@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
@@ -159,4 +160,167 @@ body {
 #toggle-edit-mode.active-edit-mode {
     background-color: #4CAF50 !important; /* Green */
     color: white;
+=======
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+}
+
+.tab-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+    overflow-x: auto; /* Enable horizontal scrolling for tabs if many projects are added */
+}
+
+.tab-button {
+    background-color: #eee;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-right: 5px;
+    border-radius: 5px 5px 0 0;
+    transition: background-color 0.3s ease;
+    white-space: nowrap; /* Prevent tab names from wrapping */
+}
+
+.tab-button:hover {
+    background-color: #ddd;
+}
+
+.tab-button.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.add-tab-button {
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+}
+
+.add-tab-button:hover {
+    background-color: #218838;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.project-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.project-table th,
+.project-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.project-table th {
+    background-color: #f2f2f2;
+}
+
+.project-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.project-table td[contenteditable="true"] {
+    background-color: #fff;
+    cursor: text;
+}
+
+.project-table td[contenteditable="false"] {
+    background-color: #e9e9e9;
+    cursor: not-allowed;
+}
+
+.table-actions {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.table-actions button {
+    padding: 8px 15px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.table-actions button:hover {
+    background-color: #0056b3;
+}
+
+.selected-row > td, .selected-row > th {
+    background-color: #f0f0f0 !important; /* Apply background to the cells within the selected row */
+    transition: background-color 0.2s ease;
+}
+
+/* New styles for selection and context menu */
+.selected-column-header {
+    background-color: #e0e0e0 !important; /* Light gray for selection */
+    transition: background-color 0.2s ease;
+}
+
+.selected-column {
+    background-color: #f0f0f0 !important; /* Slightly different for column cells */
+}
+
+/* Context Menu Styles */
+.context-menu {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 1000; /* Ensure it's above other content */
+    display: flex; /* Arrange icons in a row */
+    gap: 5px; /* Space between icons */
+}
+
+.context-menu-icon {
+    width: 30px; /* Size of icons */
+    height: 30px;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #333;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.context-menu-icon:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+}
+
+/* Optional: Styles for active edit mode button */
+#toggle-edit-mode.active-edit-mode {
+    background-color: #4CAF50 !important; /* Green */
+    color: white;
+>>>>>>> 1ae5093ff997b05683e8b2e81c65ecb9eaf5ff55
 }
