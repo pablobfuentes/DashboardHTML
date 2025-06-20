@@ -51,6 +51,98 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Helper functions ---
     const isDateColumn = (headerText) => /fecha|date/i.test(headerText);
     const isStatusColumn = (headerText) => /status|estado/i.test(headerText);
+    const isCommentColumn = (headerText) => /^comentario$/i.test(headerText.trim());
+    const isNewCommentColumn = (headerText) => {
+    // Check for either "Nuevo Comentario" or "Nuevo" (in case the header is split)
+    const result = /nuevo\s*comentario/i.test(headerText) || headerText.trim().toLowerCase() === 'nuevo';
+    console.log('Checking if column is nuevo comentario:', headerText, result);
+    return result;
+};
+
+    // Function to get current timestamp in short format
+    const getCurrentTimestamp = () => {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = now.toLocaleString('en-US', { month: 'short' });
+        return `${day}-${month}`;
+    };
+
+    // Function to extract the latest comment from history
+    const getLatestComment = (commentHistory) => {
+        if (!commentHistory || commentHistory.trim() === '') {
+            return '';
+        }
+        
+        // Get first line since comments are now single-line with date at the end
+        const lines = commentHistory.split('\n');
+        return lines[0] || '';
+    };
+
+    // Function to format a comment line to ensure consistent format
+    const formatCommentLine = (line) => {
+        // Remove any existing date format
+        let cleanLine = line.replace(/\[\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\]/g, '').trim();
+        // Extract any date in the new format if it exists
+        const dateMatch = line.match(/\[\d{2}-[A-Za-z]{3}\]/g);
+        const date = dateMatch ? dateMatch[0] : '';
+        // Remove the new format date if it exists
+        cleanLine = cleanLine.replace(/\[\d{2}-[A-Za-z]{3}\]/g, '').trim();
+        return date ? `${cleanLine} ${date}` : cleanLine;
+    };
+
+    // Function to render comment cell (collapsed by default)
+    const renderCommentCell = (commentHistory, isExpanded = false) => {
+        if (!commentHistory || commentHistory.trim() === '') {
+            return '';
+        }
+        
+        const lines = commentHistory.split('\n').map(line => formatCommentLine(line));
+        
+        if (isExpanded) {
+            return lines.join('\n');
+        } else {
+            return lines[0] || '';
+        }
+    };
+
+    // Function to format existing comment history to new format
+    const reformatCommentHistory = (history) => {
+        if (!history || history.trim() === '') return '';
+        
+        return history.split('\n').map(line => {
+            // Extract the comment and old timestamp
+            const match = line.match(/(.*?)\s*\[(.*?)\]/);
+            if (!match) return line;
+            
+            const comment = match[1].trim();
+            // Convert the old timestamp to new format
+            const date = new Date(match[2].replace(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/, '$3-$2-$1 $4:$5'));
+            if (isNaN(date.getTime())) return line;
+            
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = date.toLocaleString('en-US', { month: 'short' });
+            return `${comment} [${day}-${month}]`;
+        }).join('\n');
+    };
+
+    // Function to add new comment to history
+    const addCommentToHistory = (currentHistory, newComment) => {
+        if (!newComment || newComment.trim() === '') {
+            return currentHistory;
+        }
+        
+        const timestamp = getCurrentTimestamp();
+        const newEntry = `${newComment.trim()} [${timestamp}]`;
+        
+        // If there's no history, just return the new entry
+        if (!currentHistory || currentHistory.trim() === '') {
+            return newEntry;
+        }
+        
+        // If the history is in old format, reformat it first
+        const formattedHistory = reformatCommentHistory(currentHistory);
+        return `${newEntry}\n${formattedHistory}`;
+    };
 
     // Function to get status class based on status text
     const getStatusClass = (status) => {
@@ -205,6 +297,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     td.innerHTML = renderStatusCell(statusValue);
                     td.setAttribute('data-status', statusValue);
                     td.setAttribute('contenteditable', 'false'); // Status cells are not directly editable
+                } else if (isCommentColumn(header)) {
+                    // Comment history cells (read-only)
+                    td.classList.add('comment-cell', 'collapsed');
+                    const commentHistory = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                    td.textContent = renderCommentCell(commentHistory, false);
+                    td.setAttribute('data-full-history', commentHistory);
+                    td.setAttribute('contenteditable', 'false');
+                } else if (isEditable && isNewCommentColumn(header)) {
+                    // New comment input cells
+                    td.className = 'new-comment-cell';
+                    
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'new-comment-wrapper';
+                    
+                    const content = document.createElement('div');
+                    content.className = 'comment-content';
+                    content.setAttribute('contenteditable', 'true');
+                    content.setAttribute('placeholder', 'Add a comment...');
+                    content.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                    
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'submit-comment-icon';
+                    button.title = 'Save comment';
+                    button.textContent = '💾';
+                    
+                    // Add focus/blur handlers for the content div
+                    content.addEventListener('focus', () => {
+                        button.classList.add('visible');
+                    });
+                    
+                    content.addEventListener('blur', (e) => {
+                        // Don't hide if clicking the save button
+                        if (!e.relatedTarget || !e.relatedTarget.classList.contains('submit-comment-icon')) {
+                            button.classList.remove('visible');
+                        }
+                    });
+                    
+                    wrapper.appendChild(content);
+                    wrapper.appendChild(button);
+                    td.appendChild(wrapper);
+                    
+                    td.setAttribute('contenteditable', 'false');
                 } else {
                     td.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
                     td.setAttribute('contenteditable', isEditable);
@@ -643,11 +778,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Do not update the model on 'input' for date cells, as this will be handled on 'blur' and datepicker change
             const header = (projectId === 'main-template' ? currentTemplateHeaders : projectsData[projectId].headers)[colIndex];
-            if(isDateColumn(header)) {
-                return;
+            if(isDateColumn(header) || isCommentColumn(header)) {
+                return; // Date and comment cells have their own handling
             }
 
-            if (projectId === 'main-template' && isEditMode) { // Only update if in edit mode
+            if (projectId === 'main-template' && isEditMode) {
                 if (currentTemplateRows[rowIndex] && currentTemplateRows[rowIndex][colIndex] !== undefined) {
                     currentTemplateRows[rowIndex][colIndex] = event.target.textContent;
                     console.log(`Main Template cell [${rowIndex}][${colIndex}] updated. New currentTemplateRows:`, currentTemplateRows);
@@ -1014,4 +1149,119 @@ document.addEventListener('DOMContentLoaded', () => {
             th.style.cursor = '';
         }
     });
+
+    // --- Comment System Logic ---
+
+    // Function to submit a comment
+    function submitComment(cell, commentText) {
+        if (!commentText.trim()) return;
+
+        const table = cell.closest('table');
+        const row = cell.closest('tr');
+        const rowIndex = Array.from(table.querySelectorAll('tbody tr')).indexOf(row);
+        const cellIndex = Array.from(row.cells).indexOf(cell);
+        const tabPane = cell.closest('.tab-pane');
+        const projectId = tabPane ? tabPane.id : null;
+        
+        // Determine data model based on project or template
+        let tableHeaders, tableRows;
+        if (projectId === 'main-template') {
+            tableHeaders = currentTemplateHeaders;
+            tableRows = currentTemplateRows;
+        } else if (projectsData[projectId]) {
+            tableHeaders = projectsData[projectId].headers;
+            tableRows = projectsData[projectId].content;
+        } else {
+            console.warn('Unknown project/table for comment submission');
+            return;
+        }
+        
+        if (!tableRows[rowIndex]) {
+            console.warn('Invalid row index');
+            return;
+        }
+        
+        // Identify comment history column index
+        const commentHistoryColIndex = tableHeaders.findIndex(h => isCommentColumn(h));
+        if (commentHistoryColIndex === -1) {
+            console.warn('No comment history column found');
+            return;
+        }
+        
+        // Get existing history and add new comment
+        const existingHistory = tableRows[rowIndex][commentHistoryColIndex] || '';
+        const updatedHistory = addCommentToHistory(existingHistory, commentText);
+        tableRows[rowIndex][commentHistoryColIndex] = updatedHistory;
+        
+        // Update UI for comment history cell
+        const commentHistoryCell = row.cells[commentHistoryColIndex];
+        if (commentHistoryCell) {
+            commentHistoryCell.setAttribute('data-full-history', updatedHistory);
+            commentHistoryCell.textContent = renderCommentCell(updatedHistory, false);
+            commentHistoryCell.classList.add('collapsed');
+            commentHistoryCell.classList.remove('expanded');
+        }
+        
+        saveState();
+    }
+
+    // Handle clicking on comment cells to expand/collapse
+    document.addEventListener('click', (event) => {
+        if (event.target.classList.contains('comment-cell')) {
+            const commentCell = event.target;
+            const isExpanded = commentCell.classList.contains('expanded');
+            const fullHistory = commentCell.getAttribute('data-full-history') || '';
+            
+            if (isExpanded) {
+                // Collapse
+                commentCell.classList.remove('expanded');
+                commentCell.classList.add('collapsed');
+                commentCell.textContent = renderCommentCell(fullHistory, false);
+            } else {
+                // Expand
+                commentCell.classList.remove('collapsed');
+                commentCell.classList.add('expanded');
+                commentCell.textContent = renderCommentCell(fullHistory, true);
+            }
+        }
+    });
+
+    // Handle clicking the submit icon inside new comment cells
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('submit-comment-icon')) {
+            const cell = e.target.closest('td');
+            const commentDiv = cell.querySelector('.comment-content');
+            const newComment = commentDiv.textContent.trim();
+            if (newComment) {
+                submitComment(cell, newComment);
+                commentDiv.textContent = ''; // Clear after submission
+            }
+        }
+    });
+
+    // Handle Enter key inside comment-content divs to submit
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.target.classList.contains('comment-content')) {
+            e.preventDefault();
+            const cell = e.target.closest('td');
+            const newComment = e.target.textContent.trim();
+            if (newComment) {
+                submitComment(cell, newComment);
+                e.target.textContent = '';
+            }
+        }
+    });
+
+    // Handle placeholder text for new comment fields (optional placeholder removal)
+    document.addEventListener('focus', function(e) {
+        if (e.target.classList.contains('comment-content')) {
+            // No specific action for now
+        }
+    }, true);
+
+    document.addEventListener('blur', function(e) {
+        if (e.target.classList.contains('comment-content')) {
+            // If you want a placeholder, you can set it here
+        }
+    }, true);
 });

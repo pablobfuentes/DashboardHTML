@@ -444,6 +444,107 @@ body {
     background-color: #f8f9fa;
 }
 
+/* Comment history styles */
+.comment-cell {
+    position: relative;
+    cursor: pointer;
+    max-width: 200px;
+    overflow: hidden;
+}
+
+.comment-cell.collapsed {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.comment-cell.expanded {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border: 2px solid #007bff;
+    z-index: 10;
+}
+
+.comment-cell:hover {
+    background-color: #f0f0f0;
+}
+
+.comment-cell::after {
+    content: '📖';
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.comment-cell.expanded::after {
+    content: '📖';
+    opacity: 1;
+}
+
+.new-comment-cell {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    position: relative;
+}
+
+.new-comment-cell:focus {
+    background-color: #fff;
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* ---------- New Comment Cell Styles ---------- */
+
+.new-comment-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.new-comment-wrapper .comment-content {
+    padding: 8px;
+    padding-right: 30px; /* space for icon */
+    min-height: 21px;
+    outline: none;
+}
+
+.new-comment-wrapper .submit-comment-icon {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 16px;
+    color: #28a745;
+    display: none; /* hidden by default */
+}
+
+.new-comment-wrapper:hover .submit-comment-icon,
+.new-comment-wrapper .comment-content:focus + .submit-comment-icon {
+    display: block;
+}
+
+.submit-comment-icon:hover {
+    color: #1e7e34;
+}
+
+/* Remove deprecated comment-submit-btn styles */
+.comment-submit-btn,
+.comment-submit-btn:hover {
+    display: none !important;
+}
+
+.comment-timestamp {
+    color: #6c757d;
+    font-size: 11px;
+    font-style: italic;
+}
+
 .template-actions {
     margin-bottom: 10px;
     display: flex;
