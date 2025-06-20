@@ -18,6 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeDatepicker = null;
     let currentDateCell = null; // Track which cell we're editing
 
+    // Column resizing variables
+    let isResizing = false;
+    let currentTable = null;
+    let currentColumn = null;
+    let startX = 0;
+    let startWidth = 0;
+    let columnWidths = {}; // Store column widths for each table
+
     let isEditMode = false; // New state: Tracks if edit mode is active
     let selectedRowIndex = -1; // New state: Index of currently selected row (-1 if none)
     let selectedColIndex = -1; // New state: Index of currently selected column (-1 if none)
@@ -49,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: currentTemplateHeaders,
             rows: currentTemplateRows,
             projects: projectsData,
-            projectCount: projectCount
+            projectCount: projectCount,
+            columnWidths: columnWidths
         };
         localStorage.setItem('dashboardState', JSON.stringify(state));
         console.log("Dashboard state saved.");
@@ -75,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTemplateRows = state.rows || csvData.map(row => Object.values(row));
         projectsData = state.projects || {};
         projectCount = state.projectCount || 0;
+        columnWidths = state.columnWidths || {};
 
         renderTable(mainTemplateTable, currentTemplateHeaders, currentTemplateRows, true);
 
@@ -179,6 +189,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // This was the source of an infinite loop in certain scenarios.
         // It's not needed here as styles are applied via other calls.
         // applySelectionStyles();
+
+        // Apply saved column widths
+        applyColumnWidths(tableElement, headers, isMainTemplate);
+    }
+
+    // Function to apply saved column widths
+    function applyColumnWidths(tableElement, headers, isMainTemplate) {
+        const tableId = isMainTemplate ? 'main-template' : tableElement.closest('.tab-pane').id;
+        const savedWidths = columnWidths[tableId];
+        
+        if (!savedWidths) return;
+
+        const headerCells = tableElement.querySelectorAll('thead th');
+        headerCells.forEach((th, index) => {
+            const columnIndex = isMainTemplate ? index - 1 : index; // Account for row header in main template
+            if (columnIndex >= 0 && savedWidths[columnIndex]) {
+                th.style.width = savedWidths[columnIndex] + 'px';
+                th.style.minWidth = savedWidths[columnIndex] + 'px';
+            }
+        });
+    }
+
+    // Function to save column widths
+    function saveColumnWidths(tableElement, isMainTemplate) {
+        const tableId = isMainTemplate ? 'main-template' : tableElement.closest('.tab-pane').id;
+        const headerCells = tableElement.querySelectorAll('thead th');
+        const widths = {};
+
+        headerCells.forEach((th, index) => {
+            const columnIndex = isMainTemplate ? index - 1 : index; // Account for row header in main template
+            if (columnIndex >= 0) {
+                widths[columnIndex] = th.offsetWidth;
+            }
+        });
+
+        columnWidths[tableId] = widths;
+        saveState();
     }
 
     // Function to apply/remove selection styles
@@ -770,6 +817,92 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.classList.contains('project-name-editable') && event.key === 'Enter') {
             event.preventDefault(); // Prevent adding a new line
             event.target.blur(); // Exit edit mode
+        }
+    });
+
+    // --- Column Resizing Logic ---
+    
+    // Handle mouse down on column headers
+    document.addEventListener('mousedown', (event) => {
+        const th = event.target.closest('th');
+        if (!th) return;
+
+        const table = th.closest('.project-table');
+        if (!table) return;
+
+        const rect = th.getBoundingClientRect();
+        const isNearRightEdge = event.clientX > rect.right - 10;
+
+        if (isNearRightEdge) {
+            event.preventDefault();
+            isResizing = true;
+            currentTable = table;
+            currentColumn = th;
+            startX = event.clientX;
+            startWidth = th.offsetWidth;
+
+            table.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        }
+    });
+
+    // Handle mouse move for resizing
+    document.addEventListener('mousemove', (event) => {
+        if (isResizing && currentColumn) {
+            const deltaX = event.clientX - startX;
+            const newWidth = Math.max(50, startWidth + deltaX); // Minimum width of 50px
+
+            currentColumn.style.width = newWidth + 'px';
+            currentColumn.style.minWidth = newWidth + 'px';
+
+            // Also update corresponding cells in the column
+            const columnIndex = Array.from(currentColumn.parentNode.children).indexOf(currentColumn);
+            const rows = currentTable.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cell = row.children[columnIndex];
+                if (cell) {
+                    cell.style.width = newWidth + 'px';
+                    cell.style.minWidth = newWidth + 'px';
+                }
+            });
+        }
+    });
+
+    // Handle mouse up to end resizing
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            
+            if (currentTable) {
+                currentTable.classList.remove('resizing');
+                
+                // Save the new column widths
+                const isMainTemplate = currentTable.id === 'main-template-table';
+                saveColumnWidths(currentTable, isMainTemplate);
+            }
+
+            currentTable = null;
+            currentColumn = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
+
+    // Update cursor when hovering over column edges
+    document.addEventListener('mousemove', (event) => {
+        if (isResizing) return; // Don't change cursor while resizing
+
+        const th = event.target.closest('th');
+        if (!th || !th.closest('.project-table')) return;
+
+        const rect = th.getBoundingClientRect();
+        const isNearRightEdge = event.clientX > rect.right - 10;
+
+        if (isNearRightEdge) {
+            th.style.cursor = 'col-resize';
+        } else {
+            th.style.cursor = '';
         }
     });
 });

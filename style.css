@@ -91,10 +91,37 @@ body {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
+    position: relative;
 }
 
 .project-table th {
     background-color: #f2f2f2;
+    user-select: none; /* Prevent text selection during resize */
+}
+
+.project-table th::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 1;
+}
+
+.project-table th:hover::after {
+    background: rgba(0, 123, 255, 0.2);
+}
+
+/* Visual feedback during resize */
+.project-table.resizing {
+    user-select: none;
+}
+
+.project-table.resizing th::after {
+    background: rgba(0, 123, 255, 0.4);
 }
 
 .project-table tr:nth-child(even) {
