@@ -50,6 +50,34 @@
         </div>
     </div>
     
+    <!-- Status tag selector modal -->
+    <div id="status-selector-modal" class="status-selector-modal" style="display: none;">
+        <div class="status-selector-overlay"></div>
+        <div class="status-selector-content">
+            <div class="status-selector-header">
+                <span>Select Status</span>
+                <button class="status-selector-close">&times;</button>
+            </div>
+            <div class="status-options">
+                <div class="status-option" data-status="completo" data-color="green">
+                    <span class="status-tag status-completo">completo</span>
+                </div>
+                <div class="status-option" data-status="en proceso" data-color="blue">
+                    <span class="status-tag status-en-proceso">en proceso</span>
+                </div>
+                <div class="status-option" data-status="pendiente" data-color="yellow">
+                    <span class="status-tag status-pendiente">pendiente</span>
+                </div>
+                <div class="status-option" data-status="N/A" data-color="gray">
+                    <span class="status-tag status-na">N/A</span>
+                </div>
+                <div class="status-option" data-status="" data-color="none">
+                    <span class="status-tag status-empty">Clear</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
     <script src="script.js"></script>
 </body>

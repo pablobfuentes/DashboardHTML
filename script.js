@@ -50,6 +50,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Helper functions ---
     const isDateColumn = (headerText) => /fecha|date/i.test(headerText);
+    const isStatusColumn = (headerText) => /status|estado/i.test(headerText);
+
+    // Function to get status class based on status text
+    const getStatusClass = (status) => {
+        const statusLower = status.toLowerCase();
+        switch (statusLower) {
+            case 'completo': return 'status-completo';
+            case 'en proceso': return 'status-en-proceso';
+            case 'pendiente': return 'status-pendiente';
+            case 'n/a': return 'status-na';
+            default: return '';
+        }
+    };
+
+    // Function to render status cell content
+    const renderStatusCell = (status) => {
+        if (!status || status.trim() === '') {
+            return '';
+        }
+        const statusClass = getStatusClass(status);
+        return `<span class="status-tag ${statusClass}">${status}</span>`;
+    };
 
     // --- State Management ---
     function saveState() {
@@ -176,6 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="calendar-icon">&#128465;</span>
                         </div>
                     `;
+                } else if (isEditable && isStatusColumn(header)) {
+                    // Status cells
+                    td.classList.add('status-cell');
+                    const statusValue = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                    td.innerHTML = renderStatusCell(statusValue);
+                    td.setAttribute('data-status', statusValue);
+                    td.setAttribute('contenteditable', 'false'); // Status cells are not directly editable
                 } else {
                     td.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
                     td.setAttribute('contenteditable', isEditable);
@@ -817,6 +846,86 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.classList.contains('project-name-editable') && event.key === 'Enter') {
             event.preventDefault(); // Prevent adding a new line
             event.target.blur(); // Exit edit mode
+        }
+    });
+
+    // --- Status Selector Logic ---
+
+    let currentStatusCell = null;
+
+    // Modal elements for status selector
+    const statusSelectorModal = document.getElementById('status-selector-modal');
+    const statusSelectorClose = document.querySelector('.status-selector-close');
+    const statusSelectorOverlay = document.querySelector('.status-selector-overlay');
+
+    // Function to show the status selector modal
+    const showStatusSelectorModal = (statusCell) => {
+        currentStatusCell = statusCell;
+        statusSelectorModal.style.display = 'flex';
+    };
+
+    // Function to hide the status selector modal
+    const hideStatusSelectorModal = () => {
+        statusSelectorModal.style.display = 'none';
+        currentStatusCell = null;
+    };
+
+    // Function to update status cell
+    const updateStatusCell = (statusCell, newStatus) => {
+        const tabPane = statusCell.closest('.tab-pane');
+        const projectId = tabPane.id;
+        const rowIndex = Array.from(statusCell.closest('tr').parentNode.children).indexOf(statusCell.closest('tr'));
+        const colIndex = Array.from(statusCell.closest('tr').children).indexOf(statusCell) - (projectId === 'main-template' ? 1 : 0);
+
+        let dataModel;
+        if (projectId === 'main-template') {
+            dataModel = currentTemplateRows;
+        } else if (projectsData[projectId]) {
+            dataModel = projectsData[projectId].content;
+        }
+
+        if (dataModel && dataModel[rowIndex] && dataModel[rowIndex][colIndex] !== undefined) {
+            dataModel[rowIndex][colIndex] = newStatus;
+            statusCell.innerHTML = renderStatusCell(newStatus);
+            statusCell.setAttribute('data-status', newStatus);
+            console.log(`Status updated for [${projectId}, R${rowIndex}, C${colIndex}] to: ${newStatus}`);
+            saveState();
+        }
+    };
+
+    // Handle clicking on status cells
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('.status-cell')) {
+            const statusCell = event.target.closest('.status-cell');
+            showStatusSelectorModal(statusCell);
+        }
+    });
+
+    // Handle status option selection
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('.status-option')) {
+            const statusOption = event.target.closest('.status-option');
+            const newStatus = statusOption.getAttribute('data-status');
+            
+            if (currentStatusCell) {
+                updateStatusCell(currentStatusCell, newStatus);
+                hideStatusSelectorModal();
+            }
+        }
+    });
+
+    // Status selector modal event listeners
+    statusSelectorClose.addEventListener('click', hideStatusSelectorModal);
+    statusSelectorOverlay.addEventListener('click', hideStatusSelectorModal);
+
+    // Handle ESC key to close status selector modal
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (statusSelectorModal.style.display === 'flex') {
+                hideStatusSelectorModal();
+            } else if (datePickerModal.style.display === 'flex') {
+                hideDatePickerModal();
+            }
         }
     });
 
