@@ -81,6 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tabButton.classList.add('tab-button', 'project-tab');
             tabButton.dataset.tab = projectId;
             tabButton.textContent = project.name || `Project ${projectId.split('-')[1]}`;
+            
+            // Add delete icon
+            const deleteIcon = document.createElement('span');
+            deleteIcon.classList.add('delete-tab-icon');
+            deleteIcon.innerHTML = '&#128465;'; // Trash can emoji
+            tabButton.appendChild(deleteIcon);
+
             tabsContainer.insertBefore(tabButton, addProjectButton);
 
             const tabPane = document.createElement('div');
@@ -374,14 +381,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab switching logic
     tabsContainer.addEventListener('click', (event) => {
-        if (event.target.classList.contains('tab-button') && !event.target.classList.contains('add-tab-button')) {
+        const deleteIcon = event.target.closest('.delete-tab-icon');
+        const tabButton = event.target.closest('.tab-button');
+
+        if (deleteIcon) {
+            event.stopPropagation(); // Prevent tab switching when clicking the icon
+            const projectIdToDelete = deleteIcon.parentElement.dataset.tab;
+            
+            if (confirm(`Are you sure you want to delete project '${projectsData[projectIdToDelete].name}'? This action cannot be undone.`)) {
+                // Remove the tab and its content pane
+                const tabPaneToDelete = document.getElementById(projectIdToDelete);
+                deleteIcon.parentElement.remove();
+                if (tabPaneToDelete) {
+                    tabPaneToDelete.remove();
+                }
+
+                // Delete data from state
+                delete projectsData[projectIdToDelete];
+                
+                // If the deleted tab was active, switch to the main template
+                if (tabButton.classList.contains('active')) {
+                    document.querySelector('.tab-button[data-tab="main-template"]').click();
+                }
+                
+                saveState();
+                console.log(`Project ${projectIdToDelete} deleted.`);
+            }
+            return; // Stop further processing
+        }
+
+        if (tabButton && !tabButton.classList.contains('add-tab-button')) {
             document.querySelector('.tab-button.active')?.classList.remove('active');
             document.querySelector('.tab-pane.active')?.classList.remove('active');
 
-            event.target.classList.add('active');
-            const targetTabId = event.target.dataset.tab;
+            tabButton.classList.add('active');
+            const targetTabId = tabButton.dataset.tab;
             document.getElementById(targetTabId).classList.add('active');
-            clearSelectionAndHideMenu(); // Clear selection when switching tabs
+            clearSelectionAndHideMenu();
         }
     });
 
@@ -395,6 +431,13 @@ document.addEventListener('DOMContentLoaded', () => {
         newTabButton.classList.add('tab-button', 'project-tab');
         newTabButton.dataset.tab = projectId;
         newTabButton.textContent = initialProjectName;
+
+        // Add delete icon
+        const deleteIcon = document.createElement('span');
+        deleteIcon.classList.add('delete-tab-icon');
+        deleteIcon.innerHTML = '&#128465;'; // Trash can emoji
+        newTabButton.appendChild(deleteIcon);
+
         tabsContainer.insertBefore(newTabButton, addProjectButton);
 
         const newTabPane = document.createElement('div');
