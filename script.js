@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let projectCount = 0;
     let projectsData = {};
+    let activeDatepicker = null;
+    let currentDateCell = null; // Track which cell we're editing
 
     let isEditMode = false; // New state: Tracks if edit mode is active
     let selectedRowIndex = -1; // New state: Index of currently selected row (-1 if none)
@@ -37,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Columns that should be non-editable in project tabs
     // 'Actividad' was added based on previous conversation
     const nonEditableColumns = ['ID', 'Fase', 'Milestone', 'Actividad'];
+
+    // --- Helper functions ---
+    const isDateColumn = (headerText) => /fecha|date/i.test(headerText);
 
     // --- State Management ---
     function saveState() {
@@ -149,13 +154,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             headers.forEach((header, colIndex) => {
                 const td = document.createElement('td');
-                td.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : ''; // Handle missing data for new columns
-                
-                // Determine if the cell should be editable
-                // Cells in the main template are editable only if isEditMode is true
-                // In project tabs, the specified nonEditableColumns are not editable
                 const isEditable = isMainTemplate ? isEditMode : !nonEditableColumns.includes(header);
-                td.setAttribute('contenteditable', isEditable);
+
+                if (isEditable && isDateColumn(header)) {
+                    // Add a special class to the TD itself to remove padding
+                    td.classList.add('date-cell-td');
+                    // Use a wrapper for positioning context, this prevents the datepicker from being trapped
+                    td.innerHTML = `
+                        <div class="date-cell-wrapper">
+                            <div class="cell-content" contenteditable="true">${rowData[colIndex] !== undefined ? rowData[colIndex] : ''}</div>
+                            <span class="calendar-icon">&#128465;</span>
+                        </div>
+                    `;
+                } else {
+                    td.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                    td.setAttribute('contenteditable', isEditable);
+                }
                 
                 tr.appendChild(td);
             });
@@ -551,6 +565,12 @@ document.addEventListener('DOMContentLoaded', () => {
                              ? Array.from(event.target.parentNode.children).indexOf(event.target) - 1 
                              : Array.from(event.target.parentNode.children).indexOf(event.target);
 
+            // Do not update the model on 'input' for date cells, as this will be handled on 'blur' and datepicker change
+            const header = (projectId === 'main-template' ? currentTemplateHeaders : projectsData[projectId].headers)[colIndex];
+            if(isDateColumn(header)) {
+                return;
+            }
+
             if (projectId === 'main-template' && isEditMode) { // Only update if in edit mode
                 if (currentTemplateRows[rowIndex] && currentTemplateRows[rowIndex][colIndex] !== undefined) {
                     currentTemplateRows[rowIndex][colIndex] = event.target.textContent;
@@ -605,6 +625,151 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm("Are you sure you want to reset all data? This will clear all projects and template modifications and cannot be undone.")) {
             localStorage.removeItem('dashboardState');
             location.reload();
+        }
+    });
+
+    // --- Datepicker and Cell Validation Logic ---
+
+    const handleDateUpdate = (contentDiv, dateString) => {
+        const tabPane = contentDiv.closest('.tab-pane');
+        const projectId = tabPane.id;
+        const rowIndex = Array.from(contentDiv.closest('tr').parentNode.children).indexOf(contentDiv.closest('tr'));
+        const colIndex = Array.from(contentDiv.closest('tr').children).indexOf(contentDiv.closest('td')) - (projectId === 'main-template' ? 1 : 0);
+
+        let dataModel;
+        if (projectId === 'main-template') {
+            dataModel = currentTemplateRows;
+        } else if (projectsData[projectId]) {
+            dataModel = projectsData[projectId].content;
+        }
+
+        if (dataModel && dataModel[rowIndex] && dataModel[rowIndex][colIndex] !== undefined) {
+            dataModel[rowIndex][colIndex] = dateString;
+            contentDiv.textContent = dateString;
+            console.log(`Date updated for [${projectId}, R${rowIndex}, C${colIndex}] to: ${dateString}`);
+            saveState();
+        }
+    };
+
+    // Modal elements
+    const datePickerModal = document.getElementById('date-picker-modal');
+    const datePickerContainer = document.getElementById('date-picker-container');
+    const datePickerClose = document.querySelector('.date-picker-close');
+    const datePickerOverlay = document.querySelector('.date-picker-overlay');
+    const datePickerTBD = document.getElementById('date-picker-tbd');
+    const datePickerClear = document.getElementById('date-picker-clear');
+
+    // Function to show the date picker modal
+    const showDatePickerModal = (contentDiv) => {
+        currentDateCell = contentDiv;
+        datePickerModal.style.display = 'flex';
+        
+        // Clear any existing datepicker
+        if (activeDatepicker) {
+            activeDatepicker.destroy();
+            activeDatepicker = null;
+        }
+        
+        // Clear the container
+        datePickerContainer.innerHTML = '<input type="text" id="temp-date-input" style="opacity: 0; position: absolute; pointer-events: none;">';
+        
+        // Create datepicker on a temporary input
+        const tempInput = document.getElementById('temp-date-input');
+        const datepicker = new Datepicker(tempInput, {
+            format: 'dd-M-yyyy',
+            autohide: false,
+            todayHighlight: true,
+            container: datePickerContainer
+        });
+        
+        activeDatepicker = datepicker;
+        
+        // Handle date selection
+        tempInput.addEventListener('changeDate', (e) => {
+            const newDate = Datepicker.formatDate(e.detail.date, 'dd-M-yyyy');
+            handleDateUpdate(currentDateCell, newDate);
+            hideDatePickerModal();
+        });
+        
+        // Show the datepicker
+        datepicker.show();
+    };
+
+    // Function to hide the date picker modal
+    const hideDatePickerModal = () => {
+        datePickerModal.style.display = 'none';
+        if (activeDatepicker) {
+            activeDatepicker.destroy();
+            activeDatepicker = null;
+        }
+        currentDateCell = null;
+    };
+
+    // Handle clicking the calendar icon
+    document.addEventListener('click', (event) => {
+        if (event.target.classList.contains('calendar-icon')) {
+            const wrapper = event.target.parentElement;
+            const contentDiv = wrapper.querySelector('.cell-content');
+            showDatePickerModal(contentDiv);
+        }
+    });
+
+    // Modal event listeners
+    datePickerClose.addEventListener('click', hideDatePickerModal);
+    datePickerOverlay.addEventListener('click', hideDatePickerModal);
+
+    datePickerTBD.addEventListener('click', () => {
+        if (currentDateCell) {
+            handleDateUpdate(currentDateCell, 'TBD');
+            hideDatePickerModal();
+        }
+    });
+
+    datePickerClear.addEventListener('click', () => {
+        if (currentDateCell) {
+            handleDateUpdate(currentDateCell, '');
+            hideDatePickerModal();
+        }
+    });
+
+    // Handle ESC key to close modal
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && datePickerModal.style.display === 'flex') {
+            hideDatePickerModal();
+        }
+    });
+
+    // Handle validating manual cell entry
+    document.addEventListener('focusout', (event) => {
+        const contentDiv = event.target;
+        if (contentDiv.classList.contains('cell-content') && contentDiv.parentElement.classList.contains('date-cell-wrapper')) {
+            // Validate the content on blur
+            const value = contentDiv.textContent.trim();
+            const isValidTBD = value.toLowerCase() === 'tbd';
+            const isValidDate = !isNaN(new Date(value).getTime()) && value.length > 4;
+            
+            if (value === '' || isValidTBD) {
+                 handleDateUpdate(contentDiv, value);
+            } else if (isValidDate) {
+                 handleDateUpdate(contentDiv, Datepicker.formatDate(new Date(value), 'dd-M-yyyy'));
+            } else {
+                // Revert to old value if invalid
+                const tabPane = contentDiv.closest('.tab-pane');
+                const projectId = tabPane.id;
+                const rowIndex = Array.from(contentDiv.closest('tr').parentNode.children).indexOf(contentDiv.closest('tr'));
+                const colIndex = Array.from(contentDiv.closest('tr').children).indexOf(contentDiv.closest('td')) - (projectId === 'main-template' ? 1 : 0);
+                
+                const dataModel = (projectId === 'main-template') ? currentTemplateRows : projectsData[projectId].content;
+                contentDiv.textContent = dataModel[rowIndex][colIndex] || '';
+                console.log("Invalid date entry. Reverting to previous value.");
+            }
+        }
+    });
+
+    tabContentContainer.addEventListener('keydown', (event) => {
+        if (event.target.classList.contains('project-name-editable') && event.key === 'Enter') {
+            event.preventDefault(); // Prevent adding a new line
+            event.target.blur(); // Exit edit mode
         }
     });
 });
