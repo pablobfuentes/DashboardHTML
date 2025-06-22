@@ -141,4 +141,27 @@
 .new-comment-cell .submit-comment-icon:hover {
     background-color: #45a049;
     transform: translateY(-50%) scale(1.05);
+}
+
+/* Evidencia Column Styles */
+.evidencia-cell {
+    position: relative;
+    padding: 4px 8px;
+}
+
+.evidencia-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.evidencia-required {
+    background-color: #fff3cd !important; /* Muted yellow */
+}
+
+/* Style for the checkbox in main template */
+.evidencia-cell .evidencia-checkbox {
+    margin: 0;
+    position: relative;
+    top: 2px;
 } 

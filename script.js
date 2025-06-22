@@ -59,6 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return result;
 };
 
+const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'evidencia';
+
     // Function to get current timestamp in short format
     const getCurrentTimestamp = () => {
         const now = new Date();
@@ -304,6 +306,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     td.textContent = renderCommentCell(commentHistory, false);
                     td.setAttribute('data-full-history', commentHistory);
                     td.setAttribute('contenteditable', 'false');
+                } else if (isMainTemplate && isEvidenciaColumn(header)) {
+                    // Evidencia column in main template - add checkbox
+                    td.classList.add('evidencia-cell');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'evidencia-checkbox';
+                    checkbox.checked = rowData[colIndex] === 'true';
+                    
+                    // Store the current row index directly from the rows iteration
+                    const currentRowIndex = rows.indexOf(rowData);
+                    td.dataset.rowIndex = currentRowIndex;
+                    
+                    checkbox.addEventListener('change', (e) => {
+                        const rowIdx = parseInt(td.dataset.rowIndex);
+                        if (rowIdx >= 0 && rowIdx < currentTemplateRows.length) {
+                            // Update the data model
+                            currentTemplateRows[rowIdx][colIndex] = e.target.checked.toString();
+                            saveState();
+                            
+                            // Update all project tables to reflect the change
+                            updateAllProjectTables();
+                        }
+                    });
+                    
+                    td.appendChild(checkbox);
+                } else if (isEvidenciaColumn(header) && !isMainTemplate) {
+                    // Evidencia column in project tabs
+                    td.classList.add('evidencia-cell');
+                    
+                    // Get the current row index directly from the rows iteration
+                    const currentRowIndex = rows.indexOf(rowData);
+                    
+                    // Get the corresponding value from main template safely
+                    let mainTemplateValue = '';
+                    if (currentRowIndex >= 0 && currentRowIndex < currentTemplateRows.length) {
+                        mainTemplateValue = currentTemplateRows[currentRowIndex][colIndex];
+                    }
+                    
+                    if (mainTemplateValue === 'true') {
+                        td.classList.add('evidencia-required');
+                    }
+                    td.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
                 } else if (isEditable && isNewCommentColumn(header)) {
                     // New comment input cells
                     td.className = 'new-comment-cell';
@@ -562,41 +606,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to update all project tables when main template changes
     function updateAllProjectTables() {
-        console.log("updateAllProjectTables triggered.");
-        console.log("Main template headers (source):", currentTemplateHeaders);
-        console.log("Main template rows (source):", currentTemplateRows);
         Object.keys(projectsData).forEach(projectId => {
             const project = projectsData[projectId];
-            console.log(`  - Processing project: ${projectId}. Project's old content:`, project.content);
             const projectTable = document.getElementById(projectId).querySelector('.project-table');
             
-            const newRows = currentTemplateRows.map((mainTemplateRow, rowIndex) => { // Iterate over main template rows
+            const newRows = currentTemplateRows.map((mainTemplateRow, rowIndex) => {
                 const newRow = [];
                 currentTemplateHeaders.forEach((header, colIndex) => {
-                    if (nonEditableColumns.includes(header)) {
-                        // For non-editable columns, always take data from the current main template.
+                    if (nonEditableColumns.includes(header) || isEvidenciaColumn(header)) {
+                        // For non-editable columns and evidencia column, take data from the main template
                         newRow.push(mainTemplateRow[colIndex] !== undefined ? mainTemplateRow[colIndex] : '');
                     } else {
-                        // For editable columns, preserve old project data if column and row existed
+                        // For editable columns, preserve old project data if it exists
                         const oldRow = project.content[rowIndex];
                         const oldHeaderIndex = project.headers.indexOf(header);
 
                         if (oldRow && oldHeaderIndex !== -1 && oldRow[oldHeaderIndex] !== undefined) {
                             newRow.push(oldRow[oldHeaderIndex]);
                         } else {
-                            // New editable column or new row, add empty data
-                            newRow.push(''); 
+                            newRow.push('');
                         }
                     }
                 });
                 return newRow;
             });
-            project.content = newRows; // Update the project's stored content
-            project.headers = [...currentTemplateHeaders]; // Update project's stored headers
+            
+            project.content = newRows;
+            project.headers = [...currentTemplateHeaders];
 
             renderTable(projectTable, project.headers, project.content, false);
         });
-        applySelectionStyles(); // Apply selection styles after all tables are updated
+        applySelectionStyles();
     }
 
     // Initial render of the main template table (initially not editable)
