@@ -763,30 +763,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const projectId = `project-${projectCount}`;
         const initialProjectName = `Project ${projectCount}`;
 
-        const newTabButton = document.createElement('button');
-        newTabButton.classList.add('tab-button', 'project-tab');
-        newTabButton.dataset.tab = projectId;
-        newTabButton.textContent = initialProjectName;
-
+        // Create new tab and pane using the createProjectTab function
+        const { tabButton, tabPane } = createProjectTab(initialProjectName, projectId);
+        
         // Add delete icon
         const deleteIcon = document.createElement('span');
         deleteIcon.classList.add('delete-tab-icon');
         deleteIcon.innerHTML = '&#128465;'; // Trash can emoji
-        newTabButton.appendChild(deleteIcon);
+        tabButton.appendChild(deleteIcon);
 
-        tabsContainer.insertBefore(newTabButton, addProjectButton);
-
-        const newTabPane = document.createElement('div');
-        newTabPane.id = projectId;
-        newTabPane.classList.add('tab-pane', 'project-pane');
-        newTabPane.innerHTML = `
-            <h2 class="project-name-editable" contenteditable="true" data-project-id="${projectId}">${initialProjectName}</h2>
-            <table class="project-table">
-                <thead><tr></tr></thead>
-                <tbody></tbody>
-            </table>
-        `;
-        tabContentContainer.appendChild(newTabPane);
+        // Insert the new tab and pane
+        tabsContainer.insertBefore(tabButton, addProjectButton);
+        tabContentContainer.appendChild(tabPane);
 
         // Initialize project data with a complete copy of the main template's current state
         const newProjectContent = currentTemplateRows.map(row => [...row]);
@@ -794,15 +782,15 @@ document.addEventListener('DOMContentLoaded', () => {
         projectsData[projectId] = {
             headers: [...currentTemplateHeaders],
             content: newProjectContent,
-            name: initialProjectName // Store the name
+            name: initialProjectName
         };
         
         // Render the new project table
-        const newProjectTable = newTabPane.querySelector('.project-table');
+        const newProjectTable = tabPane.querySelector('.project-table');
         renderTable(newProjectTable, projectsData[projectId].headers, projectsData[projectId].content, false);
 
         // Automatically switch to the newly created tab
-        newTabButton.click();
+        tabButton.click();
         saveState();
     });
 
@@ -2013,5 +2001,110 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         const projectTable = document.getElementById(projectId).querySelector('.project-table');
         renderTable(projectTable, project.headers, project.content, false);
+    }
+
+    function createProjectTab(projectName, projectId) {
+        const tabButton = document.createElement('button');
+        tabButton.className = 'tab-button';
+        tabButton.setAttribute('data-tab', projectId);
+        tabButton.innerHTML = `
+            <span class="project-name-editable" contenteditable="true">${projectName}</span>
+            <span class="close-tab">&times;</span>
+        `;
+        
+        const tabPane = document.createElement('div');
+        tabPane.id = projectId;
+        tabPane.className = 'tab-pane';
+        
+        // Create dashboard structure
+        const dashboardHTML = `
+            <h2 class="project-name-editable" contenteditable="true" data-project-id="${projectId}">${projectName}</h2>
+            <div class="project-dashboard">
+                <div class="dashboard-top">
+                    <div class="completion-percentage">
+                        <div class="percentage-number">0%</div>
+                        <div class="percentage-label">Project Completion</div>
+                    </div>
+                    <div class="quick-info-table">
+                        <table>
+                            <tr>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>--</td>
+                                <td>--</td>
+                                <td>--</td>
+                                <td>--</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="dashboard-collapsible">
+                    <div class="collapsible-header">
+                        <span>Project Analytics</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="dashboard-tabs">
+                            <button class="dashboard-tab active" data-tab="timeline">Timeline</button>
+                            <button class="dashboard-tab" data-tab="gantt">Gantt Chart</button>
+                        </div>
+                        <div class="dashboard-tab-content active" data-tab="timeline">
+                            <div class="timeline-container">
+                                Timeline view will be implemented here
+                            </div>
+                        </div>
+                        <div class="dashboard-tab-content" data-tab="gantt">
+                            <div class="gantt-container">
+                                Gantt chart will be implemented here
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <table class="project-table">
+                <thead>
+                    <tr>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        `;
+        
+        tabPane.innerHTML = dashboardHTML;
+        
+        // Add event listeners for the collapsible section
+        const collapsibleHeader = tabPane.querySelector('.collapsible-header');
+        const collapsibleContent = tabPane.querySelector('.collapsible-content');
+        const toggleIcon = tabPane.querySelector('.toggle-icon');
+        
+        collapsibleHeader.addEventListener('click', () => {
+            collapsibleContent.classList.toggle('expanded');
+            toggleIcon.textContent = collapsibleContent.classList.contains('expanded') ? '▲' : '▼';
+        });
+        
+        // Add event listeners for dashboard tabs
+        const dashboardTabs = tabPane.querySelectorAll('.dashboard-tab');
+        dashboardTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const targetTab = e.target.dataset.tab;
+                
+                // Update tab buttons
+                dashboardTabs.forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Update tab contents
+                const tabContents = tabPane.querySelectorAll('.dashboard-tab-content');
+                tabContents.forEach(content => {
+                    content.classList.toggle('active', content.dataset.tab === targetTab);
+                });
+            });
+        });
+        
+        return { tabButton, tabPane };
     }
 });

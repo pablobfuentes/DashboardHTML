@@ -811,3 +811,182 @@ body {
 .evidencia-cell.text-mode.evidencia-required.has-text {
     background-color: rgba(200, 255, 200, 0.5) !important;
 }
+
+/* Project Dashboard Styles */
+.project-dashboard {
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.dashboard-top {
+    display: flex;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+.completion-percentage {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-right: 1px solid #eee;
+}
+
+.percentage-number {
+    font-size: 40px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.percentage-label {
+    color: #666;
+    margin-top: 5px;
+}
+
+.quick-info-table {
+    flex: 2;
+    padding: 20px;
+}
+
+.quick-info-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.quick-info-table th,
+.quick-info-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.quick-info-table th {
+    color: #666;
+    font-weight: normal;
+}
+
+.dashboard-collapsible {
+    border-top: 1px solid #eee;
+}
+
+.collapsible-header {
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+}
+
+.collapsible-header:hover {
+    background-color: #e9ecef;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.expanded {
+    max-height: 500px;
+}
+
+.dashboard-tabs {
+    display: flex;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    background-color: #fff;
+}
+
+.dashboard-tab {
+    padding: 8px 16px;
+    margin-right: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #666;
+    border-radius: 4px;
+}
+
+.dashboard-tab:hover {
+    background-color: #f8f9fa;
+}
+
+.dashboard-tab.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.dashboard-tab-content {
+    display: none;
+    padding: 20px;
+}
+
+.dashboard-tab-content.active {
+    display: block;
+}
+
+.timeline-container,
+.gantt-container {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Ensure project name is editable and styled properly */
+.project-name-editable {
+    outline: none;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.project-name-editable:hover {
+    background-color: #f8f9fa;
+}
+
+.project-name-editable:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 2px #007bff40;
+}
+
+/* Close tab button styles */
+.close-tab {
+    margin-left: 8px;
+    color: #999;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.close-tab:hover {
+    color: #333;
+}
+
+/* Project name heading */
+h2.project-name-editable {
+    margin: 0 0 20px 0;
+    padding: 10px;
+    font-size: 24px;
+    color: #333;
+    border-radius: 4px;
+}
+
+h2.project-name-editable:hover {
+    background-color: #f8f9fa;
+}
+
+h2.project-name-editable:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 2px #007bff40;
+    outline: none;
+}
