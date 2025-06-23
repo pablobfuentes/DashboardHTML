@@ -1,4 +1,53 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Function to execute PowerShell commands
+    const executePowerShellCommand = async (command) => {
+        try {
+            const response = await fetch('/execute-powershell', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ command })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to execute PowerShell command');
+            }
+            
+            const result = await response.text();
+            return result.trim();
+        } catch (error) {
+            console.error('Error executing PowerShell command:', error);
+            return null;
+        }
+    };
+
+    // Function to open file picker and get path
+    const getFilePathFromPicker = async () => {
+        const command = `
+            Add-Type -AssemblyName System.Windows.Forms
+            $f = New-Object System.Windows.Forms.OpenFileDialog
+            $f.ShowDialog() | Out-Null
+            $f.FileName
+        `;
+        return await executePowerShellCommand(command);
+    };
+
+    // Add event listener for executing PowerShell commands
+    document.addEventListener('executeCommand', async (event) => {
+        const { command } = event.detail;
+        
+        try {
+            // Use the Windows shell to execute the command
+            const process = new ActiveXObject('WScript.Shell');
+            process.Run(command, 0, true);
+            document.dispatchEvent(new CustomEvent('commandResult', { detail: { success: true } }));
+        } catch (error) {
+            console.error('Error executing command:', error);
+            document.dispatchEvent(new CustomEvent('commandResult', { detail: { error } }));
+        }
+    });
+
     const tabsContainer = document.getElementById('tabs');
     const tabContentContainer = document.getElementById('tab-content');
     const addProjectButton = document.getElementById('add-project-button');
@@ -316,7 +365,6 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
                     
                     // Store the current row index directly from the rows iteration
                     const currentRowIndex = rows.indexOf(rowData);
-                    td.dataset.rowIndex = currentRowIndex;
                     
                     checkbox.addEventListener('change', (e) => {
                         const rowIdx = parseInt(td.dataset.rowIndex);
@@ -344,10 +392,210 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
                         mainTemplateValue = currentTemplateRows[currentRowIndex][colIndex];
                     }
                     
-                    if (mainTemplateValue === 'true') {
-                        td.classList.add('evidencia-required');
+                    // Create container for content
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'evidencia-content';
+
+                    // Function to update the cell's appearance based on attachment status
+                    const updateCellAppearance = (hasAttachment) => {
+                        if (mainTemplateValue === 'true') {
+                            td.classList.add('evidencia-required');
+                            if (hasAttachment) {
+                                td.classList.add('has-attachment');
+                            } else {
+                                td.classList.remove('has-attachment');
+                            }
+                        }
+                        
+                        // Toggle between attach and delete icons
+                        if (hasAttachment) {
+                            attachButton.style.display = 'none';
+                            deleteButton.style.display = '';
+                        } else {
+                            attachButton.style.display = '';
+                            deleteButton.style.display = 'none';
+                        }
+                    };
+
+                    // Create attach button (clip icon)
+                    const attachButton = document.createElement('button');
+                    attachButton.className = 'attach-file-icon';
+                    attachButton.title = 'Attach file';
+                    attachButton.textContent = '📎';
+
+                    // Create delete button (X icon)
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'delete-file-icon';
+                    deleteButton.title = 'Remove file';
+                    deleteButton.textContent = '❌';
+                    deleteButton.style.display = 'none';
+
+                    // Function to upload file to server
+                    const uploadFile = async (file) => {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        try {
+                            const response = await fetch('http://localhost:3000/upload', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error('Upload failed');
+                            }
+                            
+                            return await response.json();
+                        } catch (error) {
+                            console.error('Error uploading file:', error);
+                            alert('Failed to upload file. Please try again.');
+                            return null;
+                        }
+                    };
+
+                    // Function to open file using server
+                    const openFile = async (filePath) => {
+                        try {
+                            const response = await fetch('http://localhost:3000/open-file', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ path: filePath })
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error('Failed to open file');
+                            }
+                        } catch (error) {
+                            console.error('Error opening file:', error);
+                            alert('Failed to open file. Please check if the file exists.');
+                        }
+                    };
+
+                    // Function to create a file link
+                    const createFileLink = (fileName, filePath) => {
+                        const fileLink = document.createElement('a');
+                        fileLink.textContent = fileName;
+                        fileLink.title = `Click to open: ${filePath}`;
+                        fileLink.href = '#';
+                        fileLink.onclick = (e) => {
+                            e.preventDefault();
+                            openFile(filePath);
+                        };
+                        return fileLink;
+                    };
+
+                    // Set up file input
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.style.display = 'none';
+                    
+                    fileInput.addEventListener('change', async (event) => {
+                        if (event.target.files && event.target.files[0]) {
+                            const file = event.target.files[0];
+                            const uploadResult = await uploadFile(file);
+                            
+                            if (uploadResult) {
+                                // Store the file information in the data model
+                                rowData[colIndex] = JSON.stringify({
+                                    name: uploadResult.name,
+                                    path: uploadResult.path
+                                });
+                                saveState();
+                                
+                                // Update the display
+                                const pathDiv = contentDiv.querySelector('.file-path') || document.createElement('div');
+                                pathDiv.className = 'file-path';
+                                const fileLink = createFileLink(uploadResult.name, uploadResult.path);
+                                pathDiv.innerHTML = '';
+                                pathDiv.appendChild(fileLink);
+                                if (!contentDiv.contains(pathDiv)) {
+                                    contentDiv.appendChild(pathDiv);
+                                }
+                                
+                                // Update cell appearance
+                                updateCellAppearance(true);
+                            }
+                        }
+                    });
+
+                    // Set up drag and drop
+                    contentDiv.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        contentDiv.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
+                    });
+
+                    contentDiv.addEventListener('dragleave', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        contentDiv.style.backgroundColor = '';
+                    });
+
+                    contentDiv.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        contentDiv.style.backgroundColor = '';
+                        
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            fileInput.files = e.dataTransfer.files;
+                        }
+                    });
+
+                    attachButton.addEventListener('click', () => {
+                        fileInput.click();
+                    });
+
+                    // Handle file deletion
+                    deleteButton.addEventListener('click', () => {
+                        // Clear the file data
+                        rowData[colIndex] = '';
+                        saveState();
+                        
+                        // Clear the display
+                        const pathDiv = contentDiv.querySelector('.file-path');
+                        if (pathDiv) {
+                            pathDiv.remove();
+                        }
+                        
+                        // Update cell appearance
+                        updateCellAppearance(false);
+                    });
+
+                    // Check if we have stored file data and update initial state
+                    let hasExistingFile = false;
+                    if (rowData[colIndex]) {
+                        try {
+                            const fileData = JSON.parse(rowData[colIndex]);
+                            if (fileData && fileData.name) {
+                                const pathDiv = document.createElement('div');
+                                pathDiv.className = 'file-path';
+                                const fileLink = createFileLink(fileData.name, fileData.path || fileData.name);
+                                pathDiv.appendChild(fileLink);
+                                contentDiv.appendChild(pathDiv);
+                                hasExistingFile = true;
+                            }
+                        } catch (e) {
+                            // Handle legacy format (plain string)
+                            if (typeof rowData[colIndex] === 'string' && rowData[colIndex].trim()) {
+                                const pathDiv = document.createElement('div');
+                                pathDiv.className = 'file-path';
+                                const fileLink = createFileLink(rowData[colIndex], rowData[colIndex]);
+                                pathDiv.appendChild(fileLink);
+                                contentDiv.appendChild(pathDiv);
+                                hasExistingFile = true;
+                            }
+                        }
                     }
-                    td.textContent = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                    
+                    // Update initial cell appearance
+                    updateCellAppearance(hasExistingFile);
+
+                    td.appendChild(contentDiv);
+                    td.appendChild(attachButton);
+                    td.appendChild(deleteButton);
+                    td.appendChild(fileInput);
                 } else if (isEditable && isNewCommentColumn(header)) {
                     // New comment input cells
                     td.className = 'new-comment-cell';
@@ -1304,4 +1552,151 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
             // If you want a placeholder, you can set it here
         }
     }, true);
+
+    // ... rest of the existing code ...
+
+    // ... rest of the existing code ...
+
+    function createEvidenciaCell(isMain = false) {
+        const cell = document.createElement('td');
+        cell.classList.add('evidencia-cell');
+        
+        if (isMain) {
+            // Create checkbox for main template
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.classList.add('evidencia-checkbox');
+            
+            // Create toggle switch
+            const toggleContainer = document.createElement('label');
+            toggleContainer.classList.add('evidence-type-toggle');
+            
+            const toggleInput = document.createElement('input');
+            toggleInput.type = 'checkbox';
+            
+            const slider = document.createElement('span');
+            slider.classList.add('toggle-slider');
+            
+            const labels = document.createElement('div');
+            labels.classList.add('toggle-labels');
+            labels.innerHTML = '<span>File</span><span>Text</span>';
+            
+            toggleContainer.appendChild(toggleInput);
+            toggleContainer.appendChild(slider);
+            toggleContainer.appendChild(labels);
+            
+            // Event listeners
+            checkbox.addEventListener('change', function() {
+                toggleContainer.classList.toggle('visible', this.checked);
+                updateProjectCellsVisibility();
+            });
+            
+            toggleInput.addEventListener('change', function() {
+                const projectCells = getCorrespondingProjectCells(cell);
+                projectCells.forEach(projectCell => {
+                    projectCell.classList.toggle('text-mode', this.checked);
+                    updateEvidenciaContent(projectCell, this.checked);
+                });
+            });
+            
+            cell.appendChild(checkbox);
+            cell.appendChild(toggleContainer);
+        } else {
+            // Project template cell content
+            const content = document.createElement('div');
+            content.classList.add('evidencia-content');
+            
+            // File attachment elements
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.style.display = 'none';
+            
+            const attachButton = document.createElement('button');
+            attachButton.innerHTML = '📎';
+            attachButton.classList.add('attach-button');
+            
+            const fileNameDisplay = document.createElement('span');
+            fileNameDisplay.classList.add('file-name');
+            
+            const deleteButton = document.createElement('button');
+            deleteButton.innerHTML = '✕';
+            deleteButton.classList.add('delete-button');
+            deleteButton.style.display = 'none';
+            
+            // Text input element
+            const textInput = document.createElement('input');
+            textInput.type = 'text';
+            textInput.classList.add('evidence-text');
+            textInput.style.display = 'none';
+            
+            content.appendChild(fileInput);
+            content.appendChild(attachButton);
+            content.appendChild(fileNameDisplay);
+            content.appendChild(deleteButton);
+            content.appendChild(textInput);
+            
+            // Event listeners for file attachment
+            attachButton.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelection);
+            deleteButton.addEventListener('click', handleFileDelete);
+            
+            // Event listener for text input
+            textInput.addEventListener('input', function() {
+                const hasText = this.value.trim() !== '';
+                cell.classList.toggle('has-text', hasText);
+            });
+            
+            cell.appendChild(content);
+            
+            // Add drag and drop handlers
+            cell.addEventListener('dragover', handleDragOver);
+            cell.addEventListener('drop', handleFileDrop);
+        }
+        
+        return cell;
+    }
+
+    function updateEvidenciaContent(cell, isTextMode) {
+        const content = cell.querySelector('.evidencia-content');
+        if (!content) return;
+        
+        const fileElements = [
+            content.querySelector('.attach-button'),
+            content.querySelector('.file-name'),
+            content.querySelector('.delete-button')
+        ];
+        
+        const textInput = content.querySelector('.evidence-text');
+        
+        fileElements.forEach(el => {
+            if (el) el.style.display = isTextMode ? 'none' : '';
+        });
+        
+        if (textInput) {
+            textInput.style.display = isTextMode ? '' : 'none';
+        }
+    }
+
+    function getCorrespondingProjectCells(mainCell) {
+        const mainRow = mainCell.parentElement;
+        const mainTable = mainRow.parentElement;
+        const rowIndex = Array.from(mainTable.children).indexOf(mainRow);
+        
+        return Array.from(document.querySelectorAll('.project-table'))
+            .map(table => table.rows[rowIndex]?.querySelector('.evidencia-cell'))
+            .filter(cell => cell);
+    }
+
+    function updateProjectCellsVisibility() {
+        const mainCells = document.querySelectorAll('.main-table .evidencia-cell');
+        mainCells.forEach(mainCell => {
+            const checkbox = mainCell.querySelector('.evidencia-checkbox');
+            const isRequired = checkbox.checked;
+            
+            const projectCells = getCorrespondingProjectCells(mainCell);
+            projectCells.forEach(cell => {
+                cell.classList.toggle('evidencia-required', isRequired);
+            });
+        });
+    }
 });
