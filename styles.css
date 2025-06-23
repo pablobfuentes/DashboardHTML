@@ -159,6 +159,10 @@
     background-color: #fff3cd !important; /* Muted yellow */
 }
 
+.evidencia-cell.has-attachment {
+    background-color: #d4edda !important; /* Light green */
+}
+
 /* Style for the checkbox in main template */
 .evidencia-cell .evidencia-checkbox {
     margin: 0;
@@ -166,46 +170,103 @@
     top: 2px;
 }
 
-/* Attachment styles for project tables */
-.evidencia-cell {
+/* Evidence type toggle styles */
+.evidence-type-toggle {
+    display: none;
+    margin-left: 8px;
     position: relative;
+    cursor: pointer;
 }
 
-.attachment-icon {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    font-size: 16px;
-    color: #4CAF50;
-    background: none;
-    border: none;
-    padding: 4px;
+.evidence-type-toggle.visible {
+    display: inline-block;
+}
+
+/* File input and attachment styles */
+.evidencia-content {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 4px;
+    min-height: 24px;
 }
 
-.evidencia-cell:hover .attachment-icon {
-    opacity: 1;
+.file-input {
+    display: none !important;
 }
 
-.attachment-icon:hover {
-    color: #45a049;
-}
-
-.file-path {
-    font-size: 12px;
+.attach-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
     color: #666;
-    word-break: break-all;
-    margin-top: 4px;
+    transition: color 0.2s ease;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.attach-button:hover {
+    color: #000;
+}
+
+.file-name {
+    margin-right: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.delete-button {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    color: #dc3545;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: color 0.2s ease;
+}
+
+.delete-button.visible {
+    display: block;
+}
+
+.delete-button:hover {
+    color: #c82333;
+}
+
+/* Text input styles */
+.evidence-text {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-right: 30px;
+    outline: none;
+}
+
+.evidence-text:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* File path styles */
+.file-path {
+    margin-right: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .file-path a {
-    color: #4CAF50;
+    color: #007bff;
     text-decoration: none;
 }
 

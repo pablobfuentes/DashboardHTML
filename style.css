@@ -639,7 +639,8 @@ body {
     padding-right: 30px;
 }
 
-.attach-file-icon {
+/* Hide attach button by default */
+.attach-button {
     position: absolute;
     top: 50%;
     right: 8px;
@@ -654,8 +655,29 @@ body {
     z-index: 1;
 }
 
-.evidencia-cell:hover .attach-file-icon {
+/* Show attach button on hover only for file mode */
+.evidencia-cell:not(.text-mode):hover .attach-button {
     display: block;
+}
+
+/* Text input styles */
+.evidence-text {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: inherit;
+    display: none;
+}
+
+/* Show text input on hover for text mode */
+.evidencia-cell.text-mode:hover .evidence-text {
+    display: block;
+}
+
+.evidencia-cell.text-mode .attach-button,
+.evidencia-cell.text-mode .delete-button {
+    display: none !important;
 }
 
 .file-path {
@@ -677,11 +699,12 @@ body {
     background-color: rgba(255, 255, 200, 0.5) !important;
 }
 
-.evidencia-required.has-attachment {
+.evidencia-required.has-attachment,
+.evidencia-required.has-text {
     background-color: rgba(200, 255, 200, 0.5) !important;
 }
 
-.delete-file-icon {
+.delete-button {
     position: absolute;
     top: 50%;
     right: 8px;
@@ -696,12 +719,8 @@ body {
     z-index: 1;
 }
 
-.evidencia-cell:hover .delete-file-icon {
+.evidencia-cell:hover .delete-button.visible {
     display: block;
-}
-
-.delete-file-icon:hover {
-    color: #cc0000;
 }
 
 /* Toggle switch styles */
