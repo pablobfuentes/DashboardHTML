@@ -102,13 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const isStatusColumn = (headerText) => /status|estado/i.test(headerText);
     const isCommentColumn = (headerText) => /^comentario$/i.test(headerText.trim());
     const isNewCommentColumn = (headerText) => {
-    // Check for either "Nuevo Comentario" or "Nuevo" (in case the header is split)
-    const result = /nuevo\s*comentario/i.test(headerText) || headerText.trim().toLowerCase() === 'nuevo';
-    console.log('Checking if column is nuevo comentario:', headerText, result);
-    return result;
-};
-
-const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'evidencia';
+        const result = /nuevo\s*comentario/i.test(headerText) || headerText.trim().toLowerCase() === 'nuevo';
+        console.log('Checking if column is nuevo comentario:', headerText, result);
+        return result;
+    };
+    const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'evidencia';
+    const isDurationColumn = (headerText) => /^duracion$|^dias$/i.test(headerText.trim());
+    const isDependencyColumn = (headerText) => /^dependencia$|^dep\.?$/i.test(headerText.trim());
+    const isExpectedDateColumn = (headerText) => /^fecha\s*esperada$/i.test(headerText.trim());
 
     // Function to get current timestamp in short format
     const getCurrentTimestamp = () => {
@@ -873,7 +874,6 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
     });
 
     // Event listener for content changes in table cells (only if editable)
-    // This listener correctly updates currentTemplateRows.
     document.addEventListener('input', (event) => {
         if (event.target.tagName === 'TD' && event.target.closest('.project-table')) {
             const table = event.target.closest('.project-table');
@@ -881,7 +881,6 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
             const projectId = tabPane.id;
             
             const rowIndex = Array.from(event.target.parentNode.parentNode.children).indexOf(event.target.parentNode);
-            // If it's the main template, account for the row header TH (first child)
             const colIndex = projectId === 'main-template' 
                              ? Array.from(event.target.parentNode.children).indexOf(event.target) - 1 
                              : Array.from(event.target.parentNode.children).indexOf(event.target);
@@ -903,7 +902,13 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
                 if (projectsData[projectId].content[rowIndex] && projectsData[projectId].content[rowIndex][colIndex] !== undefined) {
                     projectsData[projectId].content[rowIndex][colIndex] = event.target.textContent;
                     console.log(`Project ${projectId} cell [${rowIndex}][${colIndex}] updated. Project Data:`, projectsData[projectId].content);
-                    saveState();
+                    
+                    // If this is a duration change in a project tab, update dependencies
+                    if (isDurationColumn(header)) {
+                        updateDatesBasedOnDependencies(rowIndex, projectId);
+                    } else {
+                        saveState();
+                    }
                 }
             }
         }
@@ -957,17 +962,24 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
         const rowIndex = Array.from(contentDiv.closest('tr').parentNode.children).indexOf(contentDiv.closest('tr'));
         const colIndex = Array.from(contentDiv.closest('tr').children).indexOf(contentDiv.closest('td')) - (projectId === 'main-template' ? 1 : 0);
 
-        let dataModel;
+        let dataModel, headers;
         if (projectId === 'main-template') {
             dataModel = currentTemplateRows;
+            headers = currentTemplateHeaders;
         } else if (projectsData[projectId]) {
             dataModel = projectsData[projectId].content;
+            headers = projectsData[projectId].headers;
         }
 
         if (dataModel && dataModel[rowIndex] && dataModel[rowIndex][colIndex] !== undefined) {
             dataModel[rowIndex][colIndex] = dateString;
             contentDiv.textContent = dateString;
             console.log(`Date updated for [${projectId}, R${rowIndex}, C${colIndex}] to: ${dateString}`);
+            
+            // Only update dependencies in project tabs, not in main template
+            if (projectId !== 'main-template' && isExpectedDateColumn(headers[colIndex])) {
+                updateDatesBasedOnDependencies(rowIndex, projectId);
+            }
             saveState();
         }
     };
@@ -1781,5 +1793,225 @@ const isEvidenciaColumn = (headerText) => headerText.trim().toLowerCase() === 'e
             openFile(filePath);
         };
         return fileLink;
+    }
+
+    // Date calculation helper functions
+    function parseCustomDate(dateStr) {
+        if (!dateStr || dateStr.trim() === '') return null;
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return null;
+        
+        const day = parseInt(parts[0]);
+        const month = parts[1];  // This is in 'MMM' format (e.g., 'Oct')
+        const year = parseInt(parts[2]);
+        
+        const date = new Date(year, 0); // Start with January
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        date.setMonth(months.indexOf(month));
+        date.setDate(day);
+        
+        return date;
+    }
+
+    function formatCustomDate(date) {
+        if (!date) return '';
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    function subtractDays(date, days) {
+        return addDays(date, -days);
+    }
+
+    // Function to get column indices
+    function getColumnIndices(headers) {
+        const indices = {};
+        headers.forEach((header, index) => {
+            const headerText = header.trim().toLowerCase();
+            
+            // Test duration column
+            const isDuration = isDurationColumn(header);
+            if (isDuration) {
+                console.log(`Found duration column: "${header}" at index ${index}`);
+                indices.duration = index;
+            }
+            
+            // Test dependency column
+            const isDependency = isDependencyColumn(header);
+            if (isDependency) {
+                console.log(`Found dependency column: "${header}" at index ${index}`);
+                indices.dependency = index;
+            }
+            
+            // Test expected date column
+            const isExpectedDate = isExpectedDateColumn(header);
+            if (isExpectedDate) {
+                console.log(`Found expected date column: "${header}" at index ${index}`);
+                indices.expectedDate = index;
+            }
+            
+            // Test ID column
+            if (headerText === 'id') {
+                console.log(`Found ID column: "${header}" at index ${index}`);
+                indices.id = index;
+            }
+        });
+        
+        // Log the final indices found
+        console.log('Final indices found:', {
+            id: indices.id,
+            duration: indices.duration,
+            dependency: indices.dependency,
+            expectedDate: indices.expectedDate
+        });
+        
+        return indices;
+    }
+
+    // Function to update dates based on dependencies
+    function updateDatesBasedOnDependencies(updatedRowIndex, projectId) {
+        const project = projectsData[projectId];
+        if (!project) return;
+        
+        console.log('Project headers:', JSON.stringify(project.headers, null, 2));
+        const indices = getColumnIndices(project.headers);
+        console.log('Column indices found:', JSON.stringify(indices, null, 2));
+        
+        if (indices.id === undefined || indices.duration === undefined || 
+            indices.dependency === undefined || indices.expectedDate === undefined) {
+            console.error('Required columns not found in project data. Looking for:');
+            console.error('- ID column (exact match)');
+            console.error('- Duration column (matches /^duracion$|^dias$/i)');
+            console.error('- Dependency column (matches /^dependencia$|^dep\.?$/i)');
+            console.error('- Expected Date column (matches /^fecha\s*esperada$/i)');
+            console.error('Found headers:', JSON.stringify(project.headers, null, 2));
+            
+            // Add debug logging for each column check
+            project.headers.forEach((header, index) => {
+                console.log(`Checking header[${index}]: "${header}"`);
+                console.log(`  isDurationColumn: ${isDurationColumn(header)}`);
+                console.log(`  isDependencyColumn: ${isDependencyColumn(header)}`);
+                console.log(`  isExpectedDateColumn: ${isExpectedDateColumn(header)}`);
+                console.log(`  isID: ${header === 'ID'}`);
+            });
+            return;
+        }
+        
+        // Create a map of row data by ID for easy lookup
+        const rowDataById = new Map();
+        project.content.forEach((row, index) => {
+            const id = row[indices.id];
+            if (id) {
+                rowDataById.set(id.toString(), {
+                    index,
+                    duration: parseInt(row[indices.duration]) || 0,
+                    dependency: row[indices.dependency]?.toString() || '',
+                    date: parseCustomDate(row[indices.expectedDate])
+                });
+            }
+        });
+        
+        // Function to recursively update dates
+        function updateDependentDates(rowId, isForward = true) {
+            const row = rowDataById.get(rowId.toString());
+            if (!row) return;
+            
+            if (isForward) {
+                // Find all rows that EXPLICITLY depend on this one (where their Dep. column references this row's ID)
+                const dependentRows = Array.from(rowDataById.entries())
+                    .filter(([_, data]) => data.dependency === rowId.toString());
+                
+                for (const [depId, depRow] of dependentRows) {
+                    // Forward calculation: Set dependent's date to dependency's date + dependent's duration
+                    if (row.date) {
+                        const newDate = addDays(row.date, depRow.duration);
+                        const rowData = project.content[depRow.index];
+                        rowData[indices.expectedDate] = formatCustomDate(newDate);
+                        depRow.date = newDate;
+                        console.log(`Forward update: Row ${depId} now depends on Row ${rowId}, new date: ${formatCustomDate(newDate)}`);
+                    }
+                    
+                    // Recursively update dependent rows
+                    updateDependentDates(depId, true);
+                }
+            } else {
+                // Backward calculation: Update dependency chain recursively
+                // Only update if this row has an explicit dependency
+                if (row.dependency) {
+                    const parentRow = rowDataById.get(row.dependency);
+                    if (parentRow && row.date) {
+                        const newParentDate = subtractDays(row.date, row.duration);
+                        const parentRowData = project.content[parentRow.index];
+                        parentRowData[indices.expectedDate] = formatCustomDate(newParentDate);
+                        parentRow.date = newParentDate;
+                        console.log(`Backward update: Row ${row.dependency} is dependency of Row ${rowId}, new date: ${formatCustomDate(newParentDate)}`);
+                        
+                        // Recursively update parent's dependencies
+                        updateDependentDates(row.dependency, false);
+                    }
+                }
+            }
+        }
+        
+        // Function to find the root dependency (the row with no dependencies)
+        function findRootDependency(startRowId) {
+            let currentId = startRowId;
+            let visited = new Set();
+            
+            while (true) {
+                if (visited.has(currentId)) {
+                    console.warn('Circular dependency detected!');
+                    return currentId; // Return current ID in case of circular dependency
+                }
+                visited.add(currentId);
+                
+                const currentRow = rowDataById.get(currentId.toString());
+                if (!currentRow || !currentRow.dependency) {
+                    return currentId; // Found the root
+                }
+                currentId = currentRow.dependency;
+            }
+        }
+        
+        // Get the updated row's data
+        const updatedRow = project.content[updatedRowIndex];
+        const updatedRowId = updatedRow[indices.id];
+        const updatedRowData = rowDataById.get(updatedRowId.toString());
+        
+        if (!updatedRowData) return;
+        
+        // First update backwards through all dependencies
+        if (updatedRowData.dependency) {
+            const depRow = rowDataById.get(updatedRowData.dependency);
+            if (depRow && updatedRowData.date) {
+                const newDepDate = subtractDays(updatedRowData.date, updatedRowData.duration);
+                const rowData = project.content[depRow.index];
+                rowData[indices.expectedDate] = formatCustomDate(newDepDate);
+                depRow.date = newDepDate;
+                console.log(`Initial backward update: Row ${updatedRowData.dependency} is dependency of Row ${updatedRowId}, new date: ${formatCustomDate(newDepDate)}`);
+                // Start recursive backward update from this dependency
+                updateDependentDates(updatedRowData.dependency, false);
+            }
+        }
+        
+        // Find the root dependency
+        const rootId = findRootDependency(updatedRowId);
+        console.log(`Found root dependency: Row ${rootId}`);
+        
+        // Start forward update from the root
+        updateDependentDates(rootId, true);
+        
+        // Save state and update UI
+        saveState();
+        const projectTable = document.getElementById(projectId).querySelector('.project-table');
+        renderTable(projectTable, project.headers, project.content, false);
     }
 });
