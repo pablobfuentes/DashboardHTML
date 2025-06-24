@@ -990,3 +990,41 @@ h2.project-name-editable:focus {
     box-shadow: 0 0 0 2px #007bff40;
     outline: none;
 }
+
+/* Timeline styles */
+.timeline-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    overflow: visible;
+}
+
+.timeline-svg {
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.milestone-marker {
+    cursor: pointer;
+}
+
+.milestone-label {
+    font-size: 12px;
+    fill: #666;
+    font-family: Arial, sans-serif;
+}
+
+/* Ensure the timeline container expands properly */
+.dashboard-tab-content[data-tab="timeline"].active {
+    min-height: 300px;
+    overflow: visible;
+}
+
+.collapsible-content {
+    overflow: visible !important;
+}

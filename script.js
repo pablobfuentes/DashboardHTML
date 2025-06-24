@@ -258,10 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const project = projectsData[projectId];
             if (!project) return;
 
-            const tabButton = document.createElement('button');
-            tabButton.classList.add('tab-button', 'project-tab');
-            tabButton.dataset.tab = projectId;
-            tabButton.textContent = project.name || `Project ${projectId.split('-')[1]}`;
+            // Create new project tab using createProjectTab function
+            const { tabButton, tabPane } = createProjectTab(project.name || `Project ${projectId.split('-')[1]}`, projectId);
             
             // Add delete icon
             const deleteIcon = document.createElement('span');
@@ -269,24 +267,13 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteIcon.innerHTML = '&#128465;'; // Trash can emoji
             tabButton.appendChild(deleteIcon);
 
+            // Insert the tab and pane
             tabsContainer.insertBefore(tabButton, addProjectButton);
-
-            const tabPane = document.createElement('div');
-            tabPane.id = projectId;
-            tabPane.classList.add('tab-pane', 'project-pane');
-            tabPane.innerHTML = `
-                <h2 class="project-name-editable" contenteditable="true" data-project-id="${projectId}">${project.name || `Project ${projectId.split('-')[1]}`}</h2>
-                <table class="project-table">
-                    <thead></thead>
-                    <tbody></tbody>
-                </table>
-            `;
             tabContentContainer.appendChild(tabPane);
 
+            // Render the project table
             const projectTable = tabPane.querySelector('.project-table');
-            if (project.headers && project.content) {
-                renderTable(projectTable, project.headers, project.content, false);
-            }
+            renderTable(projectTable, project.headers, project.content, false);
         });
     }
 
@@ -704,6 +691,15 @@ document.addEventListener('DOMContentLoaded', () => {
             project.headers = [...currentTemplateHeaders];
 
             renderTable(projectTable, project.headers, project.content, false);
+
+            // Update timeline if the analytics section is expanded
+            const collapsibleContent = document.getElementById(projectId).querySelector('.collapsible-content');
+            const timelineTab = document.getElementById(projectId).querySelector('.dashboard-tab[data-tab="timeline"]');
+            
+            if (collapsibleContent.classList.contains('expanded') && 
+                timelineTab.classList.contains('active')) {
+                updateProjectTimeline(projectId);
+            }
         });
         
         // After rendering all tables, update the visibility and mode states
@@ -809,6 +805,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refresh All Projects button logic
     refreshProjectsButton.addEventListener('click', () => {
         console.log("Refresh button clicked. Current Main Template Data (currentTemplateRows):", currentTemplateRows);
+        
+        // Update all project tables and their data
+        Object.keys(projectsData).forEach(projectId => {
+            const project = projectsData[projectId];
+            project.headers = [...currentTemplateHeaders];
+            
+            // Update content while preserving editable fields
+            project.content = currentTemplateRows.map((mainTemplateRow, rowIndex) => {
+                const newRow = [];
+                currentTemplateHeaders.forEach((header, colIndex) => {
+                    if (nonEditableColumns.includes(header) || isEvidenciaColumn(header)) {
+                        // For non-editable columns and evidencia column, take data from the main template
+                        newRow.push(mainTemplateRow[colIndex] !== undefined ? mainTemplateRow[colIndex] : '');
+                    } else {
+                        // For editable columns, preserve old project data if it exists
+                        const oldRow = project.content[rowIndex];
+                        const oldHeaderIndex = project.headers.indexOf(header);
+
+                        if (oldRow && oldHeaderIndex !== -1 && oldRow[oldHeaderIndex] !== undefined) {
+                            newRow.push(oldRow[oldHeaderIndex]);
+                        } else {
+                            newRow.push('');
+                        }
+                    }
+                });
+                return newRow;
+            });
+        });
+        
         updateAllProjectTables();
         alert("All project tabs have been refreshed with the latest template structure and fixed column data.");
         clearSelectionAndHideMenu(); // Clear any active selection/menu
@@ -885,18 +910,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log(`Main Template cell [${rowIndex}][${colIndex}] updated. New currentTemplateRows:`, currentTemplateRows);
                     saveState();
                 }
-            } else if (projectId !== 'main-template' && projectsData[projectId]) {
-                // Update the stored data for this specific project (independent content)
-                if (projectsData[projectId].content[rowIndex] && projectsData[projectId].content[rowIndex][colIndex] !== undefined) {
-                    projectsData[projectId].content[rowIndex][colIndex] = event.target.textContent;
-                    console.log(`Project ${projectId} cell [${rowIndex}][${colIndex}] updated. Project Data:`, projectsData[projectId].content);
-                    
-                    // If this is a duration change in a project tab, update dependencies
-                    if (isDurationColumn(header)) {
-                        updateDatesBasedOnDependencies(rowIndex, projectId);
-                    } else {
-                        saveState();
-                    }
+            } else if (projectId !== 'main-template') {
+                updateProjectData(projectId, rowIndex, colIndex, event.target.textContent);
+                
+                // If this is a duration change in a project tab, update dependencies
+                if (isDurationColumn(header)) {
+                    updateDatesBasedOnDependencies(rowIndex, projectId);
                 }
             }
         }
@@ -2003,6 +2022,101 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable(projectTable, project.headers, project.content, false);
     }
 
+    // Add these functions before createProjectTab
+    function createTimelineVisualization(projectId) {
+        const project = projectsData[projectId];
+        if (!project) return '';
+
+        // Get milestone column index
+        const milestoneColIndex = project.headers.findIndex(header => header.toLowerCase().includes('milestone'));
+        if (milestoneColIndex === -1) return 'No milestone column found';
+
+        // Get unique milestones (excluding empty ones)
+        const milestones = project.content
+            .map(row => row[milestoneColIndex])
+            .filter(milestone => milestone && milestone.trim() !== '')
+            .filter((value, index, self) => self.indexOf(value) === index);
+
+        if (milestones.length === 0) return 'No milestones found';
+
+        // Calculate dimensions
+        const svgWidth = 900; // Increased width to accommodate text
+        const svgHeight = Math.max(200, milestones.length * 80); // Minimum height of 200px
+        const margin = { top: 40, right: 100, bottom: 60, left: 100 }; // Increased margins
+        const lineY = svgHeight / 2;
+        const diamondSize = 16; // Size of the diamond (half of the desired width/height)
+
+        // Calculate spacing between milestones
+        const timelineWidth = svgWidth - margin.left - margin.right;
+        const spacing = timelineWidth / (Math.max(1, milestones.length - 1));
+
+        // Create SVG content with a viewBox to ensure proper scaling
+        let svgContent = `
+            <svg width="${svgWidth}" height="${svgHeight}" class="timeline-svg" viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet">
+                <!-- Main horizontal line -->
+                <line 
+                    x1="${margin.left}" 
+                    y1="${lineY}" 
+                    x2="${svgWidth - margin.right}" 
+                    y2="${lineY}" 
+                    stroke="#007bff" 
+                    stroke-width="2"
+                />
+        `;
+
+        // Add milestones
+        milestones.forEach((milestone, index) => {
+            const x = margin.left + (index * spacing);
+            
+            // Add diamond with transform-origin at center
+            svgContent += `
+                <g class="milestone-marker" data-milestone="${milestone}" style="transform-origin: ${x}px ${lineY}px;">
+                    <!-- Diamond -->
+                    <path 
+                        d="M ${x} ${lineY - diamondSize} 
+                           L ${x + diamondSize} ${lineY} 
+                           L ${x} ${lineY + diamondSize} 
+                           L ${x - diamondSize} ${lineY} Z" 
+                        fill="#007bff" 
+                        stroke="#fff" 
+                        stroke-width="2"
+                    />
+                    
+                    <!-- Milestone label with increased spacing -->
+                    <text 
+                        x="${x}" 
+                        y="${lineY + diamondSize + 25}" 
+                        text-anchor="middle" 
+                        class="milestone-label"
+                    >${milestone}</text>
+                </g>
+            `;
+        });
+
+        svgContent += '</svg>';
+        return svgContent;
+    }
+
+    function updateProjectTimeline(projectId) {
+        const timelineContainer = document.querySelector(`#${projectId} .timeline-container`);
+        if (!timelineContainer) return;
+
+        const timelineContent = createTimelineVisualization(projectId);
+        timelineContainer.innerHTML = timelineContent;
+
+        // Add hover effects for milestone markers
+        const milestoneMarkers = timelineContainer.querySelectorAll('.milestone-marker');
+        milestoneMarkers.forEach(marker => {
+            marker.addEventListener('mouseenter', () => {
+                marker.querySelector('path').style.fill = '#0056b3';
+            });
+            marker.addEventListener('mouseleave', () => {
+                marker.querySelector('path').style.fill = '#007bff';
+            });
+        });
+    }
+
+    // Modify the createProjectTab function to initialize the timeline
     function createProjectTab(projectName, projectId) {
         const tabButton = document.createElement('button');
         tabButton.className = 'tab-button';
@@ -2054,7 +2168,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="dashboard-tab-content active" data-tab="timeline">
                             <div class="timeline-container">
-                                Timeline view will be implemented here
                             </div>
                         </div>
                         <div class="dashboard-tab-content" data-tab="gantt">
@@ -2085,6 +2198,11 @@ document.addEventListener('DOMContentLoaded', () => {
         collapsibleHeader.addEventListener('click', () => {
             collapsibleContent.classList.toggle('expanded');
             toggleIcon.textContent = collapsibleContent.classList.contains('expanded') ? '▲' : '▼';
+            
+            // Update timeline when expanding
+            if (collapsibleContent.classList.contains('expanded')) {
+                updateProjectTimeline(projectId);
+            }
         });
         
         // Add event listeners for dashboard tabs
@@ -2102,9 +2220,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 tabContents.forEach(content => {
                     content.classList.toggle('active', content.dataset.tab === targetTab);
                 });
+
+                // Update timeline when switching to timeline tab
+                if (targetTab === 'timeline' && collapsibleContent.classList.contains('expanded')) {
+                    updateProjectTimeline(projectId);
+                }
             });
         });
         
         return { tabButton, tabPane };
+    }
+
+    function updateProjectData(projectId, rowIndex, colIndex, newValue) {
+        if (!projectsData[projectId]) return;
+        
+        // Update the project data
+        if (projectsData[projectId].content[rowIndex]) {
+            projectsData[projectId].content[rowIndex][colIndex] = newValue;
+            
+            // If this is a milestone change, update the timeline if it's visible
+            const header = projectsData[projectId].headers[colIndex];
+            if (header.toLowerCase().includes('milestone')) {
+                const collapsibleContent = document.getElementById(projectId).querySelector('.collapsible-content');
+                const timelineTab = document.getElementById(projectId).querySelector('.dashboard-tab[data-tab="timeline"]');
+                
+                if (collapsibleContent.classList.contains('expanded') && 
+                    timelineTab.classList.contains('active')) {
+                    updateProjectTimeline(projectId);
+                }
+            }
+            
+            saveState();
+        }
     }
 });
