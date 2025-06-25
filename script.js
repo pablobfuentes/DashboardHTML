@@ -2224,11 +2224,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <table>
                                         <tr>
                                             <th>Next Milestone</th>
-                                            <td contenteditable="true">--</td>
+                                            <td>--</td>
                                         </tr>
                                         <tr>
                                             <th>Current Activity</th>
-                                            <td contenteditable="true">--</td>
+                                            <td>--</td>
                                         </tr>
                                     </table>
                                 </div>
@@ -2237,7 +2237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="info-content" data-info-content="contacts">
                             <table class="contacts-table">
                                 <tr>
-                                    <td colspan="4" class="address-row" contenteditable="true">
+                                    <td colspan="5" class="address-row" contenteditable="true">
                                         Address: --
                                     </td>
                                 </tr>
@@ -2246,24 +2246,35 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Phone</th>
+                                    <th class="action-column"></th>
                                 </tr>
                                 <tr>
                                     <td contenteditable="true">Project Manager</td>
                                     <td contenteditable="true">--</td>
                                     <td contenteditable="true">--</td>
                                     <td contenteditable="true">--</td>
+                                    <td class="action-column">
+                                        <button class="delete-row-btn" title="Delete row">🗑️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td contenteditable="true">Team Lead</td>
                                     <td contenteditable="true">--</td>
                                     <td contenteditable="true">--</td>
                                     <td contenteditable="true">--</td>
+                                    <td class="action-column">
+                                        <button class="delete-row-btn" title="Delete row">🗑️</button>
+                                    </td>
                                 </tr>
-                                <tr>
+                                <tr class="last-contact-row">
                                     <td contenteditable="true">Client Contact</td>
                                     <td contenteditable="true">--</td>
                                     <td contenteditable="true">--</td>
                                     <td contenteditable="true">--</td>
+                                    <td class="action-column">
+                                        <button class="delete-row-btn" title="Delete row">🗑️</button>
+                                        <button class="add-row-btn" title="Add new row">➕</button>
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -2381,6 +2392,67 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
+        // Add event listeners for contacts table actions
+        const contactsTable = tabPane.querySelector('.contacts-table');
+        if (contactsTable) {
+            // Delete row handler
+            contactsTable.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-row-btn');
+                if (deleteBtn) {
+                    const row = deleteBtn.closest('tr');
+                    const position = row.cells[0].textContent;
+                    
+                    if (confirm(`Are you sure you want to delete the contact "${position}"?`)) {
+                        // If this is the last row with content, clear it instead of deleting
+                        const contentRows = contactsTable.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
+                        if (contentRows.length <= 1) {
+                            Array.from(row.cells).forEach(cell => {
+                                if (cell.hasAttribute('contenteditable')) {
+                                    cell.textContent = '--';
+                                }
+                            });
+                        } else {
+                            row.remove();
+                            // Update the add button to the new last row
+                            const lastRow = contactsTable.querySelector('tr:last-child');
+                            if (lastRow) {
+                                lastRow.classList.add('last-contact-row');
+                                const actionCell = lastRow.querySelector('.action-column');
+                                if (actionCell && !actionCell.querySelector('.add-row-btn')) {
+                                    actionCell.innerHTML += '<button class="add-row-btn" title="Add new row">➕</button>';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Add row handler
+            contactsTable.addEventListener('click', (e) => {
+                const addBtn = e.target.closest('.add-row-btn');
+                if (addBtn) {
+                    const currentLastRow = contactsTable.querySelector('.last-contact-row');
+                    currentLastRow.classList.remove('last-contact-row');
+                    const actionCell = currentLastRow.querySelector('.action-column');
+                    actionCell.innerHTML = '<button class="delete-row-btn" title="Delete row">🗑️</button>';
+
+                    const newRow = document.createElement('tr');
+                    newRow.classList.add('last-contact-row');
+                    newRow.innerHTML = `
+                        <td contenteditable="true">New Position</td>
+                        <td contenteditable="true">--</td>
+                        <td contenteditable="true">--</td>
+                        <td contenteditable="true">--</td>
+                        <td class="action-column">
+                            <button class="delete-row-btn" title="Delete row">🗑️</button>
+                            <button class="add-row-btn" title="Add new row">➕</button>
+                        </td>
+                    `;
+                    contactsTable.querySelector('tbody').appendChild(newRow);
+                }
+            });
+        }
+        
         return { tabButton, tabPane };
     }
 
@@ -2394,7 +2466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get the header for this column
             const header = projectsData[projectId].headers[colIndex];
             
-            // If this is a milestone change or a status change, update the timeline if it's visible
+            // If this is a milestone change or a status change, update the timeline and current activity info
             if (header.toLowerCase().includes('milestone') || 
                 header.toLowerCase().includes('status')) {
                 const collapsibleContent = document.getElementById(projectId).querySelector('.collapsible-content');
@@ -2404,9 +2476,53 @@ document.addEventListener('DOMContentLoaded', () => {
                     timelineTab.classList.contains('active')) {
                     updateProjectTimeline(projectId);
                 }
+
+                // Update current activity and next milestone
+                updateCurrentActivityInfo(projectId);
             }
             
             saveState();
+        }
+    }
+
+    function updateCurrentActivityInfo(projectId) {
+        const project = projectsData[projectId];
+        if (!project) return;
+
+        // Get relevant column indices
+        const statusColIndex = project.headers.findIndex(header => header.toLowerCase().includes('status'));
+        const activityColIndex = project.headers.findIndex(header => header.toLowerCase() === 'actividad');
+        const milestoneColIndex = project.headers.findIndex(header => header.toLowerCase().includes('milestone'));
+
+        if (statusColIndex === -1 || activityColIndex === -1 || milestoneColIndex === -1) {
+            console.warn('Required columns not found for current activity update');
+            return;
+        }
+
+        // Find the first non-completed activity
+        const currentActivityRow = project.content.find(row => {
+            const status = (row[statusColIndex] || '').toLowerCase().trim();
+            return status !== 'completo' && row[activityColIndex]; // Ensure there's an activity value
+        });
+
+        // Get the info table cells
+        const infoContent = document.querySelector(`#${projectId} .info-content[data-info-content="general"]`);
+        if (!infoContent) return;
+
+        const currentActivityCell = infoContent.querySelector('.info-table-section:nth-child(2) table tr:nth-child(2) td');
+        const nextMilestoneCell = infoContent.querySelector('.info-table-section:nth-child(2) table tr:nth-child(1) td');
+
+        if (currentActivityCell && nextMilestoneCell) {
+            if (currentActivityRow) {
+                // Update current activity
+                currentActivityCell.textContent = currentActivityRow[activityColIndex] || '--';
+                // Update next milestone from the same row
+                nextMilestoneCell.textContent = currentActivityRow[milestoneColIndex] || '--';
+            } else {
+                // No current activity found (all complete or no activities)
+                currentActivityCell.textContent = '--';
+                nextMilestoneCell.textContent = '--';
+            }
         }
     }
 });
