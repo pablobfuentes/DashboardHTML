@@ -2188,6 +2188,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="completion-percentage">
                         <div class="percentage-number">0%</div>
                         <div class="percentage-label">Project Completion</div>
+                        <div class="time-display">
+                            <span class="current-time">--:--</span>
+                            <span class="timezone-offset">UTC+0</span>
+                            <button class="timezone-select" title="Select Timezone">🌐</button>
+                        </div>
                     </div>
                     <div class="info-tabs-container">
                         <div class="info-tabs">
@@ -2299,6 +2304,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 Gantt chart will be implemented here
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="timezone-modal">
+                <div class="timezone-modal-content">
+                    <div class="timezone-modal-header">
+                        <div class="timezone-modal-title">Select Timezone Offset</div>
+                        <button class="timezone-modal-close">&times;</button>
+                    </div>
+                    <div class="timezone-input-group">
+                        <input type="number" class="timezone-input" min="-12" max="14" step="1" placeholder="Enter offset (e.g. 2 for UTC+2)">
+                        <button class="timezone-apply-btn">Apply</button>
                     </div>
                 </div>
             </div>
@@ -2525,4 +2542,83 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+
+    // Timezone functionality
+    let timezoneOffset = 0; // Default to UTC
+    let timeUpdateInterval = null;
+
+    function updateTime(projectId) {
+        const timeDisplay = document.querySelector(`#${projectId} .current-time`);
+        if (!timeDisplay) return;
+
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + (timezoneOffset * 60));
+        
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        timeDisplay.textContent = `${hours}:${minutes}`;
+    }
+
+    function setupTimezoneHandlers(projectId) {
+        const tabPane = document.getElementById(projectId);
+        if (!tabPane) return;
+
+        const timezoneSelect = tabPane.querySelector('.timezone-select');
+        const timezoneModal = tabPane.querySelector('.timezone-modal');
+        const timezoneClose = tabPane.querySelector('.timezone-modal-close');
+        const timezoneInput = tabPane.querySelector('.timezone-input');
+        const timezoneApply = tabPane.querySelector('.timezone-apply-btn');
+        const timezoneOffsetDisplay = tabPane.querySelector('.timezone-offset');
+
+        // Start time updates
+        updateTime(projectId);
+        if (timeUpdateInterval) clearInterval(timeUpdateInterval);
+        timeUpdateInterval = setInterval(() => updateTime(projectId), 60000); // Update every minute
+
+        // Show modal
+        timezoneSelect.addEventListener('click', () => {
+            timezoneModal.classList.add('active');
+            timezoneInput.value = timezoneOffset;
+        });
+
+        // Hide modal
+        timezoneClose.addEventListener('click', () => {
+            timezoneModal.classList.remove('active');
+        });
+
+        // Apply new timezone
+        timezoneApply.addEventListener('click', () => {
+            const newOffset = parseInt(timezoneInput.value);
+            if (!isNaN(newOffset) && newOffset >= -12 && newOffset <= 14) {
+                timezoneOffset = newOffset;
+                timezoneOffsetDisplay.textContent = `UTC${newOffset >= 0 ? '+' : ''}${newOffset}`;
+                updateTime(projectId);
+                timezoneModal.classList.remove('active');
+            } else {
+                alert('Please enter a valid timezone offset between -12 and +14');
+            }
+        });
+
+        // Close modal when clicking outside
+        timezoneModal.addEventListener('click', (e) => {
+            if (e.target === timezoneModal) {
+                timezoneModal.classList.remove('active');
+            }
+        });
+
+        // Handle Enter key in input
+        timezoneInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                timezoneApply.click();
+            }
+        });
+    }
+
+    // Add timezone setup to createProjectTab
+    const originalCreateProjectTab = createProjectTab;
+    createProjectTab = function(projectName, projectId) {
+        const result = originalCreateProjectTab(projectName, projectId);
+        setupTimezoneHandlers(projectId);
+        return result;
+    };
 });

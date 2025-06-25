@@ -830,21 +830,145 @@ body {
 }
 
 .completion-percentage {
-    flex: 0 0 25%;
+    width: 25%;
     text-align: center;
-    padding: 10px;
-    border-right: 1px solid #eee;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
 }
 
 .percentage-number {
-    font-size: 40px;
+    padding-top: 15px;
+    font-size: 2.5em;
     font-weight: bold;
     color: #007bff;
 }
 
 .percentage-label {
-    color: #666;
+    font-size: 1em;
+    color: #6c757d;
     margin-top: 5px;
+}
+
+/* Time Display Styles */
+.time-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #dee2e6;
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: auto;
+}
+
+.current-time {
+    font-weight: bold;
+}
+
+.timezone-select {
+    background: none;
+    border: none;
+    font-size: 1em;
+    cursor: pointer;
+    padding: 0;
+    margin-left: -4px;
+    transition: transform 0.2s;
+}
+
+.timezone-select:hover {
+    transform: scale(1.2);
+}
+
+/* Timezone Modal Styles */
+.timezone-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+}
+
+.timezone-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timezone-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 90%;
+}
+
+.timezone-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.timezone-modal-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #212529;
+}
+
+.timezone-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #6c757d;
+}
+
+.timezone-modal-close:hover {
+    color: #212529;
+}
+
+.timezone-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.timezone-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.timezone-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.timezone-apply-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+.timezone-apply-btn:hover {
+    background-color: #0056b3;
 }
 
 /* Info tabs container */
