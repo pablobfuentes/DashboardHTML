@@ -2189,21 +2189,84 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="percentage-number">0%</div>
                         <div class="percentage-label">Project Completion</div>
                     </div>
+                    <div class="info-tabs-container">
+                        <div class="info-tabs">
+                            <button class="info-tab active" data-info-tab="general" title="General Info">
+                                <i class="info-icon">ⓘ</i>
+                            </button>
+                            <button class="info-tab" data-info-tab="contacts" title="Contacts">
+                                <i class="contact-icon">👤</i>
+                            </button>
+                        </div>
+                    </div>
                     <div class="quick-info-table">
-                        <table>
-                            <tr>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Duration</th>
-                                <th>Status</th>
-                            </tr>
-                            <tr>
-                                <td>--</td>
-                                <td>--</td>
-                                <td>--</td>
-                                <td>--</td>
-                            </tr>
-                        </table>
+                        <div class="info-content active" data-info-content="general">
+                            <div class="info-tables-container">
+                                <div class="info-table-section">
+                                    <h3>Evidence</h3>
+                                    <table>
+                                        <tr>
+                                            <th>Required</th>
+                                            <td contenteditable="true">--</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Submitted</th>
+                                            <td contenteditable="true">--</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Pending</th>
+                                            <td contenteditable="true">--</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="info-table-section">
+                                    <h3>Current Status</h3>
+                                    <table>
+                                        <tr>
+                                            <th>Next Milestone</th>
+                                            <td contenteditable="true">--</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Current Activity</th>
+                                            <td contenteditable="true">--</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-content" data-info-content="contacts">
+                            <table class="contacts-table">
+                                <tr>
+                                    <td colspan="4" class="address-row" contenteditable="true">
+                                        Address: --
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Position</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true">Project Manager</td>
+                                    <td contenteditable="true">--</td>
+                                    <td contenteditable="true">--</td>
+                                    <td contenteditable="true">--</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true">Team Lead</td>
+                                    <td contenteditable="true">--</td>
+                                    <td contenteditable="true">--</td>
+                                    <td contenteditable="true">--</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true">Client Contact</td>
+                                    <td contenteditable="true">--</td>
+                                    <td contenteditable="true">--</td>
+                                    <td contenteditable="true">--</td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 <div class="dashboard-collapsible">
@@ -2252,6 +2315,46 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update timeline when expanding
             if (collapsibleContent.classList.contains('expanded')) {
                 updateProjectTimeline(projectId);
+            }
+        });
+
+        // Add event listeners for info tabs
+        const infoTabs = tabPane.querySelectorAll('.info-tab');
+        const infoContents = tabPane.querySelectorAll('.info-content');
+        
+        console.log('Info tabs found:', infoTabs.length);
+        console.log('Info contents found:', infoContents.length);
+        
+        infoTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // Get the target tab from the clicked button
+                const targetTab = e.currentTarget.dataset.infoTab;
+                console.log('Switching to tab:', targetTab);
+                
+                // Update tab buttons
+                infoTabs.forEach(t => t.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                
+                // Update content sections
+                infoContents.forEach(content => {
+                    const isTargetContent = content.dataset.infoContent === targetTab;
+                    console.log('Content section:', content.dataset.infoContent, 'Setting active:', isTargetContent);
+                    if (isTargetContent) {
+                        content.classList.add('active');
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        // Initialize the first tab as active
+        const initialTab = infoTabs[0].dataset.infoTab;
+        infoContents.forEach(content => {
+            if (content.dataset.infoContent === initialTab) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
             }
         });
         
