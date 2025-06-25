@@ -1013,10 +1013,17 @@ h2.project-name-editable:focus {
     cursor: pointer;
 }
 
+.milestone-percentage {
+    font-family: Arial, sans-serif;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+
 .milestone-label {
     font-size: 12px;
     fill: #666;
     font-family: Arial, sans-serif;
+    dominant-baseline: middle;
 }
 
 /* Ensure the timeline container expands properly */

@@ -1172,7 +1172,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const newStatus = statusOption.getAttribute('data-status');
             
             if (currentStatusCell) {
-                updateStatusCell(currentStatusCell, newStatus);
+                const tabPane = currentStatusCell.closest('.tab-pane');
+                const projectId = tabPane.id;
+                const rowIndex = Array.from(currentStatusCell.closest('tr').parentNode.children).indexOf(currentStatusCell.closest('tr'));
+                const colIndex = Array.from(currentStatusCell.closest('tr').children).indexOf(currentStatusCell) - (projectId === 'main-template' ? 1 : 0);
+
+                if (projectId === 'main-template') {
+                    if (currentTemplateRows[rowIndex] && currentTemplateRows[rowIndex][colIndex] !== undefined) {
+                        currentTemplateRows[rowIndex][colIndex] = newStatus;
+                        currentStatusCell.innerHTML = renderStatusCell(newStatus);
+                        currentStatusCell.setAttribute('data-status', newStatus);
+                        saveState();
+                    }
+                } else {
+                    // Use updateProjectData to ensure timeline updates
+                    updateProjectData(projectId, rowIndex, colIndex, newStatus);
+                    currentStatusCell.innerHTML = renderStatusCell(newStatus);
+                    currentStatusCell.setAttribute('data-status', newStatus);
+                }
+                
                 hideStatusSelectorModal();
             }
         }
@@ -2031,6 +2049,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const milestoneColIndex = project.headers.findIndex(header => header.toLowerCase().includes('milestone'));
         if (milestoneColIndex === -1) return 'No milestone column found';
 
+        // Get status column index for completion calculation
+        const statusColIndex = project.headers.findIndex(header => header.toLowerCase().includes('status'));
+
+        // Function to calculate completion percentage for a milestone
+        function calculateMilestoneCompletion(milestone) {
+            if (!project.content || statusColIndex === -1) return 0;
+            
+            // Get all rows for this milestone
+            const milestoneRows = project.content.filter(row => row[milestoneColIndex] === milestone);
+            if (milestoneRows.length === 0) return 0;
+
+            // Count completed tasks (status is exactly "completo")
+            const completedTasks = milestoneRows.filter(row => {
+                const status = (row[statusColIndex] || '').toLowerCase().trim();
+                return status === 'completo';
+            }).length;
+
+            return Math.round((completedTasks / milestoneRows.length) * 100);
+        }
+
         // Get unique milestones (excluding empty ones)
         const milestones = project.content
             .map(row => row[milestoneColIndex])
@@ -2040,11 +2078,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (milestones.length === 0) return 'No milestones found';
 
         // Calculate dimensions
-        const svgWidth = 900; // Increased width to accommodate text
-        const svgHeight = Math.max(200, milestones.length * 80); // Minimum height of 200px
-        const margin = { top: 40, right: 100, bottom: 60, left: 100 }; // Increased margins
+        const svgWidth = 900;
+        const svgHeight = Math.max(200, milestones.length * 80);
+        const margin = { top: 40, right: 100, bottom: 60, left: 100 };
         const lineY = svgHeight / 2;
-        const diamondSize = 16; // Size of the diamond (half of the desired width/height)
+        const diamondSize = 30; // Increased size to fit percentage text
 
         // Calculate spacing between milestones
         const timelineWidth = svgWidth - margin.left - margin.right;
@@ -2067,6 +2105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add milestones
         milestones.forEach((milestone, index) => {
             const x = margin.left + (index * spacing);
+            const completion = calculateMilestoneCompletion(milestone);
             
             // Add diamond with transform-origin at center
             svgContent += `
@@ -2077,12 +2116,23 @@ document.addEventListener('DOMContentLoaded', () => {
                            L ${x + diamondSize} ${lineY} 
                            L ${x} ${lineY + diamondSize} 
                            L ${x - diamondSize} ${lineY} Z" 
-                        fill="#007bff" 
+                        fill="${completion === 100 ? '#28a745' : '#007bff'}" 
                         stroke="#fff" 
                         stroke-width="2"
                     />
                     
-                    <!-- Milestone label with increased spacing -->
+                    <!-- Percentage text inside diamond -->
+                    <text 
+                        x="${x}" 
+                        y="${lineY + 6}" 
+                        text-anchor="middle" 
+                        class="milestone-percentage"
+                        fill="#fff"
+                        font-size="14px"
+                        font-weight="bold"
+                    >${completion}%</text>
+                    
+                    <!-- Milestone label -->
                     <text 
                         x="${x}" 
                         y="${lineY + diamondSize + 25}" 
@@ -2238,9 +2288,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (projectsData[projectId].content[rowIndex]) {
             projectsData[projectId].content[rowIndex][colIndex] = newValue;
             
-            // If this is a milestone change, update the timeline if it's visible
+            // Get the header for this column
             const header = projectsData[projectId].headers[colIndex];
-            if (header.toLowerCase().includes('milestone')) {
+            
+            // If this is a milestone change or a status change, update the timeline if it's visible
+            if (header.toLowerCase().includes('milestone') || 
+                header.toLowerCase().includes('status')) {
                 const collapsibleContent = document.getElementById(projectId).querySelector('.collapsible-content');
                 const timelineTab = document.getElementById(projectId).querySelector('.dashboard-tab[data-tab="timeline"]');
                 
