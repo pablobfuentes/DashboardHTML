@@ -2335,11 +2335,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const timezoneButton = tabPane.querySelector('.timezone-select');
         const timezoneModal = tabPane.querySelector('.timezone-modal');
         const timezoneClose = tabPane.querySelector('.timezone-modal-close');
+        const timezoneInput = tabPane.querySelector('.timezone-input');
+        const timezoneApply = tabPane.querySelector('.timezone-apply-btn');
+        const timezoneOffsetDisplay = tabPane.querySelector('.timezone-offset');
         
         console.log('Found timezone elements:', {
             button: !!timezoneButton,
             modal: !!timezoneModal,
-            close: !!timezoneClose
+            close: !!timezoneClose,
+            input: !!timezoneInput,
+            apply: !!timezoneApply,
+            display: !!timezoneOffsetDisplay
         });
 
         if (timezoneButton && timezoneModal) {
@@ -2347,9 +2353,8 @@ document.addEventListener('DOMContentLoaded', () => {
             timezoneButton.addEventListener('click', (e) => {
                 console.log('Timezone button clicked - opening modal');
                 timezoneModal.classList.add('active');
-                const input = timezoneModal.querySelector('.timezone-input');
-                if (input) {
-                    input.value = timezoneOffset;
+                if (timezoneInput) {
+                    timezoneInput.value = timezoneOffset;
                 }
             });
 
@@ -2358,6 +2363,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 timezoneClose.addEventListener('click', (e) => {
                     console.log('Close button clicked - closing modal');
                     timezoneModal.classList.remove('active');
+                });
+            }
+
+            // Apply button handler
+            if (timezoneApply && timezoneInput && timezoneOffsetDisplay) {
+                timezoneApply.addEventListener('click', () => {
+                    const newOffset = parseInt(timezoneInput.value);
+                    if (!isNaN(newOffset) && newOffset >= -12 && newOffset <= 14) {
+                        console.log('Applying new timezone offset:', newOffset);
+                        timezoneOffset = newOffset;
+                        timezoneOffsetDisplay.textContent = `UTC${newOffset >= 0 ? '+' : ''}${newOffset}`;
+                        updateTime(projectId);
+                        timezoneModal.classList.remove('active');
+                    } else {
+                        alert('Please enter a valid timezone offset between -12 and +14');
+                    }
+                });
+
+                // Handle Enter key in input
+                timezoneInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        timezoneApply.click();
+                    }
                 });
             }
 
@@ -2371,6 +2399,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             console.warn('Required timezone elements not found in newly created tab');
         }
+
+        // Initialize time display
+        updateTime(projectId);
         
         // Add event listeners for the collapsible section
         const collapsibleHeader = tabPane.querySelector('.collapsible-header');
