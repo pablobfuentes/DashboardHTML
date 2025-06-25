@@ -1,3 +1,135 @@
+/* App Container */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    background-color: #2c3e50;
+    color: white;
+    width: 250px;
+    transition: width 0.3s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.nav-menu.collapsed {
+    width: 60px;
+}
+
+.nav-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: transparent;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    transition: color 0.3s;
+}
+
+.nav-toggle:hover {
+    color: #3498db;
+}
+
+.nav-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-header {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border-bottom: 1px solid #34495e;
+    min-height: 60px;
+}
+
+.nav-header h2 {
+    flex: 1;
+    margin: 0;
+    font-size: 1.5em;
+    padding: 0 20px;
+}
+
+.nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-item {
+    padding: 15px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.nav-item:hover {
+    background-color: #34495e;
+}
+
+.nav-item.active {
+    background-color: #3498db;
+}
+
+.nav-icon {
+    width: 60px;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.nav-text {
+    padding-right: 20px;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+/* Collapsed state styles */
+.nav-menu.collapsed .nav-text {
+    opacity: 0;
+    width: 0;
+    padding: 0;
+}
+
+.nav-menu.collapsed .nav-header h2 {
+    opacity: 0;
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    background-color: #f5f6fa;
+    overflow-x: hidden;
+}
+
+.content-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.content-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 20px;

@@ -9,30 +9,86 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="tab-container">
-        <div class="tabs" id="tabs">
-            <button class="tab-button active" data-tab="main-template">Main Template</button>
-            <button class="tab-button add-tab-button" id="add-project-button">+</button>
-        </div>
-        <div class="tab-content" id="tab-content">
-            <div id="main-template" class="tab-pane active">
-                <h2>Main Template</h2>
-                <div class="template-actions">
-                    <button id="toggle-edit-mode">Enable Edit Mode</button>
-                    <button id="refresh-projects-button" class="refresh-button">Refresh All Projects</button>
-                    <button id="reset-state-button" class="reset-button">Reset All Data</button>
+    <div class="app-container">
+        <!-- Navigation Menu -->
+        <nav class="nav-menu">
+            <div class="nav-content">
+                <div class="nav-header">
+                    <button class="nav-toggle" title="Toggle Navigation">☰</button>
+                    <h2>Dashboard</h2>
                 </div>
-                <table id="main-template-table" class="project-table">
-                    <thead>
-                        <tr>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-                <div id="context-menu" class="context-menu" style="display: none;"></div>
+                <ul class="nav-links">
+                    <li class="nav-item active" data-section="seguimiento">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Seguimiento</span>
+                    </li>
+                    <li class="nav-item" data-section="consulta">
+                        <span class="nav-icon">🔍</span>
+                        <span class="nav-text">Consulta</span>
+                    </li>
+                    <li class="nav-item" data-section="templates">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Templates</span>
+                    </li>
+                    <li class="nav-item" data-section="reportes">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-text">Reportes</span>
+                    </li>
+                </ul>
             </div>
-        </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Section: Seguimiento -->
+            <section class="content-section active" id="seguimiento">
+                <div class="tab-container">
+                    <div class="tab-buttons" id="tabs">
+                        <button class="tab-button active" data-tab="main-template">
+                            <span class="project-name-editable" contenteditable="true">Main Template</span>
+                        </button>
+                        <button class="tab-button add-tab-button" id="add-project-button">+</button>
+                    </div>
+                    <div class="tab-content" id="tab-content">
+                        <div class="tab-pane active" id="main-template">
+                            <h2>Main Template</h2>
+                            <div class="template-actions">
+                                <button id="toggle-edit-mode">Enable Edit Mode</button>
+                                <button id="refresh-projects-button" class="refresh-button">Refresh All Projects</button>
+                                <button id="reset-state-button" class="reset-button">Reset All Data</button>
+                            </div>
+                            <table id="main-template-table" class="project-table">
+                                <thead>
+                                    <tr>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                            <div id="context-menu" class="context-menu" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Consulta -->
+            <section class="content-section" id="consulta">
+                <h2>Consulta</h2>
+                <p>Sección de consulta en desarrollo...</p>
+            </section>
+
+            <!-- Section: Templates -->
+            <section class="content-section" id="templates">
+                <h2>Templates</h2>
+                <p>Sección de templates en desarrollo...</p>
+            </section>
+
+            <!-- Section: Reportes -->
+            <section class="content-section" id="reportes">
+                <h2>Reportes</h2>
+                <p>Sección de reportes en desarrollo...</p>
+            </section>
+        </main>
     </div>
     
     <!-- Date picker modal -->

@@ -1,4 +1,33 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Navigation Menu Functionality
+    const navMenu = document.querySelector('.nav-menu');
+    const navToggle = document.querySelector('.nav-toggle');
+    const navItems = document.querySelectorAll('.nav-item');
+    const contentSections = document.querySelectorAll('.content-section');
+
+    // Toggle navigation menu
+    navToggle.addEventListener('click', () => {
+        navMenu.classList.toggle('collapsed');
+    });
+
+    // Handle navigation item clicks
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            // Update active navigation item
+            navItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            // Show corresponding content section
+            const targetSection = item.dataset.section;
+            contentSections.forEach(section => {
+                section.classList.remove('active');
+                if (section.id === targetSection) {
+                    section.classList.add('active');
+                }
+            });
+        });
+    });
+
     // Function to execute PowerShell commands
     const executePowerShellCommand = async (command) => {
         try {
