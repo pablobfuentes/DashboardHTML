@@ -2331,6 +2331,47 @@ document.addEventListener('DOMContentLoaded', () => {
         
         tabPane.innerHTML = dashboardHTML;
         
+        // Add direct click handlers for timezone functionality
+        const timezoneButton = tabPane.querySelector('.timezone-select');
+        const timezoneModal = tabPane.querySelector('.timezone-modal');
+        const timezoneClose = tabPane.querySelector('.timezone-modal-close');
+        
+        console.log('Found timezone elements:', {
+            button: !!timezoneButton,
+            modal: !!timezoneModal,
+            close: !!timezoneClose
+        });
+
+        if (timezoneButton && timezoneModal) {
+            // Open modal handler
+            timezoneButton.addEventListener('click', (e) => {
+                console.log('Timezone button clicked - opening modal');
+                timezoneModal.classList.add('active');
+                const input = timezoneModal.querySelector('.timezone-input');
+                if (input) {
+                    input.value = timezoneOffset;
+                }
+            });
+
+            // Close button handler
+            if (timezoneClose) {
+                timezoneClose.addEventListener('click', (e) => {
+                    console.log('Close button clicked - closing modal');
+                    timezoneModal.classList.remove('active');
+                });
+            }
+
+            // Click outside modal to close
+            timezoneModal.addEventListener('click', (e) => {
+                if (e.target === timezoneModal) {
+                    console.log('Clicked outside modal - closing');
+                    timezoneModal.classList.remove('active');
+                }
+            });
+        } else {
+            console.warn('Required timezone elements not found in newly created tab');
+        }
+        
         // Add event listeners for the collapsible section
         const collapsibleHeader = tabPane.querySelector('.collapsible-header');
         const collapsibleContent = tabPane.querySelector('.collapsible-content');
@@ -2560,8 +2601,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupTimezoneHandlers(projectId) {
+        console.log('Setting up timezone handlers for project:', projectId);
         const tabPane = document.getElementById(projectId);
-        if (!tabPane) return;
+        if (!tabPane) {
+            console.warn('Tab pane not found for project:', projectId);
+            return;
+        }
 
         const timezoneSelect = tabPane.querySelector('.timezone-select');
         const timezoneModal = tabPane.querySelector('.timezone-modal');
@@ -2570,6 +2615,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const timezoneApply = tabPane.querySelector('.timezone-apply-btn');
         const timezoneOffsetDisplay = tabPane.querySelector('.timezone-offset');
 
+        console.log('Found timezone elements:', {
+            select: !!timezoneSelect,
+            modal: !!timezoneModal,
+            close: !!timezoneClose,
+            input: !!timezoneInput,
+            apply: !!timezoneApply,
+            display: !!timezoneOffsetDisplay
+        });
+
         // Start time updates
         updateTime(projectId);
         if (timeUpdateInterval) clearInterval(timeUpdateInterval);
@@ -2577,6 +2631,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show modal
         timezoneSelect.addEventListener('click', () => {
+            console.log('Timezone icon clicked - opening modal');
             timezoneModal.classList.add('active');
             timezoneInput.value = timezoneOffset;
         });
