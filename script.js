@@ -2910,18 +2910,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Only include tasks that are "En proceso" or "Pendiente"
                 if (status !== 'en proceso' && status !== 'pendiente') return;
 
-                // Get the saved Kanban status for this task, default to "todo"
-                const kanbanStatus = getKanbanStatus(projectId, rowIndex) || 'todo';
+                // Get the saved Kanban status for this task
+                const kanbanStatus = getKanbanStatus(projectId, rowIndex);
                 const kanbanNotes = getKanbanNotes(projectId, rowIndex) || '';
 
-                // Apply filters only for tasks in "todo" status
-                if (kanbanStatus === 'todo') {
-                    // Skip if project filter doesn't match
-                    if (selectedProject !== 'all' && selectedProject !== projectId) return;
-                    // Skip if date filter doesn't match
-                    if (selectedDate && dueDate !== selectedDate) return;
-                }
-
+                // Always include the task, we'll filter later
                 allTasks.push({
                     projectId,
                     rowIndex,
@@ -2935,14 +2928,81 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // Filter tasks: only apply filters to "todo" tasks, keep others as is
+        const filteredTasks = allTasks.filter(task => {
+            // If task is not in todo, always keep it
+            if (task.kanbanStatus !== 'todo') {
+                return true;
+            }
+
+            // Apply filters only to todo tasks
+            if (selectedProject !== 'all' && selectedProject !== task.projectId) {
+                return false;
+            }
+            if (selectedDate && task.dueDate !== selectedDate) {
+                return false;
+            }
+            return true;
+        });
+
+        // Sort tasks by status to maintain column order
+        const columnOrder = ['todo', 'in-progress', 'completed'];
+        filteredTasks.sort((a, b) => {
+            return columnOrder.indexOf(a.kanbanStatus) - columnOrder.indexOf(b.kanbanStatus);
+        });
+
         // Create and append cards
-        allTasks.forEach(task => {
+        filteredTasks.forEach(task => {
             const card = createKanbanCard(task);
             const column = document.querySelector(`.kanban-column[data-status="${task.kanbanStatus}"] .kanban-cards`);
             if (column) {
                 column.appendChild(card);
             }
         });
+    }
+
+    // Function to save/get Kanban notes
+    function updateKanbanNotes(projectId, rowIndex, notes) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        if (!kanbanState[projectId]) {
+            kanbanState[projectId] = {};
+        }
+        if (!kanbanState[projectId][rowIndex]) {
+            kanbanState[projectId][rowIndex] = {};
+        }
+        kanbanState[projectId][rowIndex].notes = notes;
+        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+    }
+
+    function getKanbanNotes(projectId, rowIndex) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        return kanbanState[projectId]?.[rowIndex]?.notes || '';
+    }
+
+    // Update the Kanban status storage
+    function updateKanbanStatus(projectId, rowIndex, newStatus) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        if (!kanbanState[projectId]) {
+            kanbanState[projectId] = {};
+        }
+        kanbanState[projectId][rowIndex] = {
+            ...kanbanState[projectId][rowIndex],
+            status: newStatus
+        };
+        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+    }
+
+    function getKanbanStatus(projectId, rowIndex) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        const status = kanbanState[projectId]?.[rowIndex]?.status;
+        return status || 'todo';  // Default to 'todo' only if no status is found
+    }
+
+    // Function to load Kanban state
+    function loadKanbanState() {
+        if (!localStorage.getItem('kanbanState')) {
+            localStorage.setItem('kanbanState', '{}');
+        }
     }
 
     // Function to create a Kanban card
@@ -2978,6 +3038,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.remove('dragging');
             const newStatus = card.closest('.kanban-column').dataset.status;
             updateKanbanStatus(task.projectId, task.rowIndex, newStatus);
+            task.kanbanStatus = newStatus; // Update the task object's status
         });
 
         // Add notes save functionality
@@ -2988,73 +3049,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add checkbox functionality
         const checkbox = card.querySelector('.kanban-card-checkbox');
-        const isChecked = getKanbanChecked(task.projectId, task.rowIndex);
-        checkbox.checked = isChecked;
+        
+        // Set initial checkbox state based on kanban status
+        checkbox.checked = task.kanbanStatus === 'completed';
+        
         checkbox.addEventListener('change', () => {
-            updateKanbanChecked(task.projectId, task.rowIndex, checkbox.checked);
+            const currentStatus = task.kanbanStatus;
+            let newStatus;
+            
+            // Determine new status based on current status
+            if (currentStatus === 'todo') {
+                newStatus = 'in-progress';
+                checkbox.checked = false;  // Keep unchecked in In Progress
+            } else if (currentStatus === 'in-progress') {
+                newStatus = 'completed';
+                checkbox.checked = true;   // Check when moving to Completed
+            } else if (currentStatus === 'completed') {
+                newStatus = 'todo';
+                checkbox.checked = false;  // Uncheck when moving back to Todo
+            }
+
+            // Move the card to the new column
+            const newColumn = document.querySelector(`.kanban-column[data-status="${newStatus}"] .kanban-cards`);
+            if (newColumn) {
+                newColumn.appendChild(card);
+                updateKanbanStatus(task.projectId, task.rowIndex, newStatus);
+                task.kanbanStatus = newStatus; // Update the task object's status
+            }
         });
 
         return card;
-    }
-
-    // Function to save/get Kanban notes
-    function updateKanbanNotes(projectId, rowIndex, notes) {
-        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-        if (!kanbanState[projectId]) {
-            kanbanState[projectId] = {};
-        }
-        if (!kanbanState[projectId][rowIndex]) {
-            kanbanState[projectId][rowIndex] = {};
-        }
-        kanbanState[projectId][rowIndex].notes = notes;
-        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
-    }
-
-    function getKanbanNotes(projectId, rowIndex) {
-        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-        return kanbanState[projectId]?.[rowIndex]?.notes || '';
-    }
-
-    // Function to save/get checkbox state
-    function updateKanbanChecked(projectId, rowIndex, checked) {
-        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-        if (!kanbanState[projectId]) {
-            kanbanState[projectId] = {};
-        }
-        if (!kanbanState[projectId][rowIndex]) {
-            kanbanState[projectId][rowIndex] = {};
-        }
-        kanbanState[projectId][rowIndex].checked = checked;
-        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
-    }
-
-    function getKanbanChecked(projectId, rowIndex) {
-        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-        return kanbanState[projectId]?.[rowIndex]?.checked || false;
-    }
-
-    // Update the Kanban status storage to use objects instead of direct status
-    function updateKanbanStatus(projectId, rowIndex, newStatus) {
-        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-        if (!kanbanState[projectId]) {
-            kanbanState[projectId] = {};
-        }
-        if (!kanbanState[projectId][rowIndex]) {
-            kanbanState[projectId][rowIndex] = {};
-        }
-        kanbanState[projectId][rowIndex].status = newStatus;
-        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
-    }
-
-    function getKanbanStatus(projectId, rowIndex) {
-        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-        return kanbanState[projectId]?.[rowIndex]?.status || 'todo';
-    }
-
-    // Function to load Kanban state
-    function loadKanbanState() {
-        if (!localStorage.getItem('kanbanState')) {
-            localStorage.setItem('kanbanState', '{}');
-        }
     }
 });
