@@ -1231,3 +1231,217 @@ h2.project-name-editable:focus {
     background-color: #9E9E9E;
     color: white;
 }
+
+.status-selector-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px;
+}
+
+.status-selector-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+}
+
+.status-selector-close:hover {
+    color: #333;
+}
+
+.seguimiento-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    background: #f5f5f5;
+}
+
+.seguimiento-tab {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.seguimiento-tab:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.seguimiento-tab.active {
+    background: #007bff;
+    color: white;
+}
+
+.seguimiento-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.seguimiento-view {
+    display: none;
+    width: 100%;
+    height: 100%;
+}
+
+.seguimiento-view.active {
+    display: flex;
+    flex-direction: column;
+}
+
+#kanban-board {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    height: 100%;
+}
+
+.kanban-filters {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: #666;
+}
+
+.kanban-columns {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.kanban-column {
+    flex: 1;
+    background: #f5f5f5;
+    border-radius: 4px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-width: 250px;
+}
+
+.kanban-column h3 {
+    margin: 0 0 10px 0;
+    padding: 10px;
+    text-align: center;
+    color: #666;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.kanban-cards {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kanban-card {
+    background: white;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.kanban-card.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.kanban-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kanban-card-title h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+}
+
+.kanban-card-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.due-date {
+    color: #666;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.activity-text {
+    margin: 0;
+    color: #444;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.kanban-card-notes {
+    margin-top: 10px;
+}
+
+.kanban-card-notes textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    resize: vertical;
+    background: #f9f9f9;
+}
+
+.kanban-card-notes textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    background: white;
+}
+
+.project-tag {
+    background: #007bff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+}

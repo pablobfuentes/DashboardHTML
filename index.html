@@ -42,11 +42,23 @@
         <main class="main-content">
             <!-- Section: Seguimiento -->
             <section class="content-section active" id="seguimiento">
-                <div class="tab-container">
-                    <div class="tab-buttons" id="tabs">
-                        <button class="tab-button add-tab-button" id="add-project-button">+</button>
+                <div class="seguimiento-tabs">
+                    <button class="seguimiento-tab active" data-view="kanban">Kanban</button>
+                    <button class="seguimiento-tab" data-view="projects">Projects</button>
+                </div>
+                <div class="seguimiento-content">
+                    <div class="seguimiento-view active" id="kanban-view">
+                        <!-- Kanban board will be initialized here -->
+                        <div id="kanban-board"></div>
                     </div>
-                    <div class="tab-content" id="tab-content">
+                    <div class="seguimiento-view" id="projects-view">
+                        <div class="tab-container">
+                            <div class="tab-buttons" id="tabs">
+                                <button class="tab-button add-tab-button" id="add-project-button">+</button>
+                            </div>
+                            <div class="tab-content" id="tab-content">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -115,6 +127,9 @@
     <div id="status-selector-modal" class="status-selector-modal">
         <div class="status-selector-overlay"></div>
         <div class="status-selector-content">
+            <div class="status-selector-header">
+                <button class="status-selector-close">&times;</button>
+            </div>
             <div class="status-options">
                 <button class="status-option" data-status="completo">Completo</button>
                 <button class="status-option" data-status="en proceso">En Proceso</button>

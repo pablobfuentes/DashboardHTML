@@ -1,4 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Seguimiento tab switching logic
+    const seguimientoTabs = document.querySelectorAll('.seguimiento-tab');
+    seguimientoTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Update active tab
+            seguimientoTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Update active view
+            const targetView = tab.getAttribute('data-view');
+            document.querySelectorAll('.seguimiento-view').forEach(view => {
+                view.classList.remove('active');
+            });
+            document.getElementById(`${targetView}-view`).classList.add('active');
+
+            // Initialize Kanban if switching to Kanban view
+            if (targetView === 'kanban') {
+                initializeKanban();
+            }
+        });
+    });
+
     // Navigation Menu Functionality
     const navMenu = document.querySelector('.nav-menu');
     const navToggle = document.querySelector('.nav-toggle');
@@ -2767,4 +2789,272 @@ document.addEventListener('DOMContentLoaded', () => {
         setupTimezoneHandlers(projectId);
         return result;
     };
+
+    // Kanban board initialization and functionality
+    function initializeKanban() {
+        const kanbanBoard = document.getElementById('kanban-board');
+        if (!kanbanBoard) return;
+
+        // Clear existing content
+        kanbanBoard.innerHTML = `
+            <div class="kanban-filters">
+                <div class="filter-group">
+                    <label for="kanban-project-filter">Project:</label>
+                    <select id="kanban-project-filter">
+                        <option value="all">All Projects</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="kanban-date-filter">Due Date:</label>
+                    <input type="date" id="kanban-date-filter">
+                    <button id="kanban-clear-date-filter">Clear</button>
+                </div>
+            </div>
+            <div class="kanban-columns">
+                <div class="kanban-column" data-status="todo">
+                    <h3>To Do</h3>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" data-status="in-progress">
+                    <h3>In Progress</h3>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" data-status="completed">
+                    <h3>Completed</h3>
+                    <div class="kanban-cards"></div>
+                </div>
+            </div>
+        `;
+
+        // Initialize filters
+        const projectFilter = document.getElementById('kanban-project-filter');
+        const dateFilter = document.getElementById('kanban-date-filter');
+        const clearDateFilter = document.getElementById('kanban-clear-date-filter');
+
+        // Load saved Kanban state
+        loadKanbanState();
+
+        // Populate project filter
+        Object.keys(projectsData).forEach(projectId => {
+            const option = document.createElement('option');
+            option.value = projectId;
+            option.textContent = projectId;
+            projectFilter.appendChild(option);
+        });
+
+        // Add event listeners for filters
+        projectFilter.addEventListener('change', renderKanbanCards);
+        dateFilter.addEventListener('change', renderKanbanCards);
+        clearDateFilter.addEventListener('click', () => {
+            dateFilter.value = '';
+            renderKanbanCards();
+        });
+
+        // Initialize drag and drop
+        const columns = document.querySelectorAll('.kanban-column');
+        columns.forEach(column => {
+            column.addEventListener('dragover', e => {
+                e.preventDefault();
+                const dragging = document.querySelector('.dragging');
+                if (dragging) {
+                    const cards = [...column.querySelectorAll('.kanban-card:not(.dragging)')];
+                    const afterCard = cards.reduce((closest, card) => {
+                        const box = card.getBoundingClientRect();
+                        const offset = e.clientY - box.top - box.height / 2;
+                        if (offset < 0 && offset > closest.offset) {
+                            return { offset, element: card };
+                        }
+                        return closest;
+                    }, { offset: Number.NEGATIVE_INFINITY }).element;
+
+                    const cardsContainer = column.querySelector('.kanban-cards');
+                    if (afterCard) {
+                        cardsContainer.insertBefore(dragging, afterCard);
+                    } else {
+                        cardsContainer.appendChild(dragging);
+                    }
+                }
+            });
+        });
+
+        // Initial render
+        renderKanbanCards();
+    }
+
+    // Function to render Kanban cards based on filters
+    function renderKanbanCards() {
+        const projectFilter = document.getElementById('kanban-project-filter');
+        const dateFilter = document.getElementById('kanban-date-filter');
+        const selectedProject = projectFilter.value;
+        const selectedDate = dateFilter.value;
+
+        // Clear all columns
+        document.querySelectorAll('.kanban-cards').forEach(column => {
+            column.innerHTML = '';
+        });
+
+        // Get all tasks that are either "En proceso" or "Pendiente"
+        const allTasks = [];
+        Object.entries(projectsData).forEach(([projectId, data]) => {
+            data.content.forEach((row, rowIndex) => {
+                const statusIndex = data.headers.findIndex(h => isStatusColumn(h));
+                const dateIndex = data.headers.findIndex(h => isDateColumn(h));
+                const activityIndex = data.headers.findIndex(h => h.trim().toLowerCase() === 'actividad');
+                const commentIndex = data.headers.findIndex(h => isCommentColumn(h));
+                
+                const status = row[statusIndex]?.toLowerCase() || '';
+                const dueDate = row[dateIndex] || '';
+                const activity = row[activityIndex] || 'Untitled Task';
+                const comments = row[commentIndex] || '';
+
+                // Only include tasks that are "En proceso" or "Pendiente"
+                if (status !== 'en proceso' && status !== 'pendiente') return;
+
+                // Get the saved Kanban status for this task, default to "todo"
+                const kanbanStatus = getKanbanStatus(projectId, rowIndex) || 'todo';
+                const kanbanNotes = getKanbanNotes(projectId, rowIndex) || '';
+
+                // Apply filters only for tasks in "todo" status
+                if (kanbanStatus === 'todo') {
+                    // Skip if project filter doesn't match
+                    if (selectedProject !== 'all' && selectedProject !== projectId) return;
+                    // Skip if date filter doesn't match
+                    if (selectedDate && dueDate !== selectedDate) return;
+                }
+
+                allTasks.push({
+                    projectId,
+                    rowIndex,
+                    status,
+                    dueDate,
+                    kanbanStatus,
+                    activity,
+                    comments,
+                    notes: kanbanNotes
+                });
+            });
+        });
+
+        // Create and append cards
+        allTasks.forEach(task => {
+            const card = createKanbanCard(task);
+            const column = document.querySelector(`.kanban-column[data-status="${task.kanbanStatus}"] .kanban-cards`);
+            if (column) {
+                column.appendChild(card);
+            }
+        });
+    }
+
+    // Function to create a Kanban card
+    function createKanbanCard(task) {
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.draggable = true;
+        card.dataset.projectId = task.projectId;
+        card.dataset.rowIndex = task.rowIndex;
+
+        card.innerHTML = `
+            <div class="kanban-card-header">
+                <div class="kanban-card-title">
+                    <input type="checkbox" class="kanban-card-checkbox">
+                    <h4>${task.projectId}</h4>
+                </div>
+                ${task.dueDate ? `<span class="due-date">${task.dueDate}</span>` : ''}
+            </div>
+            <div class="kanban-card-content">
+                <p class="activity-text">${task.activity}</p>
+                <div class="kanban-card-notes">
+                    <textarea placeholder="Add notes...">${task.notes}</textarea>
+                </div>
+            </div>
+        `;
+
+        // Add drag events
+        card.addEventListener('dragstart', () => {
+            card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            const newStatus = card.closest('.kanban-column').dataset.status;
+            updateKanbanStatus(task.projectId, task.rowIndex, newStatus);
+        });
+
+        // Add notes save functionality
+        const textarea = card.querySelector('textarea');
+        textarea.addEventListener('change', () => {
+            updateKanbanNotes(task.projectId, task.rowIndex, textarea.value);
+        });
+
+        // Add checkbox functionality
+        const checkbox = card.querySelector('.kanban-card-checkbox');
+        const isChecked = getKanbanChecked(task.projectId, task.rowIndex);
+        checkbox.checked = isChecked;
+        checkbox.addEventListener('change', () => {
+            updateKanbanChecked(task.projectId, task.rowIndex, checkbox.checked);
+        });
+
+        return card;
+    }
+
+    // Function to save/get Kanban notes
+    function updateKanbanNotes(projectId, rowIndex, notes) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        if (!kanbanState[projectId]) {
+            kanbanState[projectId] = {};
+        }
+        if (!kanbanState[projectId][rowIndex]) {
+            kanbanState[projectId][rowIndex] = {};
+        }
+        kanbanState[projectId][rowIndex].notes = notes;
+        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+    }
+
+    function getKanbanNotes(projectId, rowIndex) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        return kanbanState[projectId]?.[rowIndex]?.notes || '';
+    }
+
+    // Function to save/get checkbox state
+    function updateKanbanChecked(projectId, rowIndex, checked) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        if (!kanbanState[projectId]) {
+            kanbanState[projectId] = {};
+        }
+        if (!kanbanState[projectId][rowIndex]) {
+            kanbanState[projectId][rowIndex] = {};
+        }
+        kanbanState[projectId][rowIndex].checked = checked;
+        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+    }
+
+    function getKanbanChecked(projectId, rowIndex) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        return kanbanState[projectId]?.[rowIndex]?.checked || false;
+    }
+
+    // Update the Kanban status storage to use objects instead of direct status
+    function updateKanbanStatus(projectId, rowIndex, newStatus) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        if (!kanbanState[projectId]) {
+            kanbanState[projectId] = {};
+        }
+        if (!kanbanState[projectId][rowIndex]) {
+            kanbanState[projectId][rowIndex] = {};
+        }
+        kanbanState[projectId][rowIndex].status = newStatus;
+        localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+    }
+
+    function getKanbanStatus(projectId, rowIndex) {
+        const kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+        return kanbanState[projectId]?.[rowIndex]?.status || 'todo';
+    }
+
+    // Function to load Kanban state
+    function loadKanbanState() {
+        if (!localStorage.getItem('kanbanState')) {
+            localStorage.setItem('kanbanState', '{}');
+        }
+    }
 });
