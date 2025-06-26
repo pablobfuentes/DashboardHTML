@@ -1562,10 +1562,33 @@ h2.project-name-editable:focus {
 }
 
 .project-tag {
-    background: #007bff;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f0f2ff;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+    color: #667eea;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.project-tag:hover {
+    transform: translateY(-1px);
+}
+
+.project-tag.selected {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+.project-tag.unselected {
+    background: #f0f2ff;
+    border-color: #667eea;
+    color: #667eea;
 }
 
 .kanban-column[data-status="todo"] h3 {
@@ -1941,22 +1964,24 @@ h2.project-name-editable:focus {
     border-radius: 4px;
     color: #667eea;
     font-size: 13px;
-}
-
-.project-tag .remove-tag {
     cursor: pointer;
-    color: #667eea;
-    font-size: 16px;
-    padding: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
     transition: all 0.2s ease;
 }
 
-.project-tag .remove-tag:hover {
-    background: rgba(102, 126, 234, 0.1);
+.project-tag:hover {
+    transform: translateY(-1px);
+}
+
+.project-tag.selected {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+.project-tag.unselected {
+    background: #f0f2ff;
+    border-color: #667eea;
+    color: #667eea;
 }
 
 .project-selector {
@@ -2007,6 +2032,8 @@ h2.project-name-editable:focus {
 
 .contacts-table .project-tag {
     margin: 2px;
+    cursor: default;
+    pointer-events: none;
 }
 
 /* Pull Contacts Button */

@@ -3156,60 +3156,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function updateProjectSelects() {
-            const projectTabs = document.querySelectorAll('.project-tab');
-            const projectOptions = Array.from(projectTabs).map(tab => {
-                const projectName = tab.querySelector('.tab-name').textContent.trim();
-                return { name: projectName };
+            // Get all unique project names from both project tabs and existing contacts
+            const projectNames = new Set();
+            
+            // Add projects from project tabs
+            document.querySelectorAll('.project-tab').forEach(tab => {
+                const projectName = tab.querySelector('.tab-name')?.textContent.trim();
+                if (projectName) projectNames.add(projectName);
             });
-
-            ['project-select', 'edit-project-select'].forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (!select) return;
-
-                // Keep the first option (placeholder)
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">Seleccionar proyecto...</option>';
-                
-                projectOptions.forEach(project => {
-                    const option = document.createElement('option');
-                    option.value = project.name;
-                    option.textContent = project.name;
-                    select.appendChild(option);
-                });
-
-                // Restore selected value if it still exists
-                if (currentValue && projectOptions.some(p => p.name === currentValue)) {
-                    select.value = currentValue;
+            
+            // Add projects from existing contacts
+            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            contacts.forEach(contact => {
+                if (contact.projects) {
+                    contact.projects.forEach(project => projectNames.add(project));
                 }
             });
-        }
 
-        function handleProjectTagAdd(formId) {
-            const select = document.getElementById(`${formId}-project-select`);
-            const tagsContainer = document.getElementById(`${formId}-project-tags`);
-            
-            if (!select.value) return;
+            // Update both forms with project tags
+            ['contact', 'edit-contact'].forEach(formId => {
+                const tagsContainer = document.getElementById(`${formId}-project-tags`);
+                if (!tagsContainer) return;
 
-            const projectName = select.options[select.selectedIndex].text;
-            const tagElement = document.createElement('span');
-            tagElement.className = 'project-tag';
-            tagElement.innerHTML = `
-                ${projectName}
-                <span class="remove-tag">&times;</span>
-            `;
+                // Clear existing tags
+                tagsContainer.innerHTML = '';
 
-            tagElement.querySelector('.remove-tag').addEventListener('click', () => {
-                tagElement.remove();
+                // Add all project names as tags
+                Array.from(projectNames).sort().forEach(project => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'project-tag unselected';
+                    tagElement.textContent = project;
+                    
+                    // Add click handler for selection
+                    tagElement.addEventListener('click', () => {
+                        if (tagElement.classList.contains('selected')) {
+                            tagElement.classList.remove('selected');
+                            tagElement.classList.add('unselected');
+                        } else {
+                            tagElement.classList.remove('unselected');
+                            tagElement.classList.add('selected');
+                        }
+                    });
+                    
+                    tagsContainer.appendChild(tagElement);
+                });
             });
-
-            tagsContainer.appendChild(tagElement);
-            select.value = '';
         }
 
         function getProjectTagsFromForm(formId) {
             const tagsContainer = document.getElementById(`${formId}-project-tags`);
-            return Array.from(tagsContainer.querySelectorAll('.project-tag'))
-                .map(tag => tag.firstChild.textContent.trim());
+            if (!tagsContainer) return [];
+            return Array.from(tagsContainer.querySelectorAll('.project-tag.selected'))
+                .map(tag => tag.textContent.trim());
         }
 
         function pullContactsFromProjects() {
@@ -3457,14 +3455,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateContact(Object.fromEntries(formData));
             });
         }
-
-        // Add event listeners for project tag buttons
-        document.querySelectorAll('.add-project-tag').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const formId = btn.closest('form').id.replace('-form', '');
-                handleProjectTagAdd(formId);
-            });
-        });
 
         // Add search functionality
         const searchInput = document.getElementById('contact-search');
