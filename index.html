@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="styles.css">
@@ -99,17 +101,120 @@
                     <button class="consulta-tab active" data-view="contactos">Contactos</button>
                 </div>
                 <div class="consulta-content">
-                    <div class="consulta-view active" id="contactos-view">
+                    <div id="contactos-view" class="view-content">
+                        <div class="contacts-header">
+                            <h2>Directorio de Contactos</h2>
+                            <div class="contacts-actions">
+                                <div class="search-container">
+                                    <input type="text" id="contact-search" placeholder="Buscar contactos...">
+                                    <i class="fas fa-search search-icon"></i>
+                                </div>
+                                <button class="add-contact-btn">
+                                    <i class="fas fa-plus"></i> Agregar Contacto
+                                </button>
+                            </div>
+                        </div>
                         <div class="contacts-container">
-                            <div class="contacts-header">
-                                <h2>Directorio de Contactos</h2>
-                                <button class="add-contact-btn">+ Agregar Contacto</button>
+                            <table class="contacts-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Cargo</th>
+                                        <th>Email</th>
+                                        <th>Teléfono</th>
+                                        <th>Empresa</th>
+                                        <th>Proyectos</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Contact rows will be dynamically added here -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Add Contact Modal -->
+                        <div id="contact-modal" class="modal">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3>Agregar Contacto</h3>
+                                    <button class="close-modal">&times;</button>
+                                </div>
+                                <form id="contact-form" class="contact-form">
+                                    <div class="form-group">
+                                        <label for="contact-name">Nombre*</label>
+                                        <input type="text" id="contact-name" name="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="contact-position">Cargo*</label>
+                                        <input type="text" id="contact-position" name="position" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="contact-email">Email*</label>
+                                        <input type="email" id="contact-email" name="email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="contact-phone">Teléfono</label>
+                                        <input type="tel" id="contact-phone" name="phone">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="contact-company">Empresa*</label>
+                                        <input type="text" id="contact-company" name="company" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Proyectos Relacionados</label>
+                                        <div class="project-tags-selector" id="contact-project-tags">
+                                            <!-- Project tags will be dynamically added here -->
+                                        </div>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button type="submit" class="submit-btn">Guardar</button>
+                                        <button type="button" class="cancel-btn">Cancelar</button>
+                                    </div>
+                                </form>
                             </div>
-                            <div class="contacts-search">
-                                <input type="text" placeholder="Buscar contactos..." id="contact-search">
-                            </div>
-                            <div class="contacts-list">
-                                <!-- Contacts will be loaded here -->
+                        </div>
+
+                        <!-- Edit Contact Modal -->
+                        <div id="edit-contact-modal" class="modal">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3>Editar Contacto</h3>
+                                    <button class="close-modal">&times;</button>
+                                </div>
+                                <form id="edit-contact-form" class="contact-form">
+                                    <input type="hidden" id="edit-contact-id" name="id">
+                                    <div class="form-group">
+                                        <label for="edit-contact-name">Nombre*</label>
+                                        <input type="text" id="edit-contact-name" name="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-contact-position">Cargo*</label>
+                                        <input type="text" id="edit-contact-position" name="position" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-contact-email">Email*</label>
+                                        <input type="email" id="edit-contact-email" name="email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-contact-phone">Teléfono</label>
+                                        <input type="tel" id="edit-contact-phone" name="phone">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-contact-company">Empresa*</label>
+                                        <input type="text" id="edit-contact-company" name="company" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Proyectos Relacionados</label>
+                                        <div class="project-tags-selector" id="edit-contact-project-tags">
+                                            <!-- Project tags will be dynamically added here -->
+                                        </div>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button type="submit" class="submit-btn">Guardar Cambios</button>
+                                        <button type="button" class="cancel-btn">Cancelar</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -156,81 +261,6 @@
         </div>
     </div>
 
-    <!-- Contact Form Modal -->
-    <div id="contact-form-modal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Agregar Contacto</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <form id="contact-form" class="contact-form">
-                <div class="form-group">
-                    <label for="contact-name">Nombre*</label>
-                    <input type="text" id="contact-name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="contact-position">Cargo*</label>
-                    <input type="text" id="contact-position" name="position" required>
-                </div>
-                <div class="form-group">
-                    <label for="contact-email">Email*</label>
-                    <input type="email" id="contact-email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="contact-phone">Teléfono</label>
-                    <input type="tel" id="contact-phone" name="phone">
-                </div>
-                <div class="form-group">
-                    <label for="contact-company">Empresa*</label>
-                    <input type="text" id="contact-company" name="company" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="submit-btn">Guardar</button>
-                    <button type="button" class="cancel-btn">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Edit Contact Modal -->
-    <div id="edit-contact-modal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Editar Contacto</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <form id="edit-contact-form" class="contact-form">
-                <input type="hidden" id="edit-contact-id" name="id">
-                <div class="form-group">
-                    <label for="edit-contact-name">Nombre*</label>
-                    <input type="text" id="edit-contact-name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-contact-position">Cargo*</label>
-                    <input type="text" id="edit-contact-position" name="position" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-contact-email">Email*</label>
-                    <input type="email" id="edit-contact-email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-contact-phone">Teléfono</label>
-                    <input type="tel" id="edit-contact-phone" name="phone">
-                </div>
-                <div class="form-group">
-                    <label for="edit-contact-company">Empresa*</label>
-                    <input type="text" id="edit-contact-company" name="company" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="submit-btn">Guardar Cambios</button>
-                    <button type="button" class="cancel-btn">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
     <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
     <script src="script.js"></script>
 </body>

@@ -2624,6 +2624,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        // Initialize contacts section
+        const contactsSection = document.createElement('div');
+        contactsSection.className = 'project-contacts';
+        tabPane.appendChild(contactsSection);
+
+        initializeProjectContacts(tabPane);
+        
         return { tabButton, tabPane };
     }
 
@@ -3083,210 +3090,402 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Contacts functionality
     function initializeContacts() {
-        const contactsView = document.getElementById('contactos-view');
-        if (!contactsView) return;
+        let contacts = [];
+        let projectContacts = new Map();
 
-        const searchInput = document.getElementById('contact-search');
-        const addContactBtn = document.querySelector('.add-contact-btn');
-        const contactsList = document.querySelector('.contacts-list');
-        const contactFormModal = document.getElementById('contact-form-modal');
-        const contactForm = document.getElementById('contact-form');
-        const editContactModal = document.getElementById('edit-contact-modal');
-        const editContactForm = document.getElementById('edit-contact-form');
-
-        // Load contacts from localStorage
         function loadContacts() {
-            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            renderContacts(contacts);
+            contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            renderContacts();
+            return contacts;
         }
 
-        // Render contacts in the table
-        function renderContacts(contacts) {
-            // Create table structure
-            contactsList.innerHTML = `
-                <table class="contacts-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Cargo</th>
-                            <th>Email</th>
-                            <th>Teléfono</th>
-                            <th>Empresa</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${contacts.length === 0 ? `
-                            <tr>
-                                <td colspan="6">
-                                    <div class="contacts-list-empty">
-                                        <h3>No hay contactos</h3>
-                                        <p>Haga clic en "Agregar Contacto" para comenzar</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        ` : contacts.map(contact => `
-                            <tr data-id="${contact.id}">
-                                <td>${contact.name}</td>
-                                <td>${contact.position}</td>
-                                <td>${contact.email}</td>
-                                <td>${contact.phone || 'N/A'}</td>
-                                <td>${contact.company}</td>
-                                <td>
-                                    <div class="contact-actions">
-                                        <button class="edit-contact" title="Editar">✏️</button>
-                                        <button class="delete-contact" title="Eliminar">🗑️</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-
-            // Add event listeners to the new contact actions
-            if (contacts.length > 0) {
-                addContactCardListeners();
-            }
-        }
-
-        // Show contact form modal
-        function showContactForm() {
-            contactFormModal.classList.add('active');
-            contactForm.reset(); // Clear form
-        }
-
-        // Hide contact form modal
-        function hideContactForm() {
-            contactFormModal.classList.remove('active');
-            contactForm.reset();
-        }
-
-        // Show edit contact form modal
-        function showEditContactForm(contactId) {
-            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            const contact = contacts.find(c => c.id === contactId);
-            
-            if (contact) {
-                // Fill form with contact data
-                document.getElementById('edit-contact-id').value = contact.id;
-                document.getElementById('edit-contact-name').value = contact.name;
-                document.getElementById('edit-contact-position').value = contact.position;
-                document.getElementById('edit-contact-email').value = contact.email;
-                document.getElementById('edit-contact-phone').value = contact.phone || '';
-                document.getElementById('edit-contact-company').value = contact.company;
-                
-                editContactModal.classList.add('active');
-            }
-        }
-
-        // Hide edit contact form modal
-        function hideEditContactForm() {
-            editContactModal.classList.remove('active');
-            editContactForm.reset();
-        }
-
-        // Add new contact
-        function addContact(contactData) {
-            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            const newContact = {
-                id: Date.now().toString(), // Simple unique ID
-                ...contactData
-            };
-            contacts.push(newContact);
+        function saveContacts() {
             localStorage.setItem('contacts', JSON.stringify(contacts));
-            loadContacts();
         }
 
-        // Update contact
-        function updateContact(contactData) {
-            let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            const index = contacts.findIndex(c => c.id === contactData.id);
-            
-            if (index !== -1) {
-                contacts[index] = {
-                    ...contacts[index],
-                    ...contactData
-                };
-                localStorage.setItem('contacts', JSON.stringify(contacts));
-                loadContacts();
+        function renderContacts(filteredContacts = null) {
+            const contactsToRender = filteredContacts || contacts;
+            const tableBody = document.querySelector('#contactos-view .contacts-table tbody');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = '';
+
+            if (contactsToRender.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = `
+                    <td colspan="7" class="empty-state">
+                        No hay contactos disponibles
+                    </td>
+                `;
+                tableBody.appendChild(emptyRow);
+                return;
             }
+
+            contactsToRender.forEach(contact => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${contact.name}</td>
+                    <td>${contact.position}</td>
+                    <td>${contact.email}</td>
+                    <td>${contact.phone || '-'}</td>
+                    <td>${contact.company}</td>
+                    <td class="project-tags-cell">
+                        ${renderProjectTags(contact.projects || [])}
+                    </td>
+                    <td class="actions">
+                        <button class="edit-btn" data-id="${contact.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-btn" data-id="${contact.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            addContactCardListeners();
         }
 
-        // Delete contact
-        function deleteContact(contactId) {
-            let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            contacts = contacts.filter(contact => contact.id !== contactId);
-            localStorage.setItem('contacts', JSON.stringify(contacts));
-            loadContacts();
+        function renderProjectTags(projects) {
+            return projects.map(project => `
+                <span class="project-tag">
+                    ${project}
+                </span>
+            `).join('');
         }
 
-        // Add event listeners to contact actions
-        function addContactCardListeners() {
-            document.querySelectorAll('.edit-contact').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const row = e.target.closest('tr');
-                    const contactId = row.dataset.id;
-                    showEditContactForm(contactId);
-                });
+        function updateProjectSelects() {
+            const projectTabs = document.querySelectorAll('.project-tab');
+            const projectOptions = Array.from(projectTabs).map(tab => {
+                const projectName = tab.querySelector('.tab-name').textContent.trim();
+                return { name: projectName };
             });
 
-            document.querySelectorAll('.delete-contact').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const row = e.target.closest('tr');
-                    const contactId = row.dataset.id;
-                    if (confirm('¿Está seguro de que desea eliminar este contacto?')) {
-                        deleteContact(contactId);
+            ['project-select', 'edit-project-select'].forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+
+                // Keep the first option (placeholder)
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Seleccionar proyecto...</option>';
+                
+                projectOptions.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.name;
+                    option.textContent = project.name;
+                    select.appendChild(option);
+                });
+
+                // Restore selected value if it still exists
+                if (currentValue && projectOptions.some(p => p.name === currentValue)) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        function handleProjectTagAdd(formId) {
+            const select = document.getElementById(`${formId}-project-select`);
+            const tagsContainer = document.getElementById(`${formId}-project-tags`);
+            
+            if (!select.value) return;
+
+            const projectName = select.options[select.selectedIndex].text;
+            const tagElement = document.createElement('span');
+            tagElement.className = 'project-tag';
+            tagElement.innerHTML = `
+                ${projectName}
+                <span class="remove-tag">&times;</span>
+            `;
+
+            tagElement.querySelector('.remove-tag').addEventListener('click', () => {
+                tagElement.remove();
+            });
+
+            tagsContainer.appendChild(tagElement);
+            select.value = '';
+        }
+
+        function getProjectTagsFromForm(formId) {
+            const tagsContainer = document.getElementById(`${formId}-project-tags`);
+            return Array.from(tagsContainer.querySelectorAll('.project-tag'))
+                .map(tag => tag.textContent.trim());
+        }
+
+        function pullContactsFromProjects() {
+            const projectTabs = document.querySelectorAll('.project-tab');
+            const projectContacts = new Map();
+
+            projectTabs.forEach(tab => {
+                const projectId = tab.getAttribute('data-project-id');
+                const projectName = tab.textContent.trim();
+                
+                // Find contact boxes in this project's tab content
+                const tabContent = document.querySelector(`.project-content[data-project-id="${projectId}"]`);
+                if (!tabContent) return;
+
+                const contactBoxes = tabContent.querySelectorAll('.contact-box');
+                contactBoxes.forEach(box => {
+                    const contactInfo = {
+                        name: box.querySelector('.contact-name').value || '',
+                        position: box.querySelector('.contact-position').value || '',
+                        email: box.querySelector('.contact-email').value || '',
+                        phone: box.querySelector('.contact-phone').value || '',
+                        company: box.querySelector('.contact-company').value || '',
+                        projects: [projectName]
+                    };
+
+                    // Only add contacts that have at least a name or email
+                    if (contactInfo.name || contactInfo.email) {
+                        const key = contactInfo.email || contactInfo.name; // Use email or name as key
+                        const existingContact = projectContacts.get(key);
+                        if (existingContact) {
+                            if (!existingContact.projects.includes(projectName)) {
+                                existingContact.projects.push(projectName);
+                            }
+                        } else {
+                            projectContacts.set(key, contactInfo);
+                        }
                     }
                 });
             });
+
+            // Get existing contacts
+            let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+
+            // Merge project contacts with existing contacts
+            projectContacts.forEach((projectContact, key) => {
+                const existingContact = contacts.find(c => 
+                    (c.email && c.email === projectContact.email) || 
+                    (!c.email && c.name === projectContact.name)
+                );
+
+                if (!existingContact) {
+                    const newContact = {
+                        ...projectContact,
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                    };
+                    contacts.push(newContact);
+                } else {
+                    // Update existing contact's projects
+                    existingContact.projects = Array.from(new Set([
+                        ...(existingContact.projects || []),
+                        ...projectContact.projects
+                    ]));
+                }
+            });
+
+            // Save and refresh
+            localStorage.setItem('contacts', JSON.stringify(contacts));
+            renderContacts();
         }
 
-        // Event Listeners
-        addContactBtn.addEventListener('click', showContactForm);
+        function showContactForm() {
+            const modal = document.getElementById('contact-modal');
+            const form = document.getElementById('contact-form');
+            if (!modal || !form) return;
 
-        // Add contact modal event listeners
-        contactFormModal.querySelector('.modal-overlay').addEventListener('click', hideContactForm);
-        contactFormModal.querySelector('.modal-close').addEventListener('click', hideContactForm);
-        contactFormModal.querySelector('.cancel-btn').addEventListener('click', hideContactForm);
+            form.reset();
+            document.getElementById('contact-project-tags').innerHTML = '';
+            updateProjectSelects();
+            modal.style.display = 'flex';
+        }
 
-        // Edit contact modal event listeners
-        editContactModal.querySelector('.modal-overlay').addEventListener('click', hideEditContactForm);
-        editContactModal.querySelector('.modal-close').addEventListener('click', hideEditContactForm);
-        editContactModal.querySelector('.cancel-btn').addEventListener('click', hideEditContactForm);
+        function hideContactForm() {
+            const modal = document.getElementById('contact-modal');
+            if (modal) modal.style.display = 'none';
+        }
 
-        // Handle add form submission
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(contactForm);
-            const contactData = Object.fromEntries(formData.entries());
-            addContact(contactData);
-            hideContactForm();
-        });
+        function showEditContactForm(contactId) {
+            const contact = contacts.find(c => c.id === contactId);
+            if (!contact) return;
 
-        // Handle edit form submission
-        editContactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(editContactForm);
-            const contactData = Object.fromEntries(formData.entries());
-            updateContact(contactData);
-            hideEditContactForm();
-        });
+            const modal = document.getElementById('edit-contact-modal');
+            const form = document.getElementById('edit-contact-form');
+            if (!modal || !form) return;
 
-        // Search functionality
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
+            form.elements['id'].value = contact.id;
+            form.elements['name'].value = contact.name;
+            form.elements['position'].value = contact.position;
+            form.elements['email'].value = contact.email;
+            form.elements['phone'].value = contact.phone || '';
+            form.elements['company'].value = contact.company;
+
+            const tagsContainer = document.getElementById('edit-contact-project-tags');
+            tagsContainer.innerHTML = '';
+            updateProjectSelects();
+
+            if (contact.projects) {
+                contact.projects.forEach(project => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'project-tag';
+                    tagElement.innerHTML = `
+                        ${project}
+                        <span class="remove-tag">&times;</span>
+                    `;
+
+                    tagElement.querySelector('.remove-tag').addEventListener('click', () => {
+                        tagElement.remove();
+                    });
+
+                    tagsContainer.appendChild(tagElement);
+                });
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function hideEditContactForm() {
+            const modal = document.getElementById('edit-contact-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function addContact(contactData) {
             const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            const filteredContacts = contacts.filter(contact => 
-                contact.name.toLowerCase().includes(searchTerm) ||
-                contact.company.toLowerCase().includes(searchTerm) ||
-                contact.position.toLowerCase().includes(searchTerm)
-            );
-            renderContacts(filteredContacts);
+            const newContact = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                ...contactData,
+                projects: getProjectTagsFromForm('contact')
+            };
+            contacts.push(newContact);
+            localStorage.setItem('contacts', JSON.stringify(contacts));
+            renderContacts();
+            hideContactForm();
+        }
+
+        function updateContact(contactData) {
+            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            const index = contacts.findIndex(c => c.id === contactData.id);
+            if (index === -1) return;
+
+            contacts[index] = {
+                ...contacts[index],
+                ...contactData,
+                projects: getProjectTagsFromForm('edit-contact')
+            };
+
+            localStorage.setItem('contacts', JSON.stringify(contacts));
+            renderContacts();
+            hideEditContactForm();
+        }
+
+        function deleteContact(contactId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este contacto?')) return;
+            contacts = contacts.filter(c => c.id !== contactId);
+            saveContacts();
+            renderContacts();
+        }
+
+        function addContactCardListeners() {
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', () => showEditContactForm(btn.dataset.id));
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', () => deleteContact(btn.dataset.id));
+            });
+        }
+
+        function setupModalHandlers() {
+            // Add Contact Modal
+            const addModal = document.getElementById('contact-modal');
+            const addBtn = document.querySelector('.add-contact-btn');
+            const addCloseBtn = addModal?.querySelector('.close-modal');
+            const addCancelBtn = addModal?.querySelector('.cancel-btn');
+
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    showContactForm();
+                });
+            }
+
+            if (addCloseBtn) {
+                addCloseBtn.addEventListener('click', hideContactForm);
+            }
+
+            if (addCancelBtn) {
+                addCancelBtn.addEventListener('click', hideContactForm);
+            }
+
+            // Edit Contact Modal
+            const editModal = document.getElementById('edit-contact-modal');
+            const editCloseBtn = editModal?.querySelector('.close-modal');
+            const editCancelBtn = editModal?.querySelector('.cancel-btn');
+
+            if (editCloseBtn) {
+                editCloseBtn.addEventListener('click', hideEditContactForm);
+            }
+
+            if (editCancelBtn) {
+                editCancelBtn.addEventListener('click', hideEditContactForm);
+            }
+
+            // Close modals when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === addModal) hideContactForm();
+                if (e.target === editModal) hideEditContactForm();
+            });
+        }
+
+        // Initialize immediately instead of waiting for DOMContentLoaded
+        loadContacts();
+        updateProjectSelects();
+        setupModalHandlers();
+
+        // Add event listeners for forms
+        const contactForm = document.getElementById('contact-form');
+        const editContactForm = document.getElementById('edit-contact-form');
+
+        if (contactForm) {
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                addContact(Object.fromEntries(formData));
+            });
+        }
+
+        if (editContactForm) {
+            editContactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                updateContact(Object.fromEntries(formData));
+            });
+        }
+
+        // Add event listeners for project tag buttons
+        document.querySelectorAll('.add-project-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const formId = btn.closest('form').id.replace('-form', '');
+                handleProjectTagAdd(formId);
+            });
         });
 
-        // Initial load
-        loadContacts();
+        // Add search functionality
+        const searchInput = document.getElementById('contact-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredContacts = contacts.filter(contact => 
+                    contact.name.toLowerCase().includes(searchTerm) ||
+                    contact.company.toLowerCase().includes(searchTerm) ||
+                    contact.position.toLowerCase().includes(searchTerm) ||
+                    (contact.projects || []).some(project => 
+                        project.toLowerCase().includes(searchTerm)
+                    )
+                );
+                renderContacts(filteredContacts);
+            });
+        }
+
+        // Add pull contacts button (only if it doesn't exist)
+        const contactsHeader = document.querySelector('#contactos-view .contacts-header');
+        if (contactsHeader && !contactsHeader.querySelector('.pull-contacts-btn')) {
+            const pullContactsBtn = document.createElement('button');
+            pullContactsBtn.className = 'pull-contacts-btn';
+            pullContactsBtn.innerHTML = '<i class="fas fa-sync"></i> Sincronizar Contactos';
+            contactsHeader.appendChild(pullContactsBtn);
+
+            pullContactsBtn.addEventListener('click', pullContactsFromProjects);
+        }
     }
 
     // Add contacts initialization to the section change handler
@@ -3298,4 +3497,170 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize navigation
+        initializeNavigation();
+        
+        // Initialize projects
+        initializeProjects();
+        
+        // Initialize contacts
+        initializeContacts();
+        
+        // Initialize Kanban
+        initializeKanban();
+        
+        // Load initial state
+        loadAndRenderState();
+    });
+
+    function initializeNavigation() {
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+        const contentSections = document.querySelectorAll('.content-section');
+        const consultaViews = document.querySelectorAll('.consulta-view');
+
+        function showSection(sectionId) {
+            contentSections.forEach(section => {
+                section.style.display = section.id === sectionId ? 'block' : 'none';
+            });
+
+            // If we're showing the consulta section, show the first view by default
+            if (sectionId === 'consulta') {
+                showConsultaView('contactos-view');
+            }
+        }
+
+        function showConsultaView(viewId) {
+            consultaViews.forEach(view => {
+                view.classList.toggle('active', view.id === viewId);
+            });
+
+            // If showing contacts view, refresh the contacts list
+            if (viewId === 'contactos-view') {
+                const contactsTable = document.querySelector('.contacts-table tbody');
+                if (contactsTable) {
+                    const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+                    const tableBody = document.querySelector('.contacts-table tbody');
+                    if (tableBody) {
+                        tableBody.innerHTML = '';
+                        if (contacts.length === 0) {
+                            tableBody.innerHTML = `
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        No hay contactos disponibles
+                                    </td>
+                                </tr>
+                            `;
+                        } else {
+                            contacts.forEach(contact => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${contact.name}</td>
+                                    <td>${contact.position}</td>
+                                    <td>${contact.email}</td>
+                                    <td>${contact.phone || '-'}</td>
+                                    <td>${contact.company}</td>
+                                    <td class="project-tags-cell">
+                                        ${(contact.projects || []).map(project => `
+                                            <span class="project-tag">
+                                                ${project}
+                                            </span>
+                                        `).join('')}
+                                    </td>
+                                    <td class="actions">
+                                        <button class="edit-btn" data-id="${contact.id}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="delete-btn" data-id="${contact.id}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                `;
+                                tableBody.appendChild(row);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                showSection(targetId);
+
+                sidebarLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // Show default section
+        showSection('dashboard');
+    }
+
+    function createContactBox() {
+        const contactBox = document.createElement('div');
+        contactBox.className = 'contact-box';
+        contactBox.innerHTML = `
+            <div class="contact-box-header">
+                <div class="contact-fields">
+                    <input type="text" class="contact-name" placeholder="Nombre">
+                    <input type="text" class="contact-position" placeholder="Cargo">
+                    <input type="email" class="contact-email" placeholder="Email">
+                    <input type="tel" class="contact-phone" placeholder="Teléfono">
+                    <input type="text" class="contact-company" placeholder="Empresa">
+                </div>
+                <button class="delete-contact" title="Eliminar contacto">×</button>
+            </div>
+        `;
+
+        // Add delete functionality
+        const deleteBtn = contactBox.querySelector('.delete-contact');
+        deleteBtn.addEventListener('click', () => {
+            if (confirm('¿Está seguro de que desea eliminar este contacto?')) {
+                contactBox.remove();
+            }
+        });
+
+        return contactBox;
+    }
+
+    function initializeProjectContacts(projectContent) {
+        const contactsSection = projectContent.querySelector('.project-contacts');
+        if (!contactsSection) return;
+
+        // Add "Add Contact" button if it doesn't exist
+        if (!contactsSection.querySelector('.add-contact')) {
+            const addContactBtn = document.createElement('button');
+            addContactBtn.className = 'add-contact';
+            addContactBtn.innerHTML = '<i class="fas fa-plus"></i> Agregar Contacto';
+            contactsSection.insertBefore(addContactBtn, contactsSection.firstChild);
+
+            addContactBtn.addEventListener('click', () => {
+                const contactBox = createContactBox();
+                contactsSection.appendChild(contactBox);
+            });
+        }
+    }
+
+    function initializeProjects() {
+        // ... existing code ...
+
+        function createProjectTab(projectName, projectId) {
+            // ... existing code ...
+
+            // Initialize contacts section
+            const contactsSection = document.createElement('div');
+            contactsSection.className = 'project-contacts';
+            projectContent.appendChild(contactsSection);
+
+            initializeProjectContacts(projectContent);
+
+            // ... rest of the existing code ...
+        }
+
+        // ... rest of the existing code ...
+    }
 });
