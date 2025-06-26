@@ -3147,11 +3147,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function renderProjectTags(projects) {
-            return projects.map(project => `
-                <span class="project-tag">
-                    ${project}
-                </span>
-            `).join('');
+            return projects.map(project => {
+                const tagSpan = document.createElement('span');
+                tagSpan.className = 'project-tag';
+                
+                // Add project name as text node first
+                tagSpan.appendChild(document.createTextNode(project));
+                
+                // Add remove button as separate element
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-tag';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', () => {
+                    tagSpan.remove();
+                });
+                
+                tagSpan.appendChild(removeBtn);
+                return tagSpan.outerHTML;
+            }).join('');
         }
 
         function updateProjectSelects() {
@@ -3208,7 +3221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function getProjectTagsFromForm(formId) {
             const tagsContainer = document.getElementById(`${formId}-project-tags`);
             return Array.from(tagsContainer.querySelectorAll('.project-tag'))
-                .map(tag => tag.textContent.trim());
+                .map(tag => tag.firstChild.textContent.trim());
         }
 
         function pullContactsFromProjects() {
@@ -3348,7 +3361,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             contacts.push(newContact);
             localStorage.setItem('contacts', JSON.stringify(contacts));
-            renderContacts();
+            
+            // Refresh all UI elements
+            loadContacts(); // This will trigger a full refresh of contacts
+            updateProjectSelects();
             hideContactForm();
         }
 
@@ -3364,7 +3380,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             localStorage.setItem('contacts', JSON.stringify(contacts));
-            renderContacts();
+            
+            // Refresh all UI elements
+            loadContacts(); // This will trigger a full refresh of contacts
+            updateProjectSelects();
             hideEditContactForm();
         }
 
