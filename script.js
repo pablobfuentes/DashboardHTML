@@ -3080,4 +3080,222 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return card;
     }
+
+    // Contacts functionality
+    function initializeContacts() {
+        const contactsView = document.getElementById('contactos-view');
+        if (!contactsView) return;
+
+        const searchInput = document.getElementById('contact-search');
+        const addContactBtn = document.querySelector('.add-contact-btn');
+        const contactsList = document.querySelector('.contacts-list');
+        const contactFormModal = document.getElementById('contact-form-modal');
+        const contactForm = document.getElementById('contact-form');
+        const editContactModal = document.getElementById('edit-contact-modal');
+        const editContactForm = document.getElementById('edit-contact-form');
+
+        // Load contacts from localStorage
+        function loadContacts() {
+            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            renderContacts(contacts);
+        }
+
+        // Render contacts in the table
+        function renderContacts(contacts) {
+            // Create table structure
+            contactsList.innerHTML = `
+                <table class="contacts-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Cargo</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Empresa</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${contacts.length === 0 ? `
+                            <tr>
+                                <td colspan="6">
+                                    <div class="contacts-list-empty">
+                                        <h3>No hay contactos</h3>
+                                        <p>Haga clic en "Agregar Contacto" para comenzar</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        ` : contacts.map(contact => `
+                            <tr data-id="${contact.id}">
+                                <td>${contact.name}</td>
+                                <td>${contact.position}</td>
+                                <td>${contact.email}</td>
+                                <td>${contact.phone || 'N/A'}</td>
+                                <td>${contact.company}</td>
+                                <td>
+                                    <div class="contact-actions">
+                                        <button class="edit-contact" title="Editar">✏️</button>
+                                        <button class="delete-contact" title="Eliminar">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            // Add event listeners to the new contact actions
+            if (contacts.length > 0) {
+                addContactCardListeners();
+            }
+        }
+
+        // Show contact form modal
+        function showContactForm() {
+            contactFormModal.classList.add('active');
+            contactForm.reset(); // Clear form
+        }
+
+        // Hide contact form modal
+        function hideContactForm() {
+            contactFormModal.classList.remove('active');
+            contactForm.reset();
+        }
+
+        // Show edit contact form modal
+        function showEditContactForm(contactId) {
+            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            const contact = contacts.find(c => c.id === contactId);
+            
+            if (contact) {
+                // Fill form with contact data
+                document.getElementById('edit-contact-id').value = contact.id;
+                document.getElementById('edit-contact-name').value = contact.name;
+                document.getElementById('edit-contact-position').value = contact.position;
+                document.getElementById('edit-contact-email').value = contact.email;
+                document.getElementById('edit-contact-phone').value = contact.phone || '';
+                document.getElementById('edit-contact-company').value = contact.company;
+                
+                editContactModal.classList.add('active');
+            }
+        }
+
+        // Hide edit contact form modal
+        function hideEditContactForm() {
+            editContactModal.classList.remove('active');
+            editContactForm.reset();
+        }
+
+        // Add new contact
+        function addContact(contactData) {
+            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            const newContact = {
+                id: Date.now().toString(), // Simple unique ID
+                ...contactData
+            };
+            contacts.push(newContact);
+            localStorage.setItem('contacts', JSON.stringify(contacts));
+            loadContacts();
+        }
+
+        // Update contact
+        function updateContact(contactData) {
+            let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            const index = contacts.findIndex(c => c.id === contactData.id);
+            
+            if (index !== -1) {
+                contacts[index] = {
+                    ...contacts[index],
+                    ...contactData
+                };
+                localStorage.setItem('contacts', JSON.stringify(contacts));
+                loadContacts();
+            }
+        }
+
+        // Delete contact
+        function deleteContact(contactId) {
+            let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            contacts = contacts.filter(contact => contact.id !== contactId);
+            localStorage.setItem('contacts', JSON.stringify(contacts));
+            loadContacts();
+        }
+
+        // Add event listeners to contact actions
+        function addContactCardListeners() {
+            document.querySelectorAll('.edit-contact').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    const contactId = row.dataset.id;
+                    showEditContactForm(contactId);
+                });
+            });
+
+            document.querySelectorAll('.delete-contact').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    const contactId = row.dataset.id;
+                    if (confirm('¿Está seguro de que desea eliminar este contacto?')) {
+                        deleteContact(contactId);
+                    }
+                });
+            });
+        }
+
+        // Event Listeners
+        addContactBtn.addEventListener('click', showContactForm);
+
+        // Add contact modal event listeners
+        contactFormModal.querySelector('.modal-overlay').addEventListener('click', hideContactForm);
+        contactFormModal.querySelector('.modal-close').addEventListener('click', hideContactForm);
+        contactFormModal.querySelector('.cancel-btn').addEventListener('click', hideContactForm);
+
+        // Edit contact modal event listeners
+        editContactModal.querySelector('.modal-overlay').addEventListener('click', hideEditContactForm);
+        editContactModal.querySelector('.modal-close').addEventListener('click', hideEditContactForm);
+        editContactModal.querySelector('.cancel-btn').addEventListener('click', hideEditContactForm);
+
+        // Handle add form submission
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(contactForm);
+            const contactData = Object.fromEntries(formData.entries());
+            addContact(contactData);
+            hideContactForm();
+        });
+
+        // Handle edit form submission
+        editContactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(editContactForm);
+            const contactData = Object.fromEntries(formData.entries());
+            updateContact(contactData);
+            hideEditContactForm();
+        });
+
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+            const filteredContacts = contacts.filter(contact => 
+                contact.name.toLowerCase().includes(searchTerm) ||
+                contact.company.toLowerCase().includes(searchTerm) ||
+                contact.position.toLowerCase().includes(searchTerm)
+            );
+            renderContacts(filteredContacts);
+        });
+
+        // Initial load
+        loadContacts();
+    }
+
+    // Add contacts initialization to the section change handler
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const section = item.dataset.section;
+            if (section === 'consulta') {
+                initializeContacts();
+            }
+        });
+    });
 });
