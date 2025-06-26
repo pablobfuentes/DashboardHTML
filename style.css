@@ -864,34 +864,85 @@ body {
     box-sizing: border-box;
 }
 
+/* Update contacts header layout */
 .contacts-header {
-    margin-bottom: 20px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 24px;
+    margin-bottom: 30px;
     width: 100%;
 }
 
-.contacts-search {
-    margin-bottom: 20px;
-    width: 100%;
-    box-sizing: border-box;
+.contacts-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.contacts-search input {
+.search-container {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+    position: relative;
+}
+
+.search-container input {
     width: 100%;
-    padding: 12px;
+    padding: 10px 12px 10px 36px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
     font-size: 14px;
-    transition: all 0.3s ease;
-    box-sizing: border-box;
+    transition: all 0.2s ease;
 }
 
-.contacts-search input:focus {
+.search-container input:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-container .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 14px;
+}
+
+.contacts-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.add-contact-btn, .pull-contacts-btn {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.add-contact-btn i, .pull-contacts-btn i {
+    font-size: 16px;
+}
+
+.add-contact-btn:hover, .pull-contacts-btn:hover {
+    background: #5a6fd6;
+    transform: translateY(-1px);
 }
 
 .dashboard-collapsible {
@@ -1978,66 +2029,6 @@ h2.project-name-editable:focus {
 }
 
 .pull-contacts-btn:hover {
-    background: #5a6fd6;
-}
-
-/* Update contacts header layout */
-.contacts-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.contacts-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.search-container {
-    position: relative;
-    min-width: 250px;
-}
-
-.search-container input {
-    width: 100%;
-    padding: 8px 12px 8px 36px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-.search-container .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #666;
-    font-size: 14px;
-}
-
-.add-contact-btn {
-    padding: 8px 16px;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.add-contact-btn i {
-    font-size: 16px;
-}
-
-.add-contact-btn:hover {
     background: #5a6fd6;
 }
 

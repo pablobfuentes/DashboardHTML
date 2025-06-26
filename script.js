@@ -3150,19 +3150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return projects.map(project => {
                 const tagSpan = document.createElement('span');
                 tagSpan.className = 'project-tag';
-                
-                // Add project name as text node first
-                tagSpan.appendChild(document.createTextNode(project));
-                
-                // Add remove button as separate element
-                const removeBtn = document.createElement('span');
-                removeBtn.className = 'remove-tag';
-                removeBtn.innerHTML = '&times;';
-                removeBtn.addEventListener('click', () => {
-                    tagSpan.remove();
-                });
-                
-                tagSpan.appendChild(removeBtn);
+                tagSpan.textContent = project;
                 return tagSpan.outerHTML;
             }).join('');
         }
