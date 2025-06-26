@@ -3096,11 +3096,12 @@ document.addEventListener('DOMContentLoaded', () => {
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
             renderContacts();
-            return contacts;
+            updateProjectSelects(); // Add this line
         }
 
         function saveContacts() {
             localStorage.setItem('contacts', JSON.stringify(contacts));
+            updateProjectSelects(); // Add this line
         }
 
         function renderContacts(filteredContacts = null) {
@@ -3147,7 +3148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function renderProjectTags(projects) {
-            return projects.map(project => {
+            return (projects || []).map(project => {
                 const tagSpan = document.createElement('span');
                 tagSpan.className = 'project-tag';
                 tagSpan.textContent = project;
@@ -3156,26 +3157,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function updateProjectSelects() {
-            // Get all unique project names from both project tabs and existing contacts
+            // Get all unique project names from project tabs
             const projectNames = new Set();
             
             // Add projects from project tabs
-            document.querySelectorAll('.project-tab').forEach(tab => {
-                const projectName = tab.querySelector('.tab-name')?.textContent.trim();
-                if (projectName) projectNames.add(projectName);
+            console.log('Looking for project tabs...');
+            document.querySelectorAll('.tab-button').forEach(tab => {
+                const projectName = tab.querySelector('.project-name-editable')?.textContent.trim();
+                console.log('Found project:', projectName);
+                if (projectName && projectName !== 'Main Template') projectNames.add(projectName);
             });
-            
-            // Add projects from existing contacts
-            const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-            contacts.forEach(contact => {
-                if (contact.projects) {
-                    contact.projects.forEach(project => projectNames.add(project));
-                }
-            });
+
+            console.log('All project names:', Array.from(projectNames));
 
             // Update both forms with project tags
             ['contact', 'edit-contact'].forEach(formId => {
                 const tagsContainer = document.getElementById(`${formId}-project-tags`);
+                console.log(`Looking for ${formId}-project-tags:`, tagsContainer);
                 if (!tagsContainer) return;
 
                 // Clear existing tags
@@ -3183,9 +3181,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Add all project names as tags
                 Array.from(projectNames).sort().forEach(project => {
+                    console.log('Adding project tag:', project);
                     const tagElement = document.createElement('span');
                     tagElement.className = 'project-tag unselected';
                     tagElement.textContent = project;
+                    tagElement.setAttribute('data-project', project);
                     
                     // Add click handler for selection
                     tagElement.addEventListener('click', () => {
@@ -3309,24 +3309,18 @@ document.addEventListener('DOMContentLoaded', () => {
             form.elements['phone'].value = contact.phone || '';
             form.elements['company'].value = contact.company;
 
-            const tagsContainer = document.getElementById('edit-contact-project-tags');
-            tagsContainer.innerHTML = '';
+            // Update project tags
             updateProjectSelects();
-
+            
+            // Mark the contact's current projects as selected
             if (contact.projects) {
+                const tagsContainer = document.getElementById('edit-contact-project-tags');
                 contact.projects.forEach(project => {
-                    const tagElement = document.createElement('span');
-                    tagElement.className = 'project-tag';
-                    tagElement.innerHTML = `
-                        ${project}
-                        <span class="remove-tag">&times;</span>
-                    `;
-
-                    tagElement.querySelector('.remove-tag').addEventListener('click', () => {
-                        tagElement.remove();
-                    });
-
-                    tagsContainer.appendChild(tagElement);
+                    const tagElement = tagsContainer.querySelector(`.project-tag[data-project="${project}"]`);
+                    if (tagElement) {
+                        tagElement.classList.remove('unselected');
+                        tagElement.classList.add('selected');
+                    }
                 });
             }
 

@@ -2159,7 +2159,7 @@ h2.project-name-editable:focus {
     min-height: 50px;
 }
 
-.project-tag-item {
+.project-tag {
     display: inline-flex;
     align-items: center;
     padding: 6px 12px;
@@ -2170,26 +2170,26 @@ h2.project-name-editable:focus {
     user-select: none;
 }
 
-.project-tag-item.unselected {
-    background: #f3f4f6;
-    color: #6b7280;
-    border: 1px solid #e5e7eb;
-}
-
-.project-tag-item.selected {
+.project-tag.selected {
     background: #dcfce7;
     color: #166534;
     border: 1px solid #bbf7d0;
 }
 
-.project-tag-item:hover {
+.project-tag.unselected {
+    background: #f0f2ff;
+    border: 1px solid #667eea;
+    color: #667eea;
+}
+
+.project-tag:hover {
     transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.project-tag-item.unselected:hover {
-    background: #e5e7eb;
-}
-
-.project-tag-item.selected:hover {
-    background: #bbf7d0;
+/* Make tags in contacts table non-interactive */
+.contacts-table .project-tag {
+    cursor: default;
+    pointer-events: none;
+    margin: 2px;
 }
