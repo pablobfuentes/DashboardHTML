@@ -137,576 +137,119 @@ body {
 }
 
 .tab-container {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
-.tabs {
+.tab-buttons {
     display: flex;
-    border-bottom: 1px solid #ccc;
-    margin-bottom: 20px;
+    gap: 4px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
     overflow-x: auto;
 }
 
+#template-tabs, #tabs {
+    display: flex;
+    gap: 4px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    overflow-x: auto;
+}
+
+#template-content, #tab-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+}
+
 .tab-button {
-    position: relative; /* Needed for positioning the delete icon */
-    background-color: #eee;
-    border: none;
-    padding: 10px 28px 10px 20px; /* Added right padding for the icon */
+    padding: 8px 16px;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    border-radius: 4px;
     cursor: pointer;
-    margin-right: 5px;
-    border-radius: 5px 5px 0 0;
-    transition: background-color 0.3s ease;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
 }
 
 .tab-button:hover {
-    background-color: #ddd;
+    background-color: #e9ecef;
 }
 
 .tab-button.active {
     background-color: #007bff;
-    color: white;
+    color: #fff;
+    border-color: #0056b3;
 }
 
-.add-tab-button {
+.tab-button.add-tab-button {
+    font-size: 20px;
+    padding: 4px 12px;
     background-color: #28a745;
-    color: white;
-    font-weight: bold;
-    padding: 10px 20px; /* Reset padding for the + button */
+    color: #fff;
+    border-color: #28a745;
 }
 
-.add-tab-button:hover {
+.tab-button.add-tab-button:hover {
     background-color: #218838;
-}
-
-.delete-tab-icon {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 16px;
-    color: #999;
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
-}
-
-.tab-button:hover .delete-tab-icon {
-    visibility: visible;
-    opacity: 1;
-}
-
-.delete-tab-icon:hover {
-    color: #333;
+    border-color: #1e7e34;
 }
 
 .tab-pane {
     display: none;
+    height: 100%;
 }
 
 .tab-pane.active {
     display: block;
 }
 
-.project-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.project-table th,
-.project-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-    position: relative;
-}
-
-.project-table th {
-    background-color: #f2f2f2;
-    user-select: none; /* Prevent text selection during resize */
-}
-
-.project-table th::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 5px;
-    height: 100%;
-    cursor: col-resize;
-    background: transparent;
-    z-index: 1;
-}
-
-.project-table th:hover::after {
-    background: rgba(0, 123, 255, 0.2);
-}
-
-/* Visual feedback during resize */
-.project-table.resizing {
-    user-select: none;
-}
-
-.project-table.resizing th::after {
-    background: rgba(0, 123, 255, 0.4);
-}
-
-.project-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-.project-table td[contenteditable="true"] {
-    background-color: #fff;
-    cursor: text;
-}
-
-.project-table td[contenteditable="false"] {
-    background-color: #e9e9e9;
-    cursor: not-allowed;
-}
-
-/* Remove padding from the TD itself for date cells to prevent layout issues */
-.project-table td.date-cell-td {
-    padding: 0 !important;
-}
-
-/* This wrapper will now contain the text and icon, and provide the positioning context */
-.date-cell-wrapper {
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-/* The editable text content div */
-.date-cell-wrapper .cell-content {
-    padding: 8px; /* This replicates the original cell padding */
-    padding-right: 30px; /* Make extra space for the icon */
-    min-height: 21px; /* Ensures cell height is consistent */
-}
-
-/* The calendar icon, positioned relative to the wrapper */
-.date-cell-wrapper .calendar-icon {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 16px;
-    color: #666;
-    display: none; /* Hide by default */
-}
-
-/* Show the icon on hover of the wrapper OR when the content is being edited */
-.date-cell-wrapper:hover .calendar-icon,
-.date-cell-wrapper .cell-content:focus + .calendar-icon {
-    display: block;
-}
-
-.calendar-icon:hover {
-    color: #000;
-}
-
-/* New styles to center the datepicker popup */
-.datepicker-centered {
-    position: fixed !important; /* Override default positioning */
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1100; /* Ensure it's on top of all other content */
-}
-
-/* Date picker modal styles */
-.date-picker-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.date-picker-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.date-picker-content {
-    position: relative;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    padding: 0;
-    min-width: 350px;
-    max-width: 90vw;
-    max-height: 90vh;
-    overflow: visible;
-}
-
-.date-picker-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    border-bottom: 1px solid #eee;
-    font-weight: bold;
-    font-size: 16px;
-    flex-shrink: 0;
-}
-
-.date-picker-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #999;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.date-picker-close:hover {
-    color: #333;
-}
-
-#date-picker-container {
-    padding: 20px;
-    min-height: 300px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow: visible;
-}
-
-/* Ensure the datepicker has enough space and proper styling */
-#date-picker-container .datepicker {
-    position: static !important;
-    display: block !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    transform: none !important;
-    box-shadow: none !important;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.date-picker-footer {
-    display: flex;
-    gap: 10px;
-    padding: 15px 20px;
-    border-top: 1px solid #eee;
-    justify-content: flex-end;
-    flex-shrink: 0;
-}
-
-.date-picker-footer button {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.date-picker-footer button:hover {
-    background-color: #f5f5f5;
-}
-
-#date-picker-tbd {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: white;
-}
-
-#date-picker-tbd:hover {
-    background-color: #e0a800;
-}
-
-#date-picker-clear {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: white;
-}
-
-#date-picker-clear:hover {
-    background-color: #c82333;
-}
-
-/* Status selector modal styles */
-.status-selector-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.status-selector-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.status-selector-content {
-    position: relative;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    padding: 0;
-    min-width: 250px;
-    max-width: 90vw;
-}
-
-.status-selector-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    border-bottom: 1px solid #eee;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.status-selector-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #999;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.status-selector-close:hover {
-    color: #333;
-}
-
-.status-options {
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.status-option {
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-}
-
-.status-option:hover {
-    background-color: #f8f9fa;
-}
-
-/* Status tag styles */
-.status-tag {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: lowercase;
-    color: white;
-    display: inline-block;
-    min-width: 60px;
-    text-align: center;
-}
-
-.status-completo {
-    background-color: #28a745;
-}
-
-.status-en-proceso {
-    background-color: #007bff;
-}
-
-.status-pendiente {
-    background-color: #ffc107;
-    color: #212529;
-}
-
-.status-na {
-    background-color: #6c757d;
-}
-
-.status-empty {
-    background-color: #e9ecef;
-    color: #495057;
-    border: 1px dashed #adb5bd;
-}
-
-/* Status cells in tables */
-.status-cell {
-    text-align: center;
-    cursor: pointer;
-}
-
-.status-cell:hover {
-    background-color: #f8f9fa;
-}
-
-/* Comment history styles */
-.comment-cell {
-    position: relative;
-    cursor: pointer;
-    max-width: 200px;
-    overflow: hidden;
-}
-
-.comment-cell.collapsed {
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.comment-cell.expanded {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    max-height: 200px;
-    overflow-y: auto;
-    background-color: #f8f9fa;
-    border: 2px solid #007bff;
-    z-index: 10;
-}
-
-.comment-cell:hover {
-    background-color: #f0f0f0;
-}
-
-.comment-cell::after {
-    content: '📖';
-    position: absolute;
-    top: 2px;
-    right: 5px;
-    font-size: 12px;
-    opacity: 0.6;
-}
-
-.comment-cell.expanded::after {
-    content: '📖';
-    opacity: 1;
-}
-
-.new-comment-cell {
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    position: relative;
-}
-
-.new-comment-cell:focus {
-    background-color: #fff;
-    border-color: #007bff;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* ---------- New Comment Cell Styles ---------- */
-
-.new-comment-wrapper {
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-.new-comment-wrapper .comment-content {
-    padding: 8px;
-    padding-right: 30px; /* space for icon */
-    min-height: 21px;
-    outline: none;
-}
-
-.new-comment-wrapper .submit-comment-icon {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 16px;
-    color: #28a745;
-    display: none; /* hidden by default */
-}
-
-.new-comment-wrapper:hover .submit-comment-icon,
-.new-comment-wrapper .comment-content:focus + .submit-comment-icon {
-    display: block;
-}
-
-.submit-comment-icon:hover {
-    color: #1e7e34;
-}
-
-/* Remove deprecated comment-submit-btn styles */
-.comment-submit-btn,
-.comment-submit-btn:hover {
-    display: none !important;
-}
-
-.comment-timestamp {
-    color: #6c757d;
-    font-size: 11px;
-    font-style: italic;
-}
-
+/* Template actions container */
 .template-actions {
-    margin-bottom: 10px;
     display: flex;
     gap: 10px;
+    margin-bottom: 20px;
 }
 
 .template-actions button {
-    padding: 8px 15px;
+    padding: 8px 16px;
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
-    color: white;
-    background-color: #007bff;
+    font-weight: 500;
+    transition: background-color 0.2s;
 }
 
-.template-actions button:hover {
-    background-color: #0056b3;
+#toggle-edit-mode {
+    background-color: #6c757d;
+    color: white;
+}
+
+#toggle-edit-mode:hover {
+    background-color: #5a6268;
 }
 
 .template-actions button.refresh-button {
     background-color: #ffc107;
+    color: #212529;
 }
+
 .template-actions button.refresh-button:hover {
     background-color: #e0a800;
 }
 
 .template-actions button.reset-button {
     background-color: #dc3545;
+    color: white;
 }
+
 .template-actions button.reset-button:hover {
     background-color: #c82333;
 }
@@ -714,6 +257,7 @@ body {
 #toggle-edit-mode.active-edit-mode {
     background-color: #28a745;
 }
+
 #toggle-edit-mode.active-edit-mode:hover {
     background-color: #218838;
 }
@@ -1455,4 +999,235 @@ h2.project-name-editable:focus {
 
 .collapsible-content {
     overflow: visible !important;
+}
+
+.project-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.project-table th,
+.project-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    position: relative;
+}
+
+.project-table th {
+    background-color: #f2f2f2;
+    user-select: none; /* Prevent text selection during resize */
+}
+
+.project-table th::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 1;
+}
+
+.project-table th:hover::after {
+    background: rgba(0, 123, 255, 0.2);
+}
+
+/* Visual feedback during resize */
+.project-table.resizing {
+    user-select: none;
+}
+
+.project-table.resizing th::after {
+    background: rgba(0, 123, 255, 0.4);
+}
+
+.project-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.project-table td[contenteditable="true"] {
+    background-color: #fff;
+    cursor: text;
+}
+
+.project-table td[contenteditable="false"] {
+    background-color: #e9e9e9;
+    cursor: not-allowed;
+}
+
+/* Remove padding from the TD itself for date cells to prevent layout issues */
+.project-table td.date-cell-td {
+    padding: 0 !important;
+}
+
+/* This wrapper will now contain the text and icon, and provide the positioning context */
+.date-cell-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* The editable text content div */
+.date-cell-wrapper .cell-content {
+    padding: 8px; /* This replicates the original cell padding */
+    padding-right: 30px; /* Make extra space for the icon */
+    min-height: 21px; /* Ensures cell height is consistent */
+}
+
+/* The calendar icon, positioned relative to the wrapper */
+.date-cell-wrapper .calendar-icon {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    display: none; /* Hide by default */
+}
+
+/* Show the icon on hover of the wrapper OR when the content is being edited */
+.date-cell-wrapper:hover .calendar-icon,
+.date-cell-wrapper .cell-content:focus + .calendar-icon {
+    display: block;
+}
+
+.calendar-icon:hover {
+    color: #000;
+}
+
+/* Context menu styles */
+.context-menu {
+    position: fixed;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 1000;
+    display: flex;
+    gap: 5px;
+}
+
+.context-menu-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.context-menu-icon:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+}
+
+.status-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.2s ease;
+}
+
+.status-completo {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-en-proceso {
+    background-color: #2196F3;
+    color: white;
+}
+
+.status-pendiente {
+    background-color: #FFC107;
+    color: black;
+}
+
+.status-na {
+    background-color: #9E9E9E;
+    color: white;
+}
+
+/* Status selector modal styles */
+.status-selector-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.status-selector-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+}
+
+.status-selector-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1002;
+    min-width: 200px;
+}
+
+.status-option {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin: 4px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.status-option:hover {
+    opacity: 0.9;
+}
+
+.status-option[data-status="completo"] {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-option[data-status="en proceso"] {
+    background-color: #2196F3;
+    color: white;
+}
+
+.status-option[data-status="pendiente"] {
+    background-color: #FFC107;
+    color: black;
+}
+
+.status-option[data-status="n/a"] {
+    background-color: #9E9E9E;
+    color: white;
 }

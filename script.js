@@ -25,6 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     section.classList.add('active');
                 }
             });
+
+            // If switching to Templates section, ensure main template is visible
+            if (targetSection === 'templates') {
+                const mainTemplateButton = document.querySelector('.tab-button[data-tab="main-template"]');
+                const mainTemplatePane = document.getElementById('main-template');
+                if (mainTemplateButton && mainTemplatePane) {
+                    mainTemplateButton.classList.add('active');
+                    mainTemplatePane.classList.add('active');
+                }
+            }
         });
     });
 
@@ -261,8 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadAndRenderState() {
         // Clear any existing project tabs and panes before loading
-        document.querySelectorAll('.project-tab').forEach(btn => btn.remove());
-        document.querySelectorAll('.project-pane').forEach(pane => pane.remove());
+        document.querySelectorAll('#tabs .project-tab').forEach(btn => btn.remove());
+        document.querySelectorAll('#tab-content .project-pane').forEach(pane => pane.remove());
 
         const savedState = localStorage.getItem('dashboardState');
 
@@ -281,7 +291,12 @@ document.addEventListener('DOMContentLoaded', () => {
         projectCount = state.projectCount || 0;
         columnWidths = state.columnWidths || {};
 
+        // Render main template table in the Templates section
         renderTable(mainTemplateTable, currentTemplateHeaders, currentTemplateRows, true);
+
+        // Render project tabs in the Seguimiento section
+        const tabsContainer = document.getElementById('tabs');
+        const tabContentContainer = document.getElementById('tab-content');
 
         Object.keys(projectsData).forEach(projectId => {
             const project = projectsData[projectId];
@@ -577,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'insert-col-left', text: '⬅️', title: 'Insert Column Left' },
                 { id: 'insert-col-right', text: '➡️', title: 'Insert Column Right' },
                 { id: 'delete-col', text: '🗑️', title: 'Delete Column' },
-                { id: 'edit-col-header', text: '✏️', title: 'Edit Column Header' } // <<< NEW ICON
+                { id: 'edit-col-header', text: '✏️', title: 'Edit Column Header' }
             ];
         }
 
@@ -591,8 +606,27 @@ document.addEventListener('DOMContentLoaded', () => {
             contextMenu.appendChild(iconDiv);
         });
 
-        contextMenu.style.left = `${x}px`;
-        contextMenu.style.top = `${y}px`;
+        // Get the template section's position and scroll offsets
+        const templateSection = document.getElementById('templates');
+        const sectionRect = templateSection.getBoundingClientRect();
+        const scrollLeft = templateSection.scrollLeft || document.documentElement.scrollLeft;
+        const scrollTop = templateSection.scrollTop || document.documentElement.scrollTop;
+
+        // Calculate position relative to the viewport with specific offsets
+        let menuX = sectionRect.left + x - scrollLeft;
+        let menuY = sectionRect.top + y - scrollTop;
+
+        // Apply specific offsets based on type
+        if (type === 'column') {
+            menuX -= 350; // Move 350px to the left for columns
+            menuY += 23;  // Move 23px down for columns
+        } else if (type === 'row') {
+            menuX -= 300; // Move 300px to the left for rows
+        }
+
+        // Position the menu
+        contextMenu.style.left = `${menuX}px`;
+        contextMenu.style.top = `${menuY}px`;
         contextMenu.style.display = 'flex';
     }
 
@@ -648,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentTemplateHeaders.splice(contextMenuTargetIndex, 1);
                 currentTemplateRows.forEach(row => row.splice(contextMenuTargetIndex, 1));
                 break;
-            case 'edit-col-header': // <<< NEW CASE
+            case 'edit-col-header':
                 const oldColumnName = currentTemplateHeaders[contextMenuTargetIndex];
                 if (nonEditableColumns.includes(oldColumnName)) {
                     alert(`Cannot rename essential column '${oldColumnName}'.`);
@@ -672,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 currentTemplateHeaders[contextMenuTargetIndex] = newColumnName; // Update the header
                 // No need to change rows data, only the header name
-                break; // End of NEW CASE
+                break;
         }
         
         // Re-render the main table, which is the source of truth
@@ -740,10 +774,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
 
-    // Tab switching logic
-    tabsContainer.addEventListener('click', (event) => {
+    // Tab switching logic for both project and template tabs
+    document.addEventListener('click', (event) => {
         const deleteIcon = event.target.closest('.delete-tab-icon');
         const tabButton = event.target.closest('.tab-button');
+        const isTemplateTab = tabButton?.closest('#template-tabs');
+        const isProjectTab = tabButton?.closest('#tabs');
 
         if (deleteIcon) {
             event.stopPropagation(); // Prevent tab switching when clicking the icon
@@ -760,9 +796,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Delete data from state
                 delete projectsData[projectIdToDelete];
                 
-                // If the deleted tab was active, switch to the main template
+                // If the deleted tab was active, switch to the first available project tab
                 if (tabButton.classList.contains('active')) {
-                    document.querySelector('.tab-button[data-tab="main-template"]').click();
+                    const firstProjectTab = document.querySelector('#tabs .tab-button:not(.add-tab-button)');
+                    if (firstProjectTab) {
+                        firstProjectTab.click();
+                    }
                 }
                 
                 saveState();
@@ -772,12 +811,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (tabButton && !tabButton.classList.contains('add-tab-button')) {
-            document.querySelector('.tab-button.active')?.classList.remove('active');
-            document.querySelector('.tab-pane.active')?.classList.remove('active');
-
-            tabButton.classList.add('active');
-            const targetTabId = tabButton.dataset.tab;
-            document.getElementById(targetTabId).classList.add('active');
+            // Handle template tabs
+            if (isTemplateTab) {
+                document.querySelector('#template-tabs .tab-button.active')?.classList.remove('active');
+                document.querySelector('#template-content .tab-pane.active')?.classList.remove('active');
+                
+                tabButton.classList.add('active');
+                const targetTabId = tabButton.dataset.tab;
+                document.getElementById(targetTabId).classList.add('active');
+            }
+            // Handle project tabs
+            else if (isProjectTab) {
+                document.querySelector('#tabs .tab-button.active')?.classList.remove('active');
+                document.querySelector('#tab-content .tab-pane.active')?.classList.remove('active');
+                
+                tabButton.classList.add('active');
+                const targetTabId = tabButton.dataset.tab;
+                document.getElementById(targetTabId).classList.add('active');
+            }
             clearSelectionAndHideMenu();
         }
     });
@@ -798,6 +849,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tabButton.appendChild(deleteIcon);
 
         // Insert the new tab and pane
+        const tabsContainer = document.getElementById('tabs');
+        const tabContentContainer = document.getElementById('tab-content');
         tabsContainer.insertBefore(tabButton, addProjectButton);
         tabContentContainer.appendChild(tabPane);
 
@@ -1170,19 +1223,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const rowIndex = Array.from(statusCell.closest('tr').parentNode.children).indexOf(statusCell.closest('tr'));
         const colIndex = Array.from(statusCell.closest('tr').children).indexOf(statusCell) - (projectId === 'main-template' ? 1 : 0);
 
-        let dataModel;
         if (projectId === 'main-template') {
-            dataModel = currentTemplateRows;
-        } else if (projectsData[projectId]) {
-            dataModel = projectsData[projectId].content;
-        }
-
-        if (dataModel && dataModel[rowIndex] && dataModel[rowIndex][colIndex] !== undefined) {
-            dataModel[rowIndex][colIndex] = newStatus;
+            if (currentTemplateRows[rowIndex] && currentTemplateRows[rowIndex][colIndex] !== undefined) {
+                currentTemplateRows[rowIndex][colIndex] = newStatus;
+                statusCell.innerHTML = renderStatusCell(newStatus);
+                statusCell.setAttribute('data-status', newStatus);
+                saveState();
+                updateAllProjectTables();
+            }
+        } else {
+            updateProjectData(projectId, rowIndex, colIndex, newStatus);
             statusCell.innerHTML = renderStatusCell(newStatus);
             statusCell.setAttribute('data-status', newStatus);
-            console.log(`Status updated for [${projectId}, R${rowIndex}, C${colIndex}] to: ${newStatus}`);
-            saveState();
         }
     };
 
@@ -1196,32 +1248,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle status option selection
     document.addEventListener('click', (event) => {
-        if (event.target.closest('.status-option')) {
-            const statusOption = event.target.closest('.status-option');
+        const statusOption = event.target.closest('.status-option');
+        if (statusOption && currentStatusCell) {
             const newStatus = statusOption.getAttribute('data-status');
-            
-            if (currentStatusCell) {
-                const tabPane = currentStatusCell.closest('.tab-pane');
-                const projectId = tabPane.id;
-                const rowIndex = Array.from(currentStatusCell.closest('tr').parentNode.children).indexOf(currentStatusCell.closest('tr'));
-                const colIndex = Array.from(currentStatusCell.closest('tr').children).indexOf(currentStatusCell) - (projectId === 'main-template' ? 1 : 0);
-
-                if (projectId === 'main-template') {
-                    if (currentTemplateRows[rowIndex] && currentTemplateRows[rowIndex][colIndex] !== undefined) {
-                        currentTemplateRows[rowIndex][colIndex] = newStatus;
-                        currentStatusCell.innerHTML = renderStatusCell(newStatus);
-                        currentStatusCell.setAttribute('data-status', newStatus);
-                        saveState();
-                    }
-                } else {
-                    // Use updateProjectData to ensure timeline updates
-                    updateProjectData(projectId, rowIndex, colIndex, newStatus);
-                    currentStatusCell.innerHTML = renderStatusCell(newStatus);
-                    currentStatusCell.setAttribute('data-status', newStatus);
-                }
-                
-                hideStatusSelectorModal();
-            }
+            updateStatusCell(currentStatusCell, newStatus);
+            hideStatusSelectorModal();
         }
     });
 

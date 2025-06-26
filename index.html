@@ -44,12 +44,22 @@
             <section class="content-section active" id="seguimiento">
                 <div class="tab-container">
                     <div class="tab-buttons" id="tabs">
-                        <button class="tab-button active" data-tab="main-template">
-                            <span class="project-name-editable" contenteditable="true">Main Template</span>
-                        </button>
                         <button class="tab-button add-tab-button" id="add-project-button">+</button>
                     </div>
                     <div class="tab-content" id="tab-content">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Templates -->
+            <section class="content-section" id="templates">
+                <div class="tab-container">
+                    <div class="tab-buttons" id="template-tabs">
+                        <button class="tab-button active" data-tab="main-template">
+                            <span class="project-name-editable" contenteditable="true">Main Template</span>
+                        </button>
+                    </div>
+                    <div class="tab-content" id="template-content">
                         <div class="tab-pane active" id="main-template">
                             <h2>Main Template</h2>
                             <div class="template-actions">
@@ -77,12 +87,6 @@
                 <p>Sección de consulta en desarrollo...</p>
             </section>
 
-            <!-- Section: Templates -->
-            <section class="content-section" id="templates">
-                <h2>Templates</h2>
-                <p>Sección de templates en desarrollo...</p>
-            </section>
-
             <!-- Section: Reportes -->
             <section class="content-section" id="reportes">
                 <h2>Reportes</h2>
@@ -107,30 +111,15 @@
         </div>
     </div>
     
-    <!-- Status tag selector modal -->
-    <div id="status-selector-modal" class="status-selector-modal" style="display: none;">
+    <!-- Status selector modal -->
+    <div id="status-selector-modal" class="status-selector-modal">
         <div class="status-selector-overlay"></div>
         <div class="status-selector-content">
-            <div class="status-selector-header">
-                <span>Select Status</span>
-                <button class="status-selector-close">&times;</button>
-            </div>
             <div class="status-options">
-                <div class="status-option" data-status="completo" data-color="green">
-                    <span class="status-tag status-completo">completo</span>
-                </div>
-                <div class="status-option" data-status="en proceso" data-color="blue">
-                    <span class="status-tag status-en-proceso">en proceso</span>
-                </div>
-                <div class="status-option" data-status="pendiente" data-color="yellow">
-                    <span class="status-tag status-pendiente">pendiente</span>
-                </div>
-                <div class="status-option" data-status="N/A" data-color="gray">
-                    <span class="status-tag status-na">N/A</span>
-                </div>
-                <div class="status-option" data-status="" data-color="none">
-                    <span class="status-tag status-empty">Clear</span>
-                </div>
+                <button class="status-option" data-status="completo">Completo</button>
+                <button class="status-option" data-status="en proceso">En Proceso</button>
+                <button class="status-option" data-status="pendiente">Pendiente</button>
+                <button class="status-option" data-status="n/a">N/A</button>
             </div>
         </div>
     </div>
