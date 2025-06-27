@@ -2674,6 +2674,170 @@ document.addEventListener('DOMContentLoaded', () => {
         return { tabButton, tabPane };
     }
 
+    // Email Templates Functionality
+    function initializeEmailTemplates() {
+        console.log('Initializing Email Templates...');
+        
+        // Set up basic event listeners for the email templates page
+        setupEmailTemplateEventListeners();
+        
+        // Load saved email templates
+        loadEmailTemplates();
+    }
+    
+    function setupEmailTemplateEventListeners() {
+        // Add Template button
+        const addTemplateBtn = document.querySelector('.add-template-btn');
+        const createFirstTemplateBtn = document.querySelector('.create-first-template-btn');
+        
+        if (addTemplateBtn) {
+            addTemplateBtn.addEventListener('click', () => {
+                console.log('Add Template clicked');
+                // We'll implement the template creation modal later
+                alert('Template creation feature will be implemented next!');
+            });
+        }
+        
+        if (createFirstTemplateBtn) {
+            createFirstTemplateBtn.addEventListener('click', () => {
+                console.log('Create First Template clicked');
+                // Same functionality as add template
+                alert('Template creation feature will be implemented next!');
+            });
+        }
+        
+        // Import Template button
+        const importTemplateBtn = document.querySelector('.import-template-btn');
+        if (importTemplateBtn) {
+            importTemplateBtn.addEventListener('click', () => {
+                console.log('Import Template clicked');
+                alert('Template import feature will be implemented later!');
+            });
+        }
+        
+        // Export Template button
+        const exportTemplateBtn = document.querySelector('.export-template-btn');
+        if (exportTemplateBtn) {
+            exportTemplateBtn.addEventListener('click', () => {
+                console.log('Export Template clicked');
+                alert('Template export feature will be implemented later!');
+            });
+        }
+        
+        // Search functionality
+        const templateSearch = document.getElementById('template-search');
+        if (templateSearch) {
+            templateSearch.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                console.log('Searching templates for:', searchTerm);
+                // We'll implement search functionality later
+            });
+        }
+    }
+    
+    function loadEmailTemplates() {
+        // Load saved email templates from localStorage
+        const savedTemplates = localStorage.getItem('emailTemplates');
+        if (savedTemplates) {
+            const templates = JSON.parse(savedTemplates);
+            console.log('Loaded templates:', templates);
+            renderEmailTemplates(templates);
+        } else {
+            console.log('No saved templates found');
+            // Keep the empty state visible
+        }
+    }
+    
+    function renderEmailTemplates(templates) {
+        const templatesGrid = document.querySelector('.templates-grid');
+        if (!templatesGrid) return;
+        
+        // Clear current content
+        templatesGrid.innerHTML = '';
+        
+        if (templates.length === 0) {
+            // Show empty state
+            templatesGrid.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📧</div>
+                    <h3>No Email Templates Yet</h3>
+                    <p>Create your first email template to get started</p>
+                    <button class="create-first-template-btn">
+                        <i class="fas fa-plus"></i> Create First Template
+                    </button>
+                </div>
+            `;
+            
+            // Re-attach event listener to the new button
+            const createFirstTemplateBtn = templatesGrid.querySelector('.create-first-template-btn');
+            if (createFirstTemplateBtn) {
+                createFirstTemplateBtn.addEventListener('click', () => {
+                    console.log('Create First Template clicked');
+                    alert('Template creation feature will be implemented next!');
+                });
+            }
+        } else {
+            // Render template cards
+            templates.forEach(template => {
+                const templateCard = createTemplateCard(template);
+                templatesGrid.appendChild(templateCard);
+            });
+        }
+    }
+    
+    function createTemplateCard(template) {
+        const card = document.createElement('div');
+        card.className = 'template-card';
+        card.innerHTML = `
+            <div class="template-card-header">
+                <h4>${template.name}</h4>
+                <div class="template-card-actions">
+                    <button class="edit-template-btn" data-id="${template.id}">✏️</button>
+                    <button class="delete-template-btn" data-id="${template.id}">🗑️</button>
+                </div>
+            </div>
+            <div class="template-card-body">
+                <p class="template-description">${template.description || 'No description'}</p>
+                <div class="template-meta">
+                    <span class="template-stage">${template.stage}</span>
+                    <span class="template-updated">Updated: ${new Date(template.lastUpdated).toLocaleDateString()}</span>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners to the card actions
+        const editBtn = card.querySelector('.edit-template-btn');
+        const deleteBtn = card.querySelector('.delete-template-btn');
+        
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                console.log('Edit template:', template.id);
+                alert('Template editing will be implemented next!');
+            });
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                if (confirm(`Are you sure you want to delete "${template.name}"?`)) {
+                    deleteEmailTemplate(template.id);
+                }
+            });
+        }
+        
+        return card;
+    }
+    
+    function deleteEmailTemplate(templateId) {
+        const savedTemplates = localStorage.getItem('emailTemplates');
+        if (savedTemplates) {
+            let templates = JSON.parse(savedTemplates);
+            templates = templates.filter(t => t.id !== templateId);
+            localStorage.setItem('emailTemplates', JSON.stringify(templates));
+            renderEmailTemplates(templates);
+            console.log('Template deleted:', templateId);
+        }
+    }
+    
     function updateProjectData(projectId, rowIndex, colIndex, newValue) {
         if (!projectsData[projectId]) return;
         
@@ -3865,6 +4029,217 @@ document.addEventListener('DOMContentLoaded', () => {
                  .copy-emails-btn .icon {
                      font-size: 14px;
                  }
+                 
+                 /* Email Templates Styling */
+                 .email-templates-header {
+                     text-align: center;
+                     margin-bottom: 30px;
+                 }
+                 .email-templates-header h2 {
+                     margin: 0 0 10px 0;
+                     font-size: 28px;
+                     color: #333;
+                     font-weight: 600;
+                 }
+                 .page-description {
+                     color: #6c757d;
+                     font-size: 16px;
+                     margin: 0;
+                 }
+                 .email-templates-toolbar {
+                     display: flex;
+                     align-items: center;
+                     justify-content: space-between;
+                     margin-bottom: 30px;
+                     padding: 20px;
+                     background: white;
+                     border-radius: 12px;
+                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                 }
+                 .email-templates-toolbar .toolbar-left,
+                 .email-templates-toolbar .toolbar-right {
+                     display: flex;
+                     gap: 12px;
+                 }
+                 .email-templates-toolbar .toolbar-center {
+                     flex: 1;
+                     display: flex;
+                     justify-content: center;
+                     max-width: 400px;
+                     margin: 0 20px;
+                 }
+                 .template-search-container {
+                     position: relative;
+                     width: 100%;
+                     max-width: 350px;
+                 }
+                 .template-search-container input {
+                     width: 100%;
+                     padding: 12px 45px 12px 18px;
+                     border: 2px solid #e1e8ed;
+                     border-radius: 25px;
+                     font-size: 14px;
+                     outline: none;
+                     transition: all 0.2s ease;
+                 }
+                 .template-search-container input:focus {
+                     border-color: #007bff;
+                     box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+                 }
+                 .template-search-container .search-icon {
+                     position: absolute;
+                     right: 18px;
+                     top: 50%;
+                     transform: translateY(-50%);
+                     color: #6c757d;
+                     pointer-events: none;
+                 }
+                 .add-template-btn,
+                 .import-template-btn,
+                 .export-template-btn,
+                 .create-first-template-btn {
+                     background: #007bff;
+                     color: white;
+                     border: none;
+                     border-radius: 8px;
+                     padding: 12px 18px;
+                     cursor: pointer;
+                     font-size: 14px;
+                     font-weight: 500;
+                     transition: all 0.2s ease;
+                     display: flex;
+                     align-items: center;
+                     gap: 8px;
+                 }
+                 .add-template-btn:hover,
+                 .create-first-template-btn:hover {
+                     background: #0056b3;
+                     transform: translateY(-1px);
+                     box-shadow: 0 4px 12px rgba(0,123,255,0.25);
+                 }
+                 .import-template-btn,
+                 .export-template-btn {
+                     background: #6c757d;
+                 }
+                 .import-template-btn:hover,
+                 .export-template-btn:hover {
+                     background: #5a6268;
+                     transform: translateY(-1px);
+                     box-shadow: 0 4px 12px rgba(108,117,125,0.25);
+                 }
+                 .email-templates-content {
+                     background: white;
+                     border-radius: 12px;
+                     padding: 30px;
+                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                     min-height: 400px;
+                 }
+                 .templates-grid {
+                     display: grid;
+                     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                     gap: 20px;
+                 }
+                 .empty-state {
+                     display: flex;
+                     flex-direction: column;
+                     align-items: center;
+                     justify-content: center;
+                     text-align: center;
+                     padding: 60px 20px;
+                     color: #6c757d;
+                     grid-column: 1 / -1;
+                 }
+                 .empty-state-icon {
+                     font-size: 64px;
+                     margin-bottom: 20px;
+                     opacity: 0.5;
+                 }
+                 .empty-state h3 {
+                     margin: 0 0 10px 0;
+                     font-size: 20px;
+                     color: #495057;
+                 }
+                 .empty-state p {
+                     margin: 0 0 25px 0;
+                     font-size: 16px;
+                 }
+                 .create-first-template-btn {
+                     background: #28a745;
+                 }
+                 .create-first-template-btn:hover {
+                     background: #218838;
+                 }
+                 
+                 /* Template Cards */
+                 .template-card {
+                     background: white;
+                     border: 2px solid #e9ecef;
+                     border-radius: 12px;
+                     padding: 20px;
+                     transition: all 0.2s ease;
+                     cursor: pointer;
+                 }
+                 .template-card:hover {
+                     border-color: #007bff;
+                     transform: translateY(-2px);
+                     box-shadow: 0 8px 25px rgba(0,123,255,0.15);
+                 }
+                 .template-card-header {
+                     display: flex;
+                     justify-content: space-between;
+                     align-items: center;
+                     margin-bottom: 15px;
+                 }
+                 .template-card-header h4 {
+                     margin: 0;
+                     font-size: 18px;
+                     font-weight: 600;
+                     color: #333;
+                 }
+                 .template-card-actions {
+                     display: flex;
+                     gap: 8px;
+                 }
+                 .edit-template-btn,
+                 .delete-template-btn {
+                     background: none;
+                     border: none;
+                     font-size: 16px;
+                     cursor: pointer;
+                     padding: 6px;
+                     border-radius: 4px;
+                     transition: background 0.2s ease;
+                 }
+                 .edit-template-btn:hover {
+                     background: rgba(0,123,255,0.1);
+                 }
+                 .delete-template-btn:hover {
+                     background: rgba(220,53,69,0.1);
+                 }
+                 .template-card-body {
+                     color: #6c757d;
+                 }
+                 .template-description {
+                     margin: 0 0 15px 0;
+                     font-size: 14px;
+                     line-height: 1.5;
+                 }
+                 .template-meta {
+                     display: flex;
+                     justify-content: space-between;
+                     align-items: center;
+                     font-size: 12px;
+                 }
+                 .template-stage {
+                     background: #e9ecef;
+                     color: #495057;
+                     padding: 4px 8px;
+                     border-radius: 12px;
+                     font-weight: 500;
+                 }
+                 .template-updated {
+                     color: #6c757d;
+                 }
                 .filter-dropdown::-webkit-scrollbar {
                     width: 6px;
                 }
@@ -4319,11 +4694,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize projects
         initializeProjects();
         
-        // Initialize contacts
-        initializeContacts();
-        
-        // Initialize Kanban
-        initializeKanban();
+            // Initialize contacts
+    initializeContacts();
+    
+    // Initialize Kanban
+    initializeKanban();
+    
+    // Initialize Email Templates
+    initializeEmailTemplates();
         
         // Load initial state
         loadAndRenderState();

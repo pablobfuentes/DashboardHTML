@@ -72,6 +72,9 @@
                         <button class="tab-button active" data-tab="main-template">
                             <span class="project-name-editable" contenteditable="true">Main Template</span>
                         </button>
+                        <button class="tab-button" data-tab="email-templates">
+                            <span class="tab-name">Email Templates</span>
+                        </button>
                     </div>
                     <div class="tab-content" id="template-content">
                         <div class="tab-pane active" id="main-template">
@@ -90,6 +93,48 @@
                                 </tbody>
                             </table>
                             <div id="context-menu" class="context-menu" style="display: none;"></div>
+                        </div>
+                        <div class="tab-pane" id="email-templates">
+                            <div class="email-templates-header">
+                                <h2>Email Templates</h2>
+                                <p class="page-description">Manage email templates for different project stages and communications</p>
+                            </div>
+                            
+                            <div class="email-templates-toolbar">
+                                <div class="toolbar-left">
+                                    <button class="add-template-btn">
+                                        <i class="fas fa-plus"></i> New Template
+                                    </button>
+                                </div>
+                                <div class="toolbar-center">
+                                    <div class="template-search-container">
+                                        <input type="text" id="template-search" placeholder="Search templates...">
+                                        <i class="fas fa-search search-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="toolbar-right">
+                                    <button class="import-template-btn">
+                                        <i class="fas fa-upload"></i> Import
+                                    </button>
+                                    <button class="export-template-btn">
+                                        <i class="fas fa-download"></i> Export
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="email-templates-content">
+                                <div class="templates-grid">
+                                    <!-- Email templates will be dynamically added here -->
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📧</div>
+                                        <h3>No Email Templates Yet</h3>
+                                        <p>Create your first email template to get started</p>
+                                        <button class="create-first-template-btn">
+                                            <i class="fas fa-plus"></i> Create First Template
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
