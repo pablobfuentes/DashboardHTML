@@ -3283,71 +3283,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function pullContactsFromProjects() {
-            const projectTabs = document.querySelectorAll('.project-tab');
-            const projectContacts = new Map();
+            // Get existing contacts from localStorage
+            let directoryContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
 
-            projectTabs.forEach(tab => {
-                const projectId = tab.getAttribute('data-project-id');
-                const projectName = tab.textContent.trim();
-                
-                // Find contact boxes in this project's tab content
-                const tabContent = document.querySelector(`.project-content[data-project-id="${projectId}"]`);
-                if (!tabContent) return;
+            // Iterate over all projects in projectsData
+            Object.values(projectsData).forEach(project => {
+                if (!project || !project.name) return; // Skip if project is invalid
 
-                const contactBoxes = tabContent.querySelectorAll('.contact-box');
-                contactBoxes.forEach(box => {
-                    const contactInfo = {
-                        name: box.querySelector('.contact-name').value || '',
-                        position: box.querySelector('.contact-position').value || '',
-                        email: box.querySelector('.contact-email').value || '',
-                        phone: box.querySelector('.contact-phone').value || '',
-                        company: box.querySelector('.contact-company').value || '',
-                        projects: [projectName]
-                    };
+                const projectName = project.name;
+                const projectQuickContacts = project.quickInfoContacts?.contacts || [];
 
-                    // Only add contacts that have at least a name or email
-                    if (contactInfo.name || contactInfo.email) {
-                        const key = contactInfo.email || contactInfo.name; // Use email or name as key
-                        const existingContact = projectContacts.get(key);
-                        if (existingContact) {
-                            if (!existingContact.projects.includes(projectName)) {
-                                existingContact.projects.push(projectName);
-                            }
-                        } else {
-                            projectContacts.set(key, contactInfo);
+                projectQuickContacts.forEach(infoContact => {
+                    // Skip placeholder/empty contacts
+                    const contactName = infoContact.name?.trim();
+                    const contactEmail = infoContact.email?.trim();
+
+                    if (!contactName || contactName === '--' || contactName === '') {
+                        return;
+                    }
+
+                    // Find if contact already exists in the directory (by email preferably)
+                    let existingContact = null;
+                    if (contactEmail && contactEmail !== '--' && contactEmail !== '') {
+                        existingContact = directoryContacts.find(dirContact => dirContact.email === contactEmail);
+                    }
+                    
+                    // If not found by email, try by name (less reliable)
+                    if (!existingContact) {
+                         existingContact = directoryContacts.find(dirContact => dirContact.name === contactName);
+                    }
+
+                    if (existingContact) {
+                        // Contact exists, just ensure it's linked to this project
+                        if (!existingContact.projects) {
+                            existingContact.projects = [];
                         }
+                        if (!existingContact.projects.includes(projectName)) {
+                            existingContact.projects.push(projectName);
+                        }
+                    } else {
+                        // Contact doesn't exist, create a new one
+                        const newContact = {
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                            name: infoContact.name,
+                            position: infoContact.position,
+                            email: infoContact.email,
+                            phone: infoContact.phone,
+                            company: '', // company is not in quick-info-table
+                            projects: [projectName]
+                        };
+                        directoryContacts.push(newContact);
                     }
                 });
             });
 
-            // Get existing contacts
-            let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-
-            // Merge project contacts with existing contacts
-            projectContacts.forEach((projectContact, key) => {
-                const existingContact = contacts.find(c => 
-                    (c.email && c.email === projectContact.email) || 
-                    (!c.email && c.name === projectContact.name)
-                );
-
-                if (!existingContact) {
-                    const newContact = {
-                        ...projectContact,
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
-                    };
-                    contacts.push(newContact);
-                } else {
-                    // Update existing contact's projects
-                    existingContact.projects = Array.from(new Set([
-                        ...(existingContact.projects || []),
-                        ...projectContact.projects
-                    ]));
-                }
-            });
-
-            // Save and refresh
-            localStorage.setItem('contacts', JSON.stringify(contacts));
+            // Update the global contacts array, save, and refresh the view
+            contacts = directoryContacts;
+            saveContacts();
             renderContacts();
+            alert('Contacts directory has been synced with project info.');
         }
 
         function showContactForm() {
