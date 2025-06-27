@@ -280,6 +280,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- State Management ---
     function saveState() {
+        // Save quick info contacts from DOM before saving
+        Object.keys(projectsData).forEach(projectId => {
+            const project = projectsData[projectId];
+            if (project) {
+                const tabPane = document.getElementById(projectId);
+                if (tabPane) {
+                    const contactsTable = tabPane.querySelector('.quick-info-table .contacts-table');
+                    if (contactsTable) {
+                        const address = contactsTable.querySelector('.address-row')?.textContent || '';
+                        const contactRows = contactsTable.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
+                        const contacts = Array.from(contactRows).map(row => ({
+                            position: row.cells[0]?.textContent || '',
+                            name: row.cells[1]?.textContent || '',
+                            email: row.cells[2]?.textContent || '',
+                            phone: row.cells[3]?.textContent || '',
+                        }));
+                        project.quickInfoContacts = { address, contacts };
+                    }
+                }
+            }
+        });
+
         const state = {
             headers: currentTemplateHeaders,
             rows: currentTemplateRows,
@@ -340,6 +362,43 @@ document.addEventListener('DOMContentLoaded', () => {
             // Render the project table
             const projectTable = tabPane.querySelector('.project-table');
             renderTable(projectTable, project.headers, project.content, false);
+
+            // Load quick info contacts
+            if (project.quickInfoContacts) {
+                const contactsTable = tabPane.querySelector('.quick-info-table .contacts-table');
+                if (contactsTable) {
+                    const addressRow = contactsTable.querySelector('.address-row');
+                    if (addressRow) {
+                        addressRow.textContent = project.quickInfoContacts.address || 'Address: --';
+                    }
+
+                    const tbody = contactsTable.querySelector('tbody');
+                    const headerRow = tbody.querySelector('tr:nth-child(2)');
+                    
+                    // Clear existing contact rows
+                    const existingRows = tbody.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
+                    existingRows.forEach(row => row.remove());
+
+                    // Add saved contact rows
+                    project.quickInfoContacts.contacts.forEach((contact, index, arr) => {
+                        const newRow = document.createElement('tr');
+                        const isLastRow = index === arr.length - 1;
+                        if(isLastRow) newRow.classList.add('last-contact-row');
+                        
+                        newRow.innerHTML = `
+                            <td contenteditable="true">${contact.position}</td>
+                            <td contenteditable="true">${contact.name}</td>
+                            <td contenteditable="true">${contact.email}</td>
+                            <td contenteditable="true">${contact.phone}</td>
+                            <td class="action-column">
+                                <button class="delete-row-btn" title="Delete row">🗑️</button>
+                                ${isLastRow ? '<button class="add-row-btn" title="Add new row">➕</button>' : ''}
+                            </td>
+                        `;
+                        tbody.appendChild(newRow);
+                    });
+                }
+            }
         });
     }
 
@@ -882,7 +941,15 @@ document.addEventListener('DOMContentLoaded', () => {
         projectsData[projectId] = {
             headers: [...currentTemplateHeaders],
             content: newProjectContent,
-            name: initialProjectName
+            name: initialProjectName,
+            quickInfoContacts: {
+                address: 'Address: --',
+                contacts: [
+                    { position: 'Project Manager', name: '--', email: '--', phone: '--' },
+                    { position: 'Team Lead', name: '--', email: '--', phone: '--' },
+                    { position: 'Client Contact', name: '--', email: '--', phone: '--' },
+                ]
+            }
         };
         
         // Render the new project table
@@ -2566,6 +2633,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add event listeners for contacts table actions
         const contactsTable = tabPane.querySelector('.contacts-table');
         if (contactsTable) {
+            // Save state on any input in the table
+            contactsTable.addEventListener('input', () => {
+                saveState();
+            });
+
             // Delete row handler
             contactsTable.addEventListener('click', (e) => {
                 const deleteBtn = e.target.closest('.delete-row-btn');
