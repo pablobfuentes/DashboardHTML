@@ -2632,6 +2632,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                         }
+                        saveState(); // Save state after modification
                     }
                 }
             });
@@ -2658,6 +2659,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </td>
                     `;
                     contactsTable.querySelector('tbody').appendChild(newRow);
+                    saveState(); // Save state after modification
                 }
             });
         }
@@ -3749,40 +3751,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const tabPane = document.getElementById(projectId);
         if (!project || !tabPane) return;
 
-        if (project.quickInfoContacts) {
-            const contactsTable = tabPane.querySelector('.quick-info-table .contacts-table');
-            if (contactsTable) {
-                const addressRow = contactsTable.querySelector('.address-row');
-                if (addressRow) {
-                    addressRow.textContent = project.quickInfoContacts.address || 'Address: --';
-                }
+        const contactsTable = tabPane.querySelector('.quick-info-table .contacts-table');
+        if (contactsTable) {
+            const addressRow = contactsTable.querySelector('.address-row');
+            if (addressRow) {
+                addressRow.textContent = project.quickInfoContacts?.address || 'Address: --';
+            }
 
-                const tbody = contactsTable.querySelector('tbody');
-                
-                // Clear existing contact rows
-                const existingRows = tbody.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
-                existingRows.forEach(row => row.remove());
+            const tbody = contactsTable.querySelector('tbody');
+            
+            // Always clear existing contact rows from the template
+            const existingRows = tbody.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
+            existingRows.forEach(row => row.remove());
 
-                // Add saved contact rows
-                if (project.quickInfoContacts.contacts) {
-                    project.quickInfoContacts.contacts.forEach((contact, index, arr) => {
-                        const newRow = document.createElement('tr');
-                        const isLastRow = index === arr.length - 1;
-                        if(isLastRow) newRow.classList.add('last-contact-row');
-                        
-                        newRow.innerHTML = `
-                            <td contenteditable="true">${contact.position || '--'}</td>
-                            <td contenteditable="true">${contact.name || '--'}</td>
-                            <td contenteditable="true">${contact.email || '--'}</td>
-                            <td contenteditable="true">${contact.phone || '--'}</td>
-                            <td class="action-column">
-                                <button class="delete-row-btn" title="Delete row">🗑️</button>
-                                ${isLastRow ? '<button class="add-row-btn" title="Add new row">➕</button>' : ''}
-                            </td>
-                        `;
-                        tbody.appendChild(newRow);
-                    });
-                }
+            const contactsToRender = project.quickInfoContacts?.contacts;
+
+            if (contactsToRender && contactsToRender.length > 0) {
+                // Render saved contacts
+                contactsToRender.forEach((contact, index, arr) => {
+                    const newRow = document.createElement('tr');
+                    const isLastRow = index === arr.length - 1;
+                    if(isLastRow) newRow.classList.add('last-contact-row');
+                    
+                    newRow.innerHTML = `
+                        <td contenteditable="true">${contact.position || ''}</td>
+                        <td contenteditable="true">${contact.name || ''}</td>
+                        <td contenteditable="true">${contact.email || ''}</td>
+                        <td contenteditable="true">${contact.phone || ''}</td>
+                        <td class="action-column">
+                            <button class="delete-row-btn" title="Delete row">🗑️</button>
+                            ${isLastRow ? '<button class="add-row-btn" title="Add new row">➕</button>' : ''}
+                        </td>
+                    `;
+                    tbody.appendChild(newRow);
+                });
+            } else {
+                // If no contacts, create one empty row to start with
+                const newRow = document.createElement('tr');
+                newRow.classList.add('last-contact-row');
+                newRow.innerHTML = `
+                    <td contenteditable="true"></td>
+                    <td contenteditable="true"></td>
+                    <td contenteditable="true"></td>
+                    <td contenteditable="true"></td>
+                    <td class="action-column">
+                        <button class="delete-row-btn" title="Delete row">🗑️</button>
+                        <button class="add-row-btn" title="Add new row">➕</button>
+                    </td>
+                `;
+                tbody.appendChild(newRow);
             }
         }
     }
