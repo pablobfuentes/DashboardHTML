@@ -364,41 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTable(projectTable, project.headers, project.content, false);
 
             // Load quick info contacts
-            if (project.quickInfoContacts) {
-                const contactsTable = tabPane.querySelector('.quick-info-table .contacts-table');
-                if (contactsTable) {
-                    const addressRow = contactsTable.querySelector('.address-row');
-                    if (addressRow) {
-                        addressRow.textContent = project.quickInfoContacts.address || 'Address: --';
-                    }
-
-                    const tbody = contactsTable.querySelector('tbody');
-                    const headerRow = tbody.querySelector('tr:nth-child(2)');
-                    
-                    // Clear existing contact rows
-                    const existingRows = tbody.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
-                    existingRows.forEach(row => row.remove());
-
-                    // Add saved contact rows
-                    project.quickInfoContacts.contacts.forEach((contact, index, arr) => {
-                        const newRow = document.createElement('tr');
-                        const isLastRow = index === arr.length - 1;
-                        if(isLastRow) newRow.classList.add('last-contact-row');
-                        
-                        newRow.innerHTML = `
-                            <td contenteditable="true">${contact.position}</td>
-                            <td contenteditable="true">${contact.name}</td>
-                            <td contenteditable="true">${contact.email}</td>
-                            <td contenteditable="true">${contact.phone}</td>
-                            <td class="action-column">
-                                <button class="delete-row-btn" title="Delete row">🗑️</button>
-                                ${isLastRow ? '<button class="add-row-btn" title="Add new row">➕</button>' : ''}
-                            </td>
-                        `;
-                        tbody.appendChild(newRow);
-                    });
-                }
-            }
+            renderProjectQuickInfo(projectId);
         });
     }
 
@@ -3283,46 +3249,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function pullContactsFromProjects() {
-            // Get existing contacts from localStorage
+            // --- STAGE 1: Consolidate and Link (Project -> Directory) ---
+            
+            // Get existing contacts from localStorage (The Directory)
             let directoryContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
 
-            // Iterate over all projects in projectsData
+            // Iterate over all projects in projectsData to find new contacts
             Object.values(projectsData).forEach(project => {
-                if (!project || !project.name) return; // Skip if project is invalid
+                if (!project || !project.name || !project.quickInfoContacts) return;
 
                 const projectName = project.name;
-                const projectQuickContacts = project.quickInfoContacts?.contacts || [];
+                const projectQuickContacts = project.quickInfoContacts.contacts || [];
 
                 projectQuickContacts.forEach(infoContact => {
-                    // Skip placeholder/empty contacts
                     const contactName = infoContact.name?.trim();
                     const contactEmail = infoContact.email?.trim();
 
                     if (!contactName || contactName === '--' || contactName === '') {
-                        return;
+                        return; // Skip empty/placeholder contacts
                     }
 
-                    // Find if contact already exists in the directory (by email preferably)
+                    // Find if contact already exists in the directory
                     let existingContact = null;
                     if (contactEmail && contactEmail !== '--' && contactEmail !== '') {
                         existingContact = directoryContacts.find(dirContact => dirContact.email === contactEmail);
                     }
-                    
-                    // If not found by email, try by name (less reliable)
                     if (!existingContact) {
                          existingContact = directoryContacts.find(dirContact => dirContact.name === contactName);
                     }
 
                     if (existingContact) {
-                        // Contact exists, just ensure it's linked to this project
-                        if (!existingContact.projects) {
-                            existingContact.projects = [];
-                        }
+                        // Contact exists: ensure it's linked to this project
+                        if (!existingContact.projects) existingContact.projects = [];
                         if (!existingContact.projects.includes(projectName)) {
                             existingContact.projects.push(projectName);
                         }
                     } else {
-                        // Contact doesn't exist, create a new one
+                        // Contact doesn't exist: create a new one in the directory
                         const newContact = {
                             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                             name: infoContact.name,
@@ -3336,12 +3299,72 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             });
+            
+            // --- STAGE 2: Distribute and Update (Directory -> Project) ---
+            
+            // Iterate through the master list and update each project's data
+            directoryContacts.forEach(dirContact => {
+                if (!dirContact.projects) return;
 
-            // Update the global contacts array, save, and refresh the view
+                dirContact.projects.forEach(projectName => {
+                    const projectToUpdate = Object.values(projectsData).find(p => p.name === projectName);
+                    if (!projectToUpdate || !projectToUpdate.quickInfoContacts) return;
+
+                    const contactsInProject = projectToUpdate.quickInfoContacts.contacts;
+                    
+                    // Find the contact in the project's quick info table
+                    let contactToUpdate = null;
+                    if (dirContact.email && dirContact.email !== '--' && dirContact.email !== '') {
+                        contactToUpdate = contactsInProject.find(pContact => pContact.email === dirContact.email);
+                    }
+                    if (!contactToUpdate && dirContact.name) {
+                        contactToUpdate = contactsInProject.find(pContact => pContact.name === dirContact.name);
+                    }
+
+                    if (contactToUpdate) {
+                        // Update existing contact in the project
+                        contactToUpdate.name = dirContact.name;
+                        contactToUpdate.position = dirContact.position;
+                        contactToUpdate.email = dirContact.email;
+                        contactToUpdate.phone = dirContact.phone;
+                    } else {
+                        // Add new contact to the project if it was linked from the directory
+                        contactsInProject.push({
+                            name: dirContact.name,
+                            position: dirContact.position,
+                            email: dirContact.email,
+                            phone: dirContact.phone,
+                        });
+                    }
+                });
+            });
+
+            // --- FINAL STEP: Save and Re-render ---
+            
+            // Update the global contacts array for the directory view
             contacts = directoryContacts;
-            saveContacts();
-            renderContacts();
-            alert('Contacts directory has been synced with project info.');
+            
+            // Save the updated directory
+            saveContacts(); 
+            
+            // Manually save the dashboard state with the updated projectsData,
+            // bypassing the DOM-reading part of saveState() which would overwrite our changes.
+            const state = {
+                headers: currentTemplateHeaders,
+                rows: currentTemplateRows,
+                projects: projectsData, // Use the projectsData that was just modified in memory
+                projectCount: projectCount,
+                columnWidths: columnWidths
+            };
+            localStorage.setItem('dashboardState', JSON.stringify(state));
+
+            // Re-render the UI from the newly saved state
+            renderContacts(); // Refreshes the directory view
+
+            // Re-render all project quick-info tables to reflect changes
+            Object.keys(projectsData).forEach(renderProjectQuickInfo);
+
+            alert('Contacts have been synced between the directory and all projects.');
         }
 
         function showContactForm() {
@@ -3719,5 +3742,110 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // ... rest of the existing code ...
+    }
+
+    function renderProjectQuickInfo(projectId) {
+        const project = projectsData[projectId];
+        const tabPane = document.getElementById(projectId);
+        if (!project || !tabPane) return;
+
+        if (project.quickInfoContacts) {
+            const contactsTable = tabPane.querySelector('.quick-info-table .contacts-table');
+            if (contactsTable) {
+                const addressRow = contactsTable.querySelector('.address-row');
+                if (addressRow) {
+                    addressRow.textContent = project.quickInfoContacts.address || 'Address: --';
+                }
+
+                const tbody = contactsTable.querySelector('tbody');
+                
+                // Clear existing contact rows
+                const existingRows = tbody.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
+                existingRows.forEach(row => row.remove());
+
+                // Add saved contact rows
+                if (project.quickInfoContacts.contacts) {
+                    project.quickInfoContacts.contacts.forEach((contact, index, arr) => {
+                        const newRow = document.createElement('tr');
+                        const isLastRow = index === arr.length - 1;
+                        if(isLastRow) newRow.classList.add('last-contact-row');
+                        
+                        newRow.innerHTML = `
+                            <td contenteditable="true">${contact.position || '--'}</td>
+                            <td contenteditable="true">${contact.name || '--'}</td>
+                            <td contenteditable="true">${contact.email || '--'}</td>
+                            <td contenteditable="true">${contact.phone || '--'}</td>
+                            <td class="action-column">
+                                <button class="delete-row-btn" title="Delete row">🗑️</button>
+                                ${isLastRow ? '<button class="add-row-btn" title="Add new row">➕</button>' : ''}
+                            </td>
+                        `;
+                        tbody.appendChild(newRow);
+                    });
+                }
+            }
+        }
+    }
+
+    function pullContactsFromProjects() {
+        // Get existing contacts from localStorage
+        let directoryContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+
+        // Iterate over all projects in projectsData
+        Object.values(projectsData).forEach(project => {
+            if (!project || !project.name) return; // Skip if project is invalid
+
+            const projectName = project.name;
+            const projectQuickContacts = project.quickInfoContacts?.contacts || [];
+
+            projectQuickContacts.forEach(infoContact => {
+                // Skip placeholder/empty contacts
+                const contactName = infoContact.name?.trim();
+                const contactEmail = infoContact.email?.trim();
+
+                if (!contactName || contactName === '--' || contactName === '') {
+                    return;
+                }
+
+                // Find if contact already exists in the directory (by email preferably)
+                let existingContact = null;
+                if (contactEmail && contactEmail !== '--' && contactEmail !== '') {
+                    existingContact = directoryContacts.find(dirContact => dirContact.email === contactEmail);
+                }
+                
+                // If not found by email, try by name (less reliable)
+                if (!existingContact) {
+                     existingContact = directoryContacts.find(dirContact => dirContact.name === contactName);
+                }
+
+                if (existingContact) {
+                    // Contact exists, just ensure it's linked to this project
+                    if (!existingContact.projects) {
+                        existingContact.projects = [];
+                    }
+                    if (!existingContact.projects.includes(projectName)) {
+                        existingContact.projects.push(projectName);
+                    }
+                } else {
+                    // Contact doesn't exist, create a new one
+                    const newContact = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        name: infoContact.name,
+                        position: infoContact.position,
+                        email: infoContact.email,
+                        phone: infoContact.phone,
+                        company: '', // company is not in quick-info-table
+                        projects: [projectName]
+                    };
+                    directoryContacts.push(newContact);
+                }
+            });
+        });
+
+        // Update the global contacts array, save, and refresh the view
+        contacts = directoryContacts;
+        saveContacts();
+        renderContacts();
+        alert('Contacts directory has been synced with project info.');
     }
 });
