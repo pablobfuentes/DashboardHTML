@@ -3552,27 +3552,105 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.addEventListener('input', applyContactFilters);
         }
 
-        // Add pull contacts button (only if it doesn't exist)
-        const contactsHeader = document.querySelector('#contactos-view .contacts-header');
-        if (contactsHeader && !contactsHeader.querySelector('.pull-contacts-btn')) {
-            const pullContactsBtn = document.createElement('button');
-            pullContactsBtn.className = 'pull-contacts-btn';
-            pullContactsBtn.innerHTML = '<i class="fas fa-sync"></i> Sincronizar Contactos';
-            contactsHeader.appendChild(pullContactsBtn);
-
+        // Add pull contacts button event listener (button is now in HTML)
+        const pullContactsBtn = document.querySelector('.pull-contacts-btn');
+        if (pullContactsBtn && !pullContactsBtn.hasAttribute('data-event-added')) {
             pullContactsBtn.addEventListener('click', pullContactsFromProjects);
+            pullContactsBtn.setAttribute('data-event-added', 'true');
         }
 
         function addContactFilterUI() {
             const contactsView = document.getElementById('contactos-view');
-            const contactsHeader = contactsView?.querySelector('.contacts-header');
+            const contactsToolbar = contactsView?.querySelector('.contacts-toolbar');
 
-            if (!contactsView || !contactsHeader || contactsView.querySelector('.filter-container')) {
+            if (!contactsView || !contactsToolbar || contactsView.querySelector('.filter-container')) {
                 return; // Already exists or required elements are missing
             }
 
             const style = document.createElement('style');
             style.textContent = `
+                .contacts-header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .contacts-header h2 {
+                    margin: 0;
+                    font-size: 24px;
+                    color: #333;
+                    font-weight: 600;
+                }
+                .contacts-toolbar {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 20px;
+                    padding: 15px 20px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .toolbar-left, .toolbar-right {
+                    flex: 0 0 auto;
+                }
+                .toolbar-center {
+                    flex: 1;
+                    display: flex;
+                    justify-content: center;
+                    max-width: 400px;
+                    margin: 0 20px;
+                }
+                .search-container {
+                    position: relative;
+                    width: 100%;
+                    max-width: 350px;
+                }
+                .search-container input {
+                    width: 100%;
+                    padding: 10px 40px 10px 16px;
+                    border: 2px solid #e1e8ed;
+                    border-radius: 25px;
+                    font-size: 14px;
+                    outline: none;
+                    transition: border-color 0.2s ease;
+                }
+                .search-container input:focus {
+                    border-color: #007bff;
+                }
+                .search-icon {
+                    position: absolute;
+                    right: 15px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #6c757d;
+                    pointer-events: none;
+                }
+                .toolbar-left .add-contact-btn,
+                .toolbar-right .pull-contacts-btn {
+                    background: #007bff;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 10px 16px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .toolbar-left .add-contact-btn:hover,
+                .toolbar-right .pull-contacts-btn:hover {
+                    background: #0056b3;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 8px rgba(0,123,255,0.25);
+                }
+                .toolbar-right .pull-contacts-btn {
+                    background: #6c757d;
+                }
+                .toolbar-right .pull-contacts-btn:hover {
+                    background: #5a6268;
+                }
                 .filter-container { 
                     padding: 20px 0; 
                     border-bottom: 2px solid #f0f2f5; 
@@ -3749,9 +3827,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     font-weight: 500;
                     transition: background 0.2s ease;
                 }
-                .clear-all-filters:hover {
-                    background: #5a6268;
-                }
+                                 .clear-all-filters:hover {
+                     background: #5a6268;
+                 }
+                 .copy-emails-btn {
+                     background: #28a745;
+                     color: white;
+                     border: none;
+                     border-radius: 6px;
+                     padding: 8px 16px;
+                     cursor: pointer;
+                     font-size: 13px;
+                     font-weight: 500;
+                     transition: all 0.2s ease;
+                     display: flex;
+                     align-items: center;
+                     gap: 6px;
+                     margin-left: auto;
+                 }
+                 .copy-emails-btn:hover {
+                     background: #218838;
+                     transform: translateY(-1px);
+                     box-shadow: 0 2px 8px rgba(40,167,69,0.25);
+                 }
+                 .copy-emails-btn:active {
+                     transform: translateY(0);
+                 }
+                 .copy-emails-btn.copied {
+                     background: #17a2b8;
+                     animation: copySuccess 0.3s ease;
+                 }
+                 @keyframes copySuccess {
+                     0% { transform: scale(1); }
+                     50% { transform: scale(1.05); }
+                     100% { transform: scale(1); }
+                 }
+                 .copy-emails-btn .icon {
+                     font-size: 14px;
+                 }
                 .filter-dropdown::-webkit-scrollbar {
                     width: 6px;
                 }
@@ -3823,11 +3936,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <button class="clear-all-filters">Limpiar Todo</button>
+                    <button class="copy-emails-btn" id="copy-emails-btn">
+                        <span class="icon">📧</span>
+                        <span class="text">Copiar Emails</span>
+                    </button>
                 </div>
             `;
             
-            // Insert the container after the header element
-            contactsHeader.after(filterContainer);
+            // Insert the container after the toolbar element
+            contactsToolbar.after(filterContainer);
             
             // Add global click handler to close dropdowns when clicking outside (only once)
             if (!document._contactFiltersClickHandlerAdded) {
@@ -3841,6 +3958,100 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 document._contactFiltersClickHandlerAdded = true;
             }
+            
+            // Add copy emails functionality
+            setupCopyEmailsButton();
+        }
+        
+        function setupCopyEmailsButton() {
+            const copyEmailsBtn = document.getElementById('copy-emails-btn');
+            if (!copyEmailsBtn) return;
+            
+            copyEmailsBtn.addEventListener('click', async () => {
+                try {
+                    const visibleEmails = getVisibleEmails();
+                    
+                    if (visibleEmails.length === 0) {
+                        showCopyFeedback(copyEmailsBtn, 'No hay emails para copiar', 'warning');
+                        return;
+                    }
+                    
+                    // Format emails for email clients (comma-separated)
+                    const emailString = visibleEmails.join(', ');
+                    
+                    // Copy to clipboard
+                    await navigator.clipboard.writeText(emailString);
+                    
+                    // Show success feedback
+                    showCopyFeedback(copyEmailsBtn, `${visibleEmails.length} email${visibleEmails.length > 1 ? 's' : ''} copiado${visibleEmails.length > 1 ? 's' : ''}`, 'success');
+                    
+                } catch (error) {
+                    console.error('Error copying emails:', error);
+                    showCopyFeedback(copyEmailsBtn, 'Error al copiar emails', 'error');
+                }
+            });
+        }
+        
+        function getVisibleEmails() {
+            const visibleEmails = [];
+            const tableRows = document.querySelectorAll('#contactos-view .contacts-table tbody tr');
+            
+            tableRows.forEach(row => {
+                // Skip empty state rows
+                if (row.querySelector('.empty-state')) return;
+                
+                const emailCell = row.cells[2]; // Email is the 3rd column (index 2)
+                if (emailCell) {
+                    const email = emailCell.textContent.trim();
+                    
+                    // Only include valid email addresses
+                    if (email && 
+                        email !== '-' && 
+                        email !== '--' && 
+                        email !== '' && 
+                        isValidEmail(email)) {
+                        visibleEmails.push(email);
+                    }
+                }
+            });
+            
+            // Remove duplicates
+            return [...new Set(visibleEmails)];
+        }
+        
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        function showCopyFeedback(button, message, type) {
+            const originalText = button.querySelector('.text').textContent;
+            const originalIcon = button.querySelector('.icon').textContent;
+            const textSpan = button.querySelector('.text');
+            const iconSpan = button.querySelector('.icon');
+            
+            // Update button appearance based on type
+            if (type === 'success') {
+                button.classList.add('copied');
+                iconSpan.textContent = '✅';
+                textSpan.textContent = message;
+            } else if (type === 'warning') {
+                button.style.background = '#ffc107';
+                iconSpan.textContent = '⚠️';
+                textSpan.textContent = message;
+            } else if (type === 'error') {
+                button.style.background = '#dc3545';
+                iconSpan.textContent = '❌';
+                textSpan.textContent = message;
+            }
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.classList.remove('copied');
+                button.style.background = '';
+                iconSpan.textContent = originalIcon;
+                textSpan.textContent = originalText;
+            }, 2000);
         }
 
         function setupContactFilters() {
