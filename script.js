@@ -3454,6 +3454,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Refresh all UI elements
             loadContacts(); // This will trigger a full refresh of contacts
+            setupContactFilters();
+            applyContactFilters();
             updateProjectSelects();
             hideEditContactForm();
         }
@@ -3462,7 +3464,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm('¿Estás seguro de que deseas eliminar este contacto?')) return;
             contacts = contacts.filter(c => c.id !== contactId);
             saveContacts();
-            renderContacts();
+            setupContactFilters();
+            applyContactFilters();
         }
 
         function addContactCardListeners() {
@@ -3517,8 +3520,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Initialize immediately instead of waiting for DOMContentLoaded
+        addContactFilterUI();
         loadContacts();
         updateProjectSelects();
+        setupContactFilters();
         setupModalHandlers();
 
         // Add event listeners for forms
@@ -3544,18 +3549,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add search functionality
         const searchInput = document.getElementById('contact-search');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                const filteredContacts = contacts.filter(contact => 
-                    contact.name.toLowerCase().includes(searchTerm) ||
-                    contact.company.toLowerCase().includes(searchTerm) ||
-                    contact.position.toLowerCase().includes(searchTerm) ||
-                    (contact.projects || []).some(project => 
-                        project.toLowerCase().includes(searchTerm)
-                    )
-                );
-                renderContacts(filteredContacts);
-            });
+            searchInput.addEventListener('input', applyContactFilters);
         }
 
         // Add pull contacts button (only if it doesn't exist)
@@ -3567,6 +3561,533 @@ document.addEventListener('DOMContentLoaded', () => {
             contactsHeader.appendChild(pullContactsBtn);
 
             pullContactsBtn.addEventListener('click', pullContactsFromProjects);
+        }
+
+        function addContactFilterUI() {
+            const contactsView = document.getElementById('contactos-view');
+            const contactsHeader = contactsView?.querySelector('.contacts-header');
+
+            if (!contactsView || !contactsHeader || contactsView.querySelector('.filter-container')) {
+                return; // Already exists or required elements are missing
+            }
+
+            const style = document.createElement('style');
+            style.textContent = `
+                .filter-container { 
+                    padding: 20px 0; 
+                    border-bottom: 2px solid #f0f2f5; 
+                    margin-bottom: 20px; 
+                    background: #fafbfc;
+                    border-radius: 8px;
+                    margin: 0 -20px 20px -20px;
+                    padding: 20px;
+                }
+                .filter-bar { 
+                    display: flex; 
+                    gap: 15px; 
+                    align-items: center; 
+                    flex-wrap: wrap;
+                }
+                .filter-group { 
+                    position: relative; 
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .filter-btn { 
+                    background: white; 
+                    border: 2px solid #e1e8ed; 
+                    border-radius: 8px; 
+                    padding: 10px 16px; 
+                    cursor: pointer; 
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #333;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.2s ease;
+                    min-width: 120px;
+                    justify-content: space-between;
+                }
+                .filter-btn:hover { 
+                    background: #f8f9fa; 
+                    border-color: #007bff;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+                }
+                .filter-btn.active { 
+                    background: #007bff; 
+                    color: white; 
+                    border-color: #007bff;
+                }
+                .filter-btn .dropdown-arrow {
+                    font-size: 12px;
+                    transition: transform 0.2s ease;
+                }
+                .filter-btn.active .dropdown-arrow {
+                    transform: rotate(180deg);
+                }
+                .filter-badge {
+                    background: #dc3545;
+                    color: white;
+                    border-radius: 12px;
+                    padding: 2px 8px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    margin-left: 4px;
+                }
+                .filter-btn.active .filter-badge {
+                    background: rgba(255,255,255,0.3);
+                }
+                .filter-dropdown { 
+                    display: none; 
+                    position: absolute; 
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    background: white; 
+                    border: 2px solid #e1e8ed; 
+                    border-radius: 12px; 
+                    max-height: 280px; 
+                    overflow-y: auto; 
+                    z-index: 1000; 
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                    margin-top: 4px;
+                    animation: filterDropdownSlide 0.2s ease;
+                }
+                @keyframes filterDropdownSlide {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .filter-dropdown.active { 
+                    display: block; 
+                }
+                .filter-dropdown-header {
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #f0f2f5;
+                    background: #fafbfc;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-radius: 10px 10px 0 0;
+                }
+                .filter-dropdown-title {
+                    font-weight: 600;
+                    font-size: 14px;
+                    color: #333;
+                }
+                .filter-clear-btn {
+                    background: none;
+                    border: none;
+                    color: #007bff;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 500;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    transition: background 0.2s ease;
+                }
+                .filter-clear-btn:hover {
+                    background: rgba(0,123,255,0.1);
+                }
+                .filter-search {
+                    padding: 8px 16px;
+                    border-bottom: 1px solid #f0f2f5;
+                }
+                .filter-search input {
+                    width: 100%;
+                    border: 1px solid #e1e8ed;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    font-size: 13px;
+                    outline: none;
+                    transition: border-color 0.2s ease;
+                }
+                .filter-search input:focus {
+                    border-color: #007bff;
+                }
+                .filter-options {
+                    padding: 8px 0;
+                    max-height: 180px;
+                    overflow-y: auto;
+                }
+                .filter-option { 
+                    display: flex;
+                    align-items: center;
+                    padding: 8px 16px; 
+                    cursor: pointer;
+                    transition: background 0.2s ease;
+                    border: none;
+                    margin: 0;
+                }
+                .filter-option:hover { 
+                    background: #f8f9fa; 
+                }
+                .filter-option input {
+                    margin: 0;
+                    margin-right: 12px;
+                    transform: scale(1.1);
+                }
+                .filter-option label {
+                    cursor: pointer;
+                    font-size: 14px;
+                    color: #333;
+                    margin: 0;
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                }
+                .clear-all-filters {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 500;
+                    transition: background 0.2s ease;
+                }
+                .clear-all-filters:hover {
+                    background: #5a6268;
+                }
+                .filter-dropdown::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .filter-dropdown::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 3px;
+                }
+                .filter-dropdown::-webkit-scrollbar-thumb {
+                    background: #c1c1c1;
+                    border-radius: 3px;
+                }
+                .filter-dropdown::-webkit-scrollbar-thumb:hover {
+                    background: #a1a1a1;
+                }
+            `;
+            document.head.appendChild(style);
+
+            const filterContainer = document.createElement('div');
+            filterContainer.className = 'filter-container';
+
+            filterContainer.innerHTML = `
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <button id="project-filter-btn" class="filter-btn">
+                            <span class="filter-text">Proyecto</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div id="project-filter-dropdown" class="filter-dropdown">
+                            <div class="filter-dropdown-header">
+                                <span class="filter-dropdown-title">Filtrar por Proyecto</span>
+                                <button class="filter-clear-btn" data-filter="project">Limpiar</button>
+                            </div>
+                            <div class="filter-search">
+                                <input type="text" placeholder="Buscar proyecto..." class="filter-search-input">
+                            </div>
+                            <div class="filter-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <button id="company-filter-btn" class="filter-btn">
+                            <span class="filter-text">Empresa</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div id="company-filter-dropdown" class="filter-dropdown">
+                            <div class="filter-dropdown-header">
+                                <span class="filter-dropdown-title">Filtrar por Empresa</span>
+                                <button class="filter-clear-btn" data-filter="company">Limpiar</button>
+                            </div>
+                            <div class="filter-search">
+                                <input type="text" placeholder="Buscar empresa..." class="filter-search-input">
+                            </div>
+                            <div class="filter-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <button id="position-filter-btn" class="filter-btn">
+                            <span class="filter-text">Cargo</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div id="position-filter-dropdown" class="filter-dropdown">
+                            <div class="filter-dropdown-header">
+                                <span class="filter-dropdown-title">Filtrar por Cargo</span>
+                                <button class="filter-clear-btn" data-filter="position">Limpiar</button>
+                            </div>
+                            <div class="filter-search">
+                                <input type="text" placeholder="Buscar cargo..." class="filter-search-input">
+                            </div>
+                            <div class="filter-options"></div>
+                        </div>
+                    </div>
+                    <button class="clear-all-filters">Limpiar Todo</button>
+                </div>
+            `;
+            
+            // Insert the container after the header element
+            contactsHeader.after(filterContainer);
+            
+            // Add global click handler to close dropdowns when clicking outside (only once)
+            if (!document._contactFiltersClickHandlerAdded) {
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.filter-group')) {
+                        document.querySelectorAll('.filter-dropdown.active').forEach(dropdown => {
+                            dropdown.classList.remove('active');
+                            dropdown.closest('.filter-group').querySelector('.filter-btn').classList.remove('active');
+                        });
+                    }
+                });
+                document._contactFiltersClickHandlerAdded = true;
+            }
+        }
+
+        function setupContactFilters() {
+            const projects = [...new Set(contacts.flatMap(c => c.projects || []))].sort();
+            const companies = [...new Set(contacts.map(c => c.company).filter(Boolean))].sort();
+            const positions = [...new Set(contacts.map(c => c.position).filter(Boolean))].sort();
+
+            const setupDropdown = (btnId, dropdownId, items, filterType) => {
+                const btn = document.getElementById(btnId);
+                const dropdown = document.getElementById(dropdownId);
+                const optionsContainer = dropdown.querySelector('.filter-options');
+                const searchInput = dropdown.querySelector('.filter-search-input');
+                const clearBtn = dropdown.querySelector('.filter-clear-btn');
+                
+                // Function to render options
+                const renderOptions = (filteredItems = items) => {
+                    optionsContainer.innerHTML = filteredItems.map(item => `
+                        <div class="filter-option">
+                            <input type="checkbox" value="${item}" id="${filterType}-${item.replace(/\s+/g, '-')}">
+                            <label for="${filterType}-${item.replace(/\s+/g, '-')}">${item}</label>
+                        </div>
+                    `).join('');
+                };
+
+                // Initial render
+                renderOptions();
+
+                // Search functionality
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const filteredItems = items.filter(item => 
+                        item.toLowerCase().includes(searchTerm)
+                    );
+                    renderOptions(filteredItems);
+                    
+                    // Restore checked states
+                    const selectedValues = getSelected(`${dropdownId}`);
+                    selectedValues.forEach(value => {
+                        const checkbox = optionsContainer.querySelector(`input[value="${value}"]`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                });
+
+                // Button click handler
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    // Hide other dropdowns
+                    document.querySelectorAll('.filter-dropdown').forEach(d => {
+                        if (d.id !== dropdownId) {
+                            d.classList.remove('active');
+                            d.closest('.filter-group').querySelector('.filter-btn').classList.remove('active');
+                        }
+                    });
+                    
+                    // Toggle current dropdown
+                    const isActive = dropdown.classList.contains('active');
+                    if (isActive) {
+                        dropdown.classList.remove('active');
+                        btn.classList.remove('active');
+                    } else {
+                        dropdown.classList.add('active');
+                        btn.classList.add('active');
+                        // Focus search input when opening
+                        setTimeout(() => searchInput.focus(), 100);
+                    }
+                });
+
+                // Clear individual filter
+                clearBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+                    updateFilterBadge(btn, 0);
+                    applyContactFilters();
+                });
+
+                // Handle checkbox changes
+                optionsContainer.addEventListener('change', (e) => {
+                    if (e.target.type === 'checkbox') {
+                        const selectedCount = optionsContainer.querySelectorAll('input:checked').length;
+                        updateFilterBadge(btn, selectedCount);
+                        applyContactFilters();
+                    }
+                });
+
+                // Prevent dropdown from closing when clicking inside
+                dropdown.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            };
+
+            // Function to update filter badge
+            const updateFilterBadge = (btn, count) => {
+                const existingBadge = btn.querySelector('.filter-badge');
+                if (existingBadge) {
+                    existingBadge.remove();
+                }
+                
+                if (count > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'filter-badge';
+                    badge.textContent = count;
+                    btn.querySelector('.filter-text').after(badge);
+                }
+            };
+
+            // Function to get selected values
+            const getSelected = (dropdownId) => {
+                const dropdown = document.getElementById(dropdownId);
+                return Array.from(dropdown.querySelectorAll('input:checked')).map(cb => cb.value);
+            };
+
+            // Setup all dropdowns
+            setupDropdown('project-filter-btn', 'project-filter-dropdown', projects, 'project');
+            setupDropdown('company-filter-btn', 'company-filter-dropdown', companies, 'company');
+            setupDropdown('position-filter-btn', 'position-filter-dropdown', positions, 'position');
+
+            // Clear all filters functionality
+            const clearAllBtn = document.querySelector('.clear-all-filters');
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener('click', () => {
+                    // Clear all checkboxes
+                    document.querySelectorAll('.filter-dropdown input[type="checkbox"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+                    
+                    // Clear all badges
+                    document.querySelectorAll('.filter-badge').forEach(badge => badge.remove());
+                    
+                    // Clear search inputs
+                    document.querySelectorAll('.filter-search-input').forEach(input => {
+                        input.value = '';
+                    });
+                    
+                    // Close all dropdowns
+                    document.querySelectorAll('.filter-dropdown.active').forEach(dropdown => {
+                        dropdown.classList.remove('active');
+                        dropdown.closest('.filter-group').querySelector('.filter-btn').classList.remove('active');
+                    });
+                    
+                    // Re-render options to show all items
+                    setupContactFilters();
+                    
+                    // Apply filters (will show all contacts)
+                    applyContactFilters();
+                });
+            }
+        }
+
+        function applyContactFilters() {
+            const getSelected = (dropdownId) => {
+                const dropdown = document.getElementById(dropdownId);
+                if (!dropdown) return [];
+                return Array.from(dropdown.querySelectorAll('.filter-options input:checked')).map(cb => cb.value);
+            };
+
+            const selectedProjects = getSelected('project-filter-dropdown');
+            const selectedCompanies = getSelected('company-filter-dropdown');
+            const selectedPositions = getSelected('position-filter-dropdown');
+            const searchInput = document.getElementById('contact-search');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+            let filteredContacts = contacts.filter(contact => {
+                const projectMatch = selectedProjects.length === 0 || (contact.projects && contact.projects.some(p => selectedProjects.includes(p)));
+                const companyMatch = selectedCompanies.length === 0 || selectedCompanies.includes(contact.company);
+                const positionMatch = selectedPositions.length === 0 || selectedPositions.includes(contact.position);
+                return projectMatch && companyMatch && positionMatch;
+            });
+
+            if (searchTerm) {
+                filteredContacts = filteredContacts.filter(contact => 
+                    contact.name.toLowerCase().includes(searchTerm) ||
+                    (contact.company || '').toLowerCase().includes(searchTerm) ||
+                    (contact.position || '').toLowerCase().includes(searchTerm) ||
+                    (contact.projects || []).some(project => project.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            renderContacts(filteredContacts);
+            
+            // Update filter button states based on results
+            updateFilterButtonStates(filteredContacts.length, contacts.length);
+        }
+        
+        function updateFilterButtonStates(filteredCount, totalCount) {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const isFiltered = filteredCount < totalCount;
+            
+            filterButtons.forEach(btn => {
+                if (isFiltered && btn.querySelector('.filter-badge')) {
+                    btn.style.fontWeight = '600';
+                } else {
+                    btn.style.fontWeight = '500';
+                }
+            });
+            
+            // Update clear all button state
+            const clearAllBtn = document.querySelector('.clear-all-filters');
+            if (clearAllBtn) {
+                clearAllBtn.style.opacity = isFiltered ? '1' : '0.6';
+                clearAllBtn.disabled = !isFiltered;
+            }
+        }
+
+        function renderContacts(filteredContacts = null) {
+            const contactsToRender = filteredContacts || contacts;
+            const tableBody = document.querySelector('#contactos-view .contacts-table tbody');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = '';
+
+            if (contactsToRender.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = `
+                    <td colspan="7" class="empty-state">
+                        No hay contactos disponibles
+                    </td>
+                `;
+                tableBody.appendChild(emptyRow);
+                return;
+            }
+
+            contactsToRender.forEach(contact => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${contact.name}</td>
+                    <td>${contact.position}</td>
+                    <td>${contact.email}</td>
+                    <td>${contact.phone || '-'}</td>
+                    <td>${contact.company}</td>
+                    <td class="project-tags-cell">
+                        ${renderProjectTags(contact.projects || [])}
+                    </td>
+                    <td class="actions">
+                        <button class="edit-btn" data-id="${contact.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-btn" data-id="${contact.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            addContactCardListeners();
         }
     }
 
