@@ -5953,14 +5953,19 @@ document.addEventListener('DOMContentLoaded', () => {
             modal = createGroupSelectionModal();
             document.body.appendChild(modal);
         }
+        // Initialize/reset the staging array each time the modal is opened
+        window.stagedRecipients = []; 
+        updateStagedCount();
+
         modal.style.display = 'flex';
-        renderGroupList(); // Render the list of groups when modal is shown
+        populateAvailableFilterTags();
     }
 
     function hideGroupSelectionModal() {
         const modal = document.getElementById('group-selection-modal');
         if (modal) {
             modal.style.display = 'none';
+            clearGroupModalState(); // Clear state when hiding
         }
     }
 
@@ -5970,43 +5975,58 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.className = 'template-modal'; // Reuse existing modal styles
         
         modal.innerHTML = `
-            <div class="template-modal-content" style="max-width: 800px; max-height: 80vh;">
+            <div class="template-modal-content" style="max-width: 900px; max-height: 85vh;">
                 <div class="template-modal-header">
-                    <h3>Contact Groups</h3>
-                    <button class="template-modal-close" onclick="hideGroupSelectionModal()">&times;</button>
+                    <h3>Build Recipient List from Groups</h3>
+                    <button class="template-modal-close">&times;</button>
                 </div>
                 <div class="group-modal-body">
-                    <div class="group-list-container">
-                        <h4>My Groups</h4>
-                        <div id="group-list" class="group-list">
-                            <!-- Group items will be dynamically inserted here -->
+                    <div class="recipient-preview-container">
+                        <h4>Recipients Preview</h4>
+                        <div class="recipient-summary">
+                            <div id="recipient-summary-tags" class="recipient-summary-tags"></div>
+                            <div class="recipient-summary-count">
+                                Current selection: <span id="recipient-count">0</span> recipients
+                            </div>
                         </div>
-                        <button id="create-new-group-btn" class="btn-secondary">Create New Group</button>
+                        <div id="recipient-email-list" class="recipient-email-list"></div>
+                        <div class="staged-recipients-summary">
+                            <h4>Staged for Adding</h4>
+                            <div>Total unique recipients: <span id="staged-recipient-count">0</span></div>
+                        </div>
                     </div>
-                    <div class="group-editor-container">
-                        <div id="group-editor" style="display: none;">
-                            <input type="hidden" id="group-id">
-                            <div class="form-group">
-                                <label for="group-name">Group Name</label>
-                                <input type="text" id="group-name" placeholder="Enter group name...">
+                    <div class="filter-builder-container">
+                        <div class="filter-dropzone-wrapper">
+                            <label>Selected Filters (Contacts must match ALL of these)</label>
+                            <div id="selected-filters-dropzone" class="filter-dropzone">
+                                <span class="dropzone-placeholder">Click or drag tags here</span>
                             </div>
-                            <div class="form-group">
-                                <label>Contacts</label>
-                                <div id="group-contacts-list" class="group-contacts-list">
-                                    <!-- Contacts will be dynamically inserted here -->
-                                </div>
-                            </div>
-                            <button id="save-group-btn" class="btn-primary">Save Group</button>
-                            <button id="delete-group-btn" class="btn-danger" style="display: none;">Delete Group</button>
                         </div>
-                         <div id="group-editor-placeholder" class="group-editor-placeholder">
-                            <p>Select a group to edit or create a new one.</p>
+                        <div class="available-tags-wrapper">
+                            <div class="available-tags-header">
+                                <label>Available Filter Tags</label>
+                                <input type="text" id="filter-tag-search" placeholder="Search tags...">
+                            </div>
+                            <div id="available-filter-tags" class="available-filter-tags"></div>
+                        </div>
+                        <div class="saved-groups-wrapper">
+                             <label for="saved-groups-dropdown">Load Saved Group</label>
+                             <div class="saved-groups-controls">
+                                <select id="saved-groups-dropdown">
+                                    <option value="">Select a saved group...</option>
+                                </select>
+                                <button id="save-current-filters-btn" class="btn-secondary">Save Current Filters</button>
+                                <button id="delete-selected-group-btn" class="btn-danger" style="display:none;">Delete Selected Group</button>
+                             </div>
+                        </div>
+                        <div class="apply-filters-wrapper">
+                             <button id="stage-recipients-btn" class="btn-primary">Stage These Recipients</button>
                         </div>
                     </div>
                 </div>
                 <div class="template-modal-footer">
-                    <button type="button" class="btn-secondary" onclick="hideGroupSelectionModal()">Cancel</button>
-                    <button type="button" class="btn-primary" id="add-groups-to-template-btn">Add to Template</button>
+                    <button type="button" class="btn-secondary" id="cancel-group-modal-btn">Cancel</button>
+                    <button type="button" class="btn-primary" id="done-adding-recipients-btn">Done & Add Recipients</button>
                 </div>
             </div>
         `;
@@ -6015,10 +6035,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addGroupModalCSS();
 
         // Add event listeners for the new modal's functionality
-        modal.querySelector('#create-new-group-btn').addEventListener('click', () => setupGroupEditor());
-        modal.querySelector('#save-group-btn').addEventListener('click', saveGroup);
-        modal.querySelector('#delete-group-btn').addEventListener('click', deleteGroup);
-        modal.querySelector('#add-groups-to-template-btn').addEventListener('click', addSelectedGroupsToTemplate);
+        modal.querySelector('.template-modal-close').addEventListener('click', hideGroupSelectionModal);
+        modal.querySelector('#cancel-group-modal-btn').addEventListener('click', hideGroupSelectionModal);
+        modal.querySelector('#stage-recipients-btn').addEventListener('click', stageCurrentRecipients);
+        modal.querySelector('#done-adding-recipients-btn').addEventListener('click', addStagedRecipientsToTemplate);
+        modal.querySelector('#save-current-filters-btn').addEventListener('click', saveCurrentFiltersAsGroup);
+        modal.querySelector('#saved-groups-dropdown').addEventListener('change', (e) => loadSavedGroup(e.target.value));
+        modal.querySelector('#delete-selected-group-btn').addEventListener('click', deleteSelectedGroup);
 
 
         // Add event listener to close when clicking outside
@@ -6032,109 +6055,470 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addGroupModalCSS() {
-        if (document.getElementById('group-modal-styles')) return;
+        if (document.getElementById('group-modal-styles')) {
+            document.getElementById('group-modal-styles').remove();
+        }
 
         const style = document.createElement('style');
         style.id = 'group-modal-styles';
         style.textContent = `
             .group-modal-body {
                 display: flex;
-                min-height: 50vh;
+                min-height: 60vh;
                 padding: 20px 30px;
+                gap: 30px;
             }
-            .group-list-container {
-                flex: 0 0 250px;
+            .recipient-preview-container {
+                flex: 1;
                 border-right: 1px solid #e9ecef;
-                padding-right: 20px;
+                padding-right: 30px;
                 display: flex;
                 flex-direction: column;
             }
-            .group-list-container h4 {
-                margin: 0 0 15px 0;
+            .staged-recipients-summary {
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #e9ecef;
+                font-size: 14px;
+            }
+            .staged-recipients-summary h4 {
+                margin: 0 0 8px 0;
+                font-size: 14px;
                 font-weight: 600;
             }
-            .group-list {
-                flex-grow: 1;
-                overflow-y: auto;
+            #staged-recipient-count {
+                font-weight: bold;
+            }
+            .filter-builder-container {
+                flex: 1.5;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            .apply-filters-wrapper {
+                margin-top: auto;
+                padding-top: 20px;
+                border-top: 1px solid #e9ecef;
+            }
+            #apply-filters-btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 16px;
+            }
+            .recipient-preview-container h4 {
+                 margin: 0 0 15px 0;
+                 font-weight: 600;
+            }
+            .recipient-summary {
+                background-color: #f8f9fa;
+                border-radius: 8px;
+                padding: 10px;
                 margin-bottom: 15px;
             }
-            .group-item {
+            .recipient-summary-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                padding-bottom: 8px;
+                margin-bottom: 8px;
+                border-bottom: 1px solid #e9ecef;
+            }
+            .recipient-summary-count {
+                font-size: 14px;
+                font-weight: 600;
+                color: #333;
+            }
+            .recipient-email-list {
+                flex-grow: 1;
+                overflow-y: auto;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 10px;
+            }
+            .filter-dropzone-wrapper, .available-tags-wrapper, .saved-groups-wrapper {
+                display: flex;
+                flex-direction: column;
+            }
+            .filter-dropzone-wrapper label, .available-tags-wrapper label, .saved-groups-wrapper label {
+                font-weight: 600;
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            .filter-dropzone {
+                border: 2px dashed #d1d9e0;
+                border-radius: 8px;
+                padding: 10px;
+                min-height: 50px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+                background-color: #fdfdfd;
+            }
+            .dropzone-placeholder {
+                color: #6c757d;
+                font-style: italic;
+            }
+            .available-tags-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 10px;
+                margin-bottom: 8px;
+            }
+            #filter-tag-search {
+                border: 1px solid #d1d9e0;
                 border-radius: 6px;
-                cursor: pointer;
-                transition: background-color 0.2s ease;
+                padding: 6px 10px;
+                font-size: 13px;
             }
-            .group-item:hover {
-                background-color: #f8f9fa;
-            }
-            .group-item.active {
-                background-color: #e3f2fd;
-                color: #0056b3;
-                font-weight: 600;
-            }
-            .group-item .group-member-count {
-                font-size: 12px;
-                color: #6c757d;
-                background-color: #e9ecef;
-                padding: 2px 6px;
-                border-radius: 4px;
-            }
-            .group-editor-container {
-                flex-grow: 1;
-                padding-left: 20px;
-                position: relative;
-            }
-            .group-editor-placeholder {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                color: #6c757d;
-                text-align: center;
-            }
-            .group-contacts-list {
+            .available-filter-tags {
                 border: 1px solid #e1e8ed;
                 border-radius: 8px;
                 padding: 10px;
-                height: 250px;
+                height: 200px;
                 overflow-y: auto;
                 background: #fdfdfd;
             }
-            .contact-checkbox-item {
-                display: block;
-                padding: 6px;
-                cursor: pointer;
+            .filter-tag-category {
+                margin-bottom: 15px;
             }
-            .contact-checkbox-item:hover {
-                 background-color: #f8f9fa;
-            }
-            .contact-checkbox-item input {
-                margin-right: 10px;
-            }
-            .contact-checkbox-item label {
-                font-size: 14px;
-                color: #333;
-                cursor: pointer;
-            }
-            .contact-checkbox-item label span {
-                font-size: 12px;
+            .filter-tag-category h5 {
+                font-size: 13px;
                 color: #6c757d;
-                margin-left: 5px;
+                text-transform: uppercase;
+                margin: 0 0 8px 0;
+                border-bottom: 1px solid #e9ecef;
+                padding-bottom: 4px;
             }
-            .btn-danger {
-                background-color: #dc3545;
+            .tags-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .filter-tag {
+                background-color: #e9ecef;
+                color: #495057;
+                padding: 5px 10px;
+                border-radius: 15px;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background-color 0.2s, color 0.2s;
+            }
+            .filter-tag:hover {
+                background-color: #007bff;
                 color: white;
-                margin-left: 10px;
             }
-            .btn-danger:hover {
-                background-color: #c82333;
+            #selected-filters-dropzone .filter-tag {
+                background-color: #007bff;
+                color: white;
+            }
+            #selected-filters-dropzone .filter-tag:hover::after {
+                content: '   ×';
+                font-weight: bold;
+                padding-left: 5px;
+            }
+             .saved-groups-controls {
+                display: flex;
+                gap: 10px;
+            }
+            .saved-groups-controls select {
+                flex-grow: 1;
+                border: 1px solid #d1d9e0;
+                border-radius: 6px;
+                padding: 8px 10px;
             }
         `;
         document.head.appendChild(style);
     }
+
+    function populateAvailableFilterTags() {
+        const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+        const projects = [...new Set(contacts.flatMap(c => c.projects || []))].sort();
+        const companies = [...new Set(contacts.map(c => c.company).filter(Boolean))].sort();
+        const positions = [...new Set(contacts.map(c => c.position).filter(Boolean))].sort();
+
+        const tagsContainer = document.getElementById('available-filter-tags');
+        tagsContainer.innerHTML = '';
+
+        const createCategoryHtml = (title, tags, type) => {
+            if (tags.length === 0) return '';
+            return `
+                <div class="filter-tag-category">
+                    <h5>${title}</h5>
+                    <div class="tags-container">
+                        ${tags.map(tag => `<span class="filter-tag" data-tag-type="${type}" data-tag-value="${tag}">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
+        tagsContainer.innerHTML += createCategoryHtml('Proyecto', projects, 'project');
+        tagsContainer.innerHTML += createCategoryHtml('Empresa', companies, 'company');
+        tagsContainer.innerHTML += createCategoryHtml('Puesto', positions, 'position');
+
+        // Add event listeners to the newly created tags
+        tagsContainer.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.addEventListener('click', () => addFilterTag(tag.dataset.tagType, tag.dataset.tagValue));
+        });
+
+        populateSavedGroupsDropdown();
+    }
+
+    function addFilterTag(type, value) {
+        const dropzone = document.getElementById('selected-filters-dropzone');
+        const placeholder = dropzone.querySelector('.dropzone-placeholder');
+
+        // Prevent duplicate tags
+        if (dropzone.querySelector(`.filter-tag[data-tag-value="${value}"]`)) {
+            return;
+        }
+
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
+        const tag = document.createElement('span');
+        tag.className = 'filter-tag';
+        tag.dataset.tagType = type;
+        tag.dataset.tagValue = value;
+        tag.textContent = value;
+        
+        tag.addEventListener('click', () => {
+            tag.remove();
+            if (dropzone.children.length === 1) { // Only placeholder left
+                 placeholder.style.display = 'block';
+            }
+            updateRecipientPreview();
+        });
+        
+        dropzone.appendChild(tag);
+        updateRecipientPreview();
+    }
+
+    function updateRecipientPreview() {
+        const dropzone = document.getElementById('selected-filters-dropzone');
+        const selectedTags = Array.from(dropzone.querySelectorAll('.filter-tag')).map(tag => ({
+            type: tag.dataset.tagType,
+            value: tag.dataset.tagValue
+        }));
+
+        const summaryTagsContainer = document.getElementById('recipient-summary-tags');
+        summaryTagsContainer.innerHTML = selectedTags.map(tag => `<span class="filter-tag">${tag.value}</span>`).join('');
+
+        const allContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+        
+        let filteredContacts = allContacts;
+        if (selectedTags.length > 0) {
+            filteredContacts = allContacts.filter(contact => {
+                return selectedTags.every(tag => {
+                    switch (tag.type) {
+                        case 'project':
+                            return contact.projects && contact.projects.includes(tag.value);
+                        case 'company':
+                            return contact.company === tag.value;
+                        case 'position':
+                            return contact.position === tag.value;
+                        default:
+                            return false;
+                    }
+                });
+            });
+        } else {
+            filteredContacts = []; // No filters selected, show no one
+        }
+
+        const emailList = document.getElementById('recipient-email-list');
+        emailList.innerHTML = filteredContacts.map(c => `<div>${c.email}</div>`).join('');
+        
+        const recipientCount = document.getElementById('recipient-count');
+        recipientCount.textContent = filteredContacts.length;
+    }
+
+    function saveCurrentFiltersAsGroup() {
+        const selectedTags = Array.from(document.querySelectorAll('#selected-filters-dropzone .filter-tag')).map(tag => ({
+            type: tag.dataset.tagType,
+            value: tag.dataset.tagValue
+        }));
+
+        if (selectedTags.length === 0) {
+            alert("Please select at least one filter to save as a group.");
+            return;
+        }
+
+        const groupName = prompt("Enter a name for this group:");
+        if (!groupName || groupName.trim() === "") {
+            return; // User cancelled or entered empty name
+        }
+
+        const newGroup = {
+            id: 'group_' + Date.now(),
+            name: groupName.trim(),
+            filters: selectedTags
+        };
+
+        const groups = getGroups();
+        groups.push(newGroup);
+        saveGroups(groups);
+        populateSavedGroupsDropdown();
+        alert(`Group "${groupName}" saved.`);
+    }
+
+    function populateSavedGroupsDropdown() {
+        const groups = getGroups();
+        const dropdown = document.getElementById('saved-groups-dropdown');
+        dropdown.innerHTML = '<option value="">Select a saved group...</option>'; // Reset
+        
+        groups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.id;
+            option.textContent = group.name;
+            dropdown.appendChild(option);
+        });
+    }
+
+    function loadSavedGroup(groupId) {
+        const deleteBtn = document.getElementById('delete-selected-group-btn');
+        if (!groupId) {
+            deleteBtn.style.display = 'none';
+            return;
+        }
+
+        const groups = getGroups();
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+
+        const dropzone = document.getElementById('selected-filters-dropzone');
+        dropzone.innerHTML = ''; // Clear existing tags
+
+        group.filters.forEach(filter => {
+            addFilterTag(filter.type, filter.value);
+        });
+        
+        deleteBtn.style.display = 'inline-block';
+    }
+
+    function deleteSelectedGroup() {
+        const dropdown = document.getElementById('saved-groups-dropdown');
+        const groupId = dropdown.value;
+
+        if (!groupId || !confirm("Are you sure you want to delete this saved group?")) {
+            return;
+        }
+
+        let groups = getGroups();
+        groups = groups.filter(g => g.id !== groupId);
+        saveGroups(groups);
+
+        populateSavedGroupsDropdown();
+        document.getElementById('delete-selected-group-btn').style.display = 'none';
+        
+        // Clear the filters from the UI if they matched the deleted group
+        const dropzone = document.getElementById('selected-filters-dropzone');
+        dropzone.innerHTML = '<span class="dropzone-placeholder">Click or drag tags here</span>';
+        updateRecipientPreview();
+    }
+
+    function addRecipientEmailsToTemplate() {
+        const emailDivs = document.querySelectorAll('#recipient-email-list div');
+        if (emailDivs.length === 0) {
+            alert("There are no recipients to add.");
+            return;
+        }
+
+        const emails = Array.from(emailDivs).map(div => div.textContent);
+        
+        const toInput = document.getElementById('template-to');
+        const existingEmails = toInput.value.split(',').map(e => e.trim()).filter(Boolean);
+        const newEmails = [...new Set([...existingEmails, ...emails])];
+
+        toInput.value = newEmails.join(', ');
+        hideGroupSelectionModal();
+    }
+
+    function stageCurrentRecipients() {
+        const emailDivs = document.querySelectorAll('#recipient-email-list div');
+        if (emailDivs.length === 0) {
+            alert("The current filters result in 0 recipients. Nothing to stage.");
+            return;
+        }
+
+        const newEmails = Array.from(emailDivs).map(div => div.textContent);
+        
+        // Add to global staged array, ensuring uniqueness
+        const combined = new Set([...(window.stagedRecipients || []), ...newEmails]);
+        window.stagedRecipients = [...combined];
+        
+        updateStagedCount();
+        clearFilterBuilderState(); // Clear the filter builder for the next group
+        alert(`${newEmails.length} recipients staged. You can now build another group or click "Done".`);
+    }
+
+    function addStagedRecipientsToTemplate() {
+        if (!window.stagedRecipients || window.stagedRecipients.length === 0) {
+            alert("No recipients have been staged. Stage some recipients first or use the Cancel button.");
+            return;
+        }
+
+        const toInput = document.getElementById('template-to');
+        const existingEmails = toInput.value.split(',').map(e => e.trim()).filter(Boolean);
+        
+        const combined = new Set([...existingEmails, ...window.stagedRecipients]);
+        toInput.value = [...combined].join(', ');
+        
+        hideGroupSelectionModal();
+    }
+
+    function updateStagedCount() {
+        const countEl = document.getElementById('staged-recipient-count');
+        if (countEl) {
+            countEl.textContent = (window.stagedRecipients || []).length;
+        }
+    }
+    
+    function clearFilterBuilderState() {
+        const dropzone = document.getElementById('selected-filters-dropzone');
+        if (dropzone) {
+            dropzone.innerHTML = '<span class="dropzone-placeholder">Click or drag tags here</span>';
+        }
+
+        const dropdown = document.getElementById('saved-groups-dropdown');
+        if (dropdown) dropdown.value = '';
+        
+        const deleteBtn = document.getElementById('delete-selected-group-btn');
+        if (deleteBtn) deleteBtn.style.display = 'none';
+
+        // Manually trigger the recipient preview update to clear the left side
+        updateRecipientPreview();
+    }
+
+    function clearGroupModalState() {
+        // This function now clears everything, including the builder
+        clearFilterBuilderState();
+        const dropzone = document.getElementById('selected-filters-dropzone');
+        if (dropzone) {
+            dropzone.innerHTML = '<span class="dropzone-placeholder">Click or drag tags here</span>';
+        }
+
+        const summaryTags = document.getElementById('recipient-summary-tags');
+        if (summaryTags) summaryTags.innerHTML = '';
+        
+        const emailList = document.getElementById('recipient-email-list');
+        if (emailList) emailList.innerHTML = '';
+
+        const recipientCount = document.getElementById('recipient-count');
+        if (recipientCount) recipientCount.textContent = '0';
+
+        const dropdown = document.getElementById('saved-groups-dropdown');
+        if (dropdown) dropdown.value = '';
+
+        const deleteBtn = document.getElementById('delete-selected-group-btn');
+        if (deleteBtn) deleteBtn.style.display = 'none';
+
+        const searchInput = document.getElementById('filter-tag-search');
+        if (searchInput) searchInput.value = '';
+    }
+
 
     // --- Group Management Logic ---
 
