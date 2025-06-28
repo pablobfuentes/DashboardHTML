@@ -2899,6 +2899,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 transform: translateY(-2px);
                 box-shadow: 0 8px 25px rgba(0,123,255,0.15);
             }
+            .template-card.active-template {
+                border-color: #007bff;
+                box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+                background-color: #f0f7ff;
+            }
             .template-card-main {
                 display: flex;
                 flex-direction: column;
@@ -3183,14 +3188,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const quickActionButtons = document.querySelectorAll('.quick-action-btn');
         quickActionButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const action = e.target.textContent.trim();
-                console.log('Quick action clicked:', action);
+                const actionButton = e.currentTarget;
+                const actionText = actionButton.textContent.trim();
                 
-                if (action.includes('Preview')) {
+                if (!window.activeTemplateId) {
+                    console.log(`Action "${actionText}" clicked but no template selected.`);
+                    return;
+                }
+
+                console.log('Quick action clicked:', actionText, 'for template id:', window.activeTemplateId);
+                
+                if (actionText.includes('Preview')) {
                     alert('Template preview feature will be implemented!');
-                } else if (action.includes('Duplicate')) {
+                } else if (actionText.includes('Duplicate')) {
                     alert('Template duplication feature will be implemented!');
-                } else if (action.includes('Send Test')) {
+                } else if (actionText.includes('Send Test')) {
                     alert('Test email feature will be implemented!');
                 }
             });
@@ -3213,12 +3225,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 filterTemplatesByCategory(categoryName);
             });
         });
+
+        // Set initial state for sidebar buttons
+        updateSidebarState();
     }
     
     function filterTemplatesByCategory(categoryName) {
         console.log('Filtering templates by category:', categoryName);
         // This function will filter the templates grid based on the selected category
         // Implementation will come when we have actual templates
+    }
+    
+    function updateSidebarState() {
+        const quickActionButtons = document.querySelectorAll('.quick-actions .quick-action-btn');
+        const hasActiveTemplate = !!window.activeTemplateId;
+
+        quickActionButtons.forEach(btn => {
+            btn.disabled = !hasActiveTemplate;
+            btn.style.cursor = hasActiveTemplate ? 'pointer' : 'not-allowed';
+            btn.style.opacity = hasActiveTemplate ? '1' : '0.6';
+        });
     }
     
     function updateCategoryCounts() {
@@ -3302,6 +3328,28 @@ document.addEventListener('DOMContentLoaded', () => {
             // Render template cards
             templates.forEach(template => {
                 const templateCard = createTemplateCard(template);
+
+                templateCard.addEventListener('click', () => {
+                    // Deselect if clicking the same card again
+                    if (templateCard.classList.contains('active-template')) {
+                        templateCard.classList.remove('active-template');
+                        window.activeTemplateId = null;
+                    } else {
+                        // Remove active class from any other card
+                        const currentActive = templatesGrid.querySelector('.template-card.active-template');
+                        if (currentActive) {
+                            currentActive.classList.remove('active-template');
+                        }
+                        // Add active class to this card
+                        templateCard.classList.add('active-template');
+                        // Store active template ID
+                        window.activeTemplateId = template.id;
+                    }
+                    
+                    // Update sidebar button states
+                    updateSidebarState();
+                });
+                
                 templatesGrid.appendChild(templateCard);
             });
         }
@@ -5439,6 +5487,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="form-group">
+                        <label for="template-to">To:</label>
+                        <div class="recipient-input-wrapper">
+                            <input type="text" id="template-to" name="to" placeholder="Enter recipient emails, separated by commas">
+                            <button type="button" class="add-group-btn" id="add-from-groups-btn">Add from Groups</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="template-subject">Subject *</label>
                         <input type="text" id="template-subject" name="subject" required placeholder="Enter email subject">
                     </div>
@@ -5463,6 +5518,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const form = modal.querySelector('#template-form');
         form.addEventListener('submit', handleTemplateSubmit);
+        
+        const addGroupBtn = modal.querySelector('#add-from-groups-btn');
+        addGroupBtn.addEventListener('click', () => {
+            showGroupSelectionModal();
+        });
         
         // Add modal CSS
         addTemplateModalCSS();
@@ -5643,6 +5703,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 transform: translateY(-1px);
                 box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
             }
+            
+            .recipient-input-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .recipient-input-wrapper input {
+                flex: 1;
+            }
+
+            .add-group-btn {
+                padding: 12px 16px;
+                background-color: #6c757d;
+                color: white;
+                border: 2px solid #6c757d;
+                border-radius: 0 8px 8px 0;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                white-space: nowrap;
+                transition: background-color 0.2s ease;
+            }
+
+            .add-group-btn:hover {
+                background-color: #5a6268;
+                border-color: #5a6268;
+            }
+
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                outline: none;
+                border-color: #007bff;
+                box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+            }
+
+            .recipient-input-wrapper input:focus {
+                 border-color: #007bff;
+                 box-shadow: none;
+            }
+            
+            .recipient-input-wrapper input:focus + .add-group-btn {
+                border-color: #007bff;
+            }
+
+            .form-group textarea {
+                resize: vertical;
+                min-height: 120px;
+                line-height: 1.5;
+            }
+            
+            .template-modal-footer {
+                transform: translateY(-1px);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
+            }
         `;
         document.head.appendChild(style);
     }
@@ -5652,6 +5769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('template-category').value = templateData.category || '';
         document.getElementById('template-subject').value = templateData.subject || '';
         document.getElementById('template-body').value = templateData.body || '';
+        document.getElementById('template-to').value = templateData.to || '';
     }
     
     function clearTemplateForm() {
@@ -5666,7 +5784,8 @@ document.addEventListener('DOMContentLoaded', () => {
             name: formData.get('name').trim(),
             category: formData.get('category'),
             subject: formData.get('subject').trim(),
-            body: formData.get('body').trim()
+            body: formData.get('body').trim(),
+            to: formData.get('to').trim()
         };
         
         // Validate required fields
@@ -5698,6 +5817,7 @@ document.addEventListener('DOMContentLoaded', () => {
             category: templateData.category,
             subject: templateData.subject,
             body: templateData.body,
+            to: templateData.to,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -5729,6 +5849,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 category: templateData.category,
                 subject: templateData.subject,
                 body: templateData.body,
+                to: templateData.to,
                 updatedAt: new Date().toISOString()
             };
             
@@ -5738,5 +5859,447 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Template updated:', templates[templateIndex]);
         }
+    }
+    function showSendEmailModal(templateData) {
+        console.log('Showing send email modal for template:', templateData.name);
+        
+        let modal = document.getElementById('send-email-modal');
+        if (!modal) {
+            modal = createSendEmailModal();
+            document.body.appendChild(modal);
+        }
+
+        // Populate modal with template data
+        modal.querySelector('#send-email-subject').value = templateData.subject;
+        modal.querySelector('#send-email-body').value = templateData.body;
+        
+        modal.style.display = 'flex';
+    }
+
+    function hideSendEmailModal() {
+        const modal = document.getElementById('send-email-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function createSendEmailModal() {
+        const modal = document.createElement('div');
+        modal.id = 'send-email-modal';
+        modal.className = 'send-email-modal';
+        
+        modal.innerHTML = `
+            <div class="send-email-modal-content">
+                <div class="send-email-modal-header">
+                    <h3>Send Email</h3>
+                    <button class="send-email-modal-close">&times;</button>
+                </div>
+                <div class="send-email-modal-body">
+                    <div class="recipient-field">
+                        <label for="send-to">To:</label>
+                        <textarea id="send-to" class="recipient-input" rows="1" placeholder="Enter emails..."></textarea>
+                        <button class="add-group-btn" data-recipient-type="to">Add from Groups</button>
+                    </div>
+                    <div class="recipient-field">
+                        <label for="send-cc">Cc:</label>
+                        <textarea id="send-cc" class="recipient-input" rows="1" placeholder="Enter emails..."></textarea>
+                        <button class="add-group-btn" data-recipient-type="cc">Add from Groups</button>
+                    </div>
+                    <div class="recipient-field">
+                        <label for="send-bcc">Bcc:</label>
+                        <textarea id="send-bcc" class="recipient-input" rows="1" placeholder="Enter emails..."></textarea>
+                        <button class="add-group-btn" data-recipient-type="bcc">Add from Groups</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="send-email-subject">Subject:</label>
+                        <input type="text" id="send-email-subject" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="send-email-body">Body:</label>
+                        <textarea id="send-email-body" rows="10" readonly></textarea>
+                    </div>
+                </div>
+                <div class="send-email-modal-footer">
+                    <button type="button" class="btn-secondary close-send-modal-btn">Cancel</button>
+                    <button type="button" class="btn-primary" id="send-final-email-btn">Send</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        modal.querySelector('.send-email-modal-close').addEventListener('click', hideSendEmailModal);
+        modal.querySelector('.close-send-modal-btn').addEventListener('click', hideSendEmailModal);
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideSendEmailModal();
+            }
+        });
+
+        // Placeholder for Add from Groups button
+        modal.querySelectorAll('.add-group-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const type = e.target.dataset.recipientType;
+                alert(`Opening 'Add from Groups' for ${type.toUpperCase()} field. (Phase 2)`);
+            });
+        });
+
+        return modal;
+    }
+
+    function showGroupSelectionModal() {
+        let modal = document.getElementById('group-selection-modal');
+        if (!modal) {
+            modal = createGroupSelectionModal();
+            document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+        renderGroupList(); // Render the list of groups when modal is shown
+    }
+
+    function hideGroupSelectionModal() {
+        const modal = document.getElementById('group-selection-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function createGroupSelectionModal() {
+        const modal = document.createElement('div');
+        modal.id = 'group-selection-modal';
+        modal.className = 'template-modal'; // Reuse existing modal styles
+        
+        modal.innerHTML = `
+            <div class="template-modal-content" style="max-width: 800px; max-height: 80vh;">
+                <div class="template-modal-header">
+                    <h3>Contact Groups</h3>
+                    <button class="template-modal-close" onclick="hideGroupSelectionModal()">&times;</button>
+                </div>
+                <div class="group-modal-body">
+                    <div class="group-list-container">
+                        <h4>My Groups</h4>
+                        <div id="group-list" class="group-list">
+                            <!-- Group items will be dynamically inserted here -->
+                        </div>
+                        <button id="create-new-group-btn" class="btn-secondary">Create New Group</button>
+                    </div>
+                    <div class="group-editor-container">
+                        <div id="group-editor" style="display: none;">
+                            <input type="hidden" id="group-id">
+                            <div class="form-group">
+                                <label for="group-name">Group Name</label>
+                                <input type="text" id="group-name" placeholder="Enter group name...">
+                            </div>
+                            <div class="form-group">
+                                <label>Contacts</label>
+                                <div id="group-contacts-list" class="group-contacts-list">
+                                    <!-- Contacts will be dynamically inserted here -->
+                                </div>
+                            </div>
+                            <button id="save-group-btn" class="btn-primary">Save Group</button>
+                            <button id="delete-group-btn" class="btn-danger" style="display: none;">Delete Group</button>
+                        </div>
+                         <div id="group-editor-placeholder" class="group-editor-placeholder">
+                            <p>Select a group to edit or create a new one.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="template-modal-footer">
+                    <button type="button" class="btn-secondary" onclick="hideGroupSelectionModal()">Cancel</button>
+                    <button type="button" class="btn-primary" id="add-groups-to-template-btn">Add to Template</button>
+                </div>
+            </div>
+        `;
+        
+        // Add CSS for the group modal
+        addGroupModalCSS();
+
+        // Add event listeners for the new modal's functionality
+        modal.querySelector('#create-new-group-btn').addEventListener('click', () => setupGroupEditor());
+        modal.querySelector('#save-group-btn').addEventListener('click', saveGroup);
+        modal.querySelector('#delete-group-btn').addEventListener('click', deleteGroup);
+        modal.querySelector('#add-groups-to-template-btn').addEventListener('click', addSelectedGroupsToTemplate);
+
+
+        // Add event listener to close when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideGroupSelectionModal();
+            }
+        });
+
+        return modal;
+    }
+
+    function addGroupModalCSS() {
+        if (document.getElementById('group-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'group-modal-styles';
+        style.textContent = `
+            .group-modal-body {
+                display: flex;
+                min-height: 50vh;
+                padding: 20px 30px;
+            }
+            .group-list-container {
+                flex: 0 0 250px;
+                border-right: 1px solid #e9ecef;
+                padding-right: 20px;
+                display: flex;
+                flex-direction: column;
+            }
+            .group-list-container h4 {
+                margin: 0 0 15px 0;
+                font-weight: 600;
+            }
+            .group-list {
+                flex-grow: 1;
+                overflow-y: auto;
+                margin-bottom: 15px;
+            }
+            .group-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            .group-item:hover {
+                background-color: #f8f9fa;
+            }
+            .group-item.active {
+                background-color: #e3f2fd;
+                color: #0056b3;
+                font-weight: 600;
+            }
+            .group-item .group-member-count {
+                font-size: 12px;
+                color: #6c757d;
+                background-color: #e9ecef;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+            .group-editor-container {
+                flex-grow: 1;
+                padding-left: 20px;
+                position: relative;
+            }
+            .group-editor-placeholder {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                color: #6c757d;
+                text-align: center;
+            }
+            .group-contacts-list {
+                border: 1px solid #e1e8ed;
+                border-radius: 8px;
+                padding: 10px;
+                height: 250px;
+                overflow-y: auto;
+                background: #fdfdfd;
+            }
+            .contact-checkbox-item {
+                display: block;
+                padding: 6px;
+                cursor: pointer;
+            }
+            .contact-checkbox-item:hover {
+                 background-color: #f8f9fa;
+            }
+            .contact-checkbox-item input {
+                margin-right: 10px;
+            }
+            .contact-checkbox-item label {
+                font-size: 14px;
+                color: #333;
+                cursor: pointer;
+            }
+            .contact-checkbox-item label span {
+                font-size: 12px;
+                color: #6c757d;
+                margin-left: 5px;
+            }
+            .btn-danger {
+                background-color: #dc3545;
+                color: white;
+                margin-left: 10px;
+            }
+            .btn-danger:hover {
+                background-color: #c82333;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // --- Group Management Logic ---
+
+    function getGroups() {
+        return JSON.parse(localStorage.getItem('contactGroups') || '[]');
+    }
+
+    function saveGroups(groups) {
+        localStorage.setItem('contactGroups', JSON.stringify(groups));
+    }
+
+    function renderGroupList() {
+        const groups = getGroups();
+        const groupList = document.getElementById('group-list');
+        groupList.innerHTML = '';
+
+        if (groups.length === 0) {
+            groupList.innerHTML = '<div class="empty-group-state" style="padding: 10px; color: #6c757d;">No groups yet.</div>';
+            return;
+        }
+
+        groups.forEach(group => {
+            const groupItem = document.createElement('div');
+            groupItem.className = 'group-item';
+            groupItem.dataset.groupId = group.id;
+            groupItem.innerHTML = `
+                <span class="group-name">${group.name}</span>
+                <span class="group-member-count">${group.contactIds.length}</span>
+            `;
+            groupItem.addEventListener('click', () => {
+                 // Highlight this item
+                document.querySelectorAll('.group-item').forEach(item => item.classList.remove('active'));
+                groupItem.classList.add('active');
+                setupGroupEditor(group.id);
+            });
+            groupList.appendChild(groupItem);
+        });
+    }
+
+    function setupGroupEditor(groupId = null) {
+        const editor = document.getElementById('group-editor');
+        const placeholder = document.getElementById('group-editor-placeholder');
+        const groupNameInput = document.getElementById('group-name');
+        const contactsList = document.getElementById('group-contacts-list');
+        const groupIdInput = document.getElementById('group-id');
+        const deleteBtn = document.getElementById('delete-group-btn');
+
+        // Show editor, hide placeholder
+        editor.style.display = 'block';
+        if(placeholder) placeholder.style.display = 'none';
+
+        // Populate contacts list
+        const allContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+        contactsList.innerHTML = allContacts.map(contact => `
+            <div class="contact-checkbox-item">
+                 <label>
+                    <input type="checkbox" value="${contact.id}">
+                    ${contact.name} <span>(${contact.email})</span>
+                </label>
+            </div>
+        `).join('');
+
+
+        if (groupId) {
+            // Editing existing group
+            const groups = getGroups();
+            const group = groups.find(g => g.id === groupId);
+            groupNameInput.value = group.name;
+            groupIdInput.value = group.id;
+            deleteBtn.style.display = 'inline-block';
+
+            // Check the contacts that are part of the group
+            group.contactIds.forEach(contactId => {
+                const checkbox = contactsList.querySelector(`input[value="${contactId}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+
+        } else {
+            // Creating new group
+            groupNameInput.value = '';
+            groupIdInput.value = '';
+            deleteBtn.style.display = 'none';
+             // Clear active class from group list
+            document.querySelectorAll('.group-item').forEach(item => item.classList.remove('active'));
+        }
+    }
+
+    function saveGroup() {
+        const groupName = document.getElementById('group-name').value.trim();
+        const groupId = document.getElementById('group-id').value;
+        
+        if (!groupName) {
+            alert('Group name is required.');
+            return;
+        }
+
+        const selectedContactIds = Array.from(document.querySelectorAll('#group-contacts-list input:checked')).map(cb => cb.value);
+
+        let groups = getGroups();
+
+        if (groupId) {
+            // Update existing group
+            const groupIndex = groups.findIndex(g => g.id === groupId);
+            if (groupIndex > -1) {
+                groups[groupIndex].name = groupName;
+                groups[groupIndex].contactIds = selectedContactIds;
+            }
+        } else {
+            // Create new group
+            const newGroup = {
+                id: 'group_' + Date.now(),
+                name: groupName,
+                contactIds: selectedContactIds
+            };
+            groups.push(newGroup);
+        }
+
+        saveGroups(groups);
+        renderGroupList();
+
+        // Hide editor, show placeholder
+        document.getElementById('group-editor').style.display = 'none';
+        document.getElementById('group-editor-placeholder').style.display = 'flex';
+    }
+
+    function deleteGroup() {
+        const groupId = document.getElementById('group-id').value;
+        if (!groupId || !confirm('Are you sure you want to delete this group?')) {
+            return;
+        }
+
+        let groups = getGroups();
+        groups = groups.filter(g => g.id !== groupId);
+        saveGroups(groups);
+        renderGroupList();
+        
+        // Hide editor, show placeholder
+        document.getElementById('group-editor').style.display = 'none';
+        document.getElementById('group-editor-placeholder').style.display = 'flex';
+    }
+
+    function addSelectedGroupsToTemplate() {
+        const activeGroupItem = document.querySelector('.group-item.active');
+        if (!activeGroupItem) {
+            alert('Please select a group to add.');
+            return;
+        }
+        
+        const groupId = activeGroupItem.dataset.groupId;
+        const groups = getGroups();
+        const group = groups.find(g => g.id === groupId);
+        const allContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+
+        const emails = group.contactIds.map(contactId => {
+            const contact = allContacts.find(c => c.id === contactId);
+            return contact ? contact.email : null;
+        }).filter(Boolean); // Filter out null/undefined emails
+
+        const toInput = document.getElementById('template-to');
+        const existingEmails = toInput.value.split(',').map(e => e.trim()).filter(Boolean);
+        const newEmails = [...new Set([...existingEmails, ...emails])]; // Combine and remove duplicates
+
+        toInput.value = newEmails.join(', ');
+        hideGroupSelectionModal();
     }
 });
