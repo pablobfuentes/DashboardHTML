@@ -3199,11 +3199,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Quick action clicked:', actionText, 'for template id:', window.activeTemplateId);
                 
                 if (actionText.includes('Preview')) {
-                    alert('Template preview feature will be implemented!');
+                    showPreviewModal(window.activeTemplateId);
                 } else if (actionText.includes('Duplicate')) {
-                    alert('Template duplication feature will be implemented!');
+                    duplicateTemplate(window.activeTemplateId);
                 } else if (actionText.includes('Send Test')) {
-                    alert('Test email feature will be implemented!');
+                    showSendTestModal(window.activeTemplateId);
                 }
             });
         });
@@ -3401,14 +3401,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function deleteEmailTemplate(templateId) {
+        if (!templateId) return;
+    
         const savedTemplates = localStorage.getItem('emailTemplates');
-        if (savedTemplates) {
-            let templates = JSON.parse(savedTemplates);
-            templates = templates.filter(t => t.id !== templateId);
+        if (!savedTemplates) return;
+    
+        let templates = JSON.parse(savedTemplates);
+        const originalLength = templates.length;
+        templates = templates.filter(t => t.id !== templateId);
+    
+        if (templates.length < originalLength) {
             localStorage.setItem('emailTemplates', JSON.stringify(templates));
             renderEmailTemplates(templates);
+            updateCategoryCounts();
             console.log('Template deleted:', templateId);
+            
+            // If the deleted template was the active one, clear the active state
+            if (window.activeTemplateId === templateId) {
+                window.activeTemplateId = null;
+                updateSidebarState();
+            }
         }
+    }
+
+    function duplicateTemplate(templateId) {
+        if (!templateId) return;
+
+        const savedTemplates = localStorage.getItem('emailTemplates');
+        if (!savedTemplates) return;
+
+        const templates = JSON.parse(savedTemplates);
+        const templateToDuplicate = templates.find(t => t.id === templateId);
+
+        if (!templateToDuplicate) return;
+
+        const newTemplate = {
+            ...templateToDuplicate,
+            id: `template-${new Date().getTime()}`,
+            name: `${templateToDuplicate.name} (Copy)`,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        const updatedTemplates = [...templates, newTemplate];
+        localStorage.setItem('emailTemplates', JSON.stringify(updatedTemplates));
+
+        // Re-render the templates view
+        renderEmailTemplates(updatedTemplates);
+        updateCategoryCounts();
+
+        // Optional: provide user feedback
+        console.log(`Template duplicated: ${newTemplate.name}`);
     }
 
     // Make template modal functions global so they can be called from event handlers
@@ -6685,5 +6728,194 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toInput.value = newEmails.join(', ');
         hideGroupSelectionModal();
+    }
+
+    function showPreviewModal(templateId) {
+        if (!templateId) return;
+
+        const templates = JSON.parse(localStorage.getItem('emailTemplates') || '[]');
+        const template = templates.find(t => t.id === templateId);
+
+        if (!template) {
+            console.error('Template not found for preview');
+            return;
+        }
+
+        let modal = document.getElementById('template-preview-modal');
+        if (modal) {
+            modal.remove(); // Remove existing modal to ensure it's fresh
+        }
+        
+        modal = createPreviewModal(template);
+        document.body.appendChild(modal);
+        addPreviewModalCSS();
+        
+        // Show the modal
+        setTimeout(() => {
+            modal.style.display = 'flex';
+        }, 10);
+    }
+
+    function hidePreviewModal() {
+        const modal = document.getElementById('template-preview-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    function createPreviewModal(template) {
+        const modal = document.createElement('div');
+        modal.id = 'template-preview-modal';
+        modal.className = 'template-modal';
+        
+        modal.innerHTML = `
+            <div class="template-modal-content" style="max-width: 800px;">
+                <div class="template-modal-header">
+                    <h3>Preview: ${template.name}</h3>
+                    <button class="template-modal-close">&times;</button>
+                </div>
+                <div class="preview-modal-body">
+                    <div class="preview-subject-line">
+                        <strong>Subject:</strong> ${template.subject}
+                    </div>
+                    <div class="preview-body-content">
+                        ${template.body}
+                    </div>
+                </div>
+                <div class="template-modal-footer">
+                    <button type="button" class="btn-primary" id="close-preview-modal-btn">Close</button>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector('.template-modal-close').addEventListener('click', hidePreviewModal);
+        modal.querySelector('#close-preview-modal-btn').addEventListener('click', hidePreviewModal);
+
+        return modal;
+    }
+
+    function addPreviewModalCSS() {
+        if (document.getElementById('template-preview-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'template-preview-modal-styles';
+        style.textContent = `
+            .preview-modal-body {
+                padding: 20px 30px;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+            .preview-subject-line {
+                background-color: #f8f9fa;
+                padding: 10px 15px;
+                border-radius: 6px;
+                margin-bottom: 20px;
+                border: 1px solid #e9ecef;
+            }
+            .preview-body-content {
+                height: 45vh;
+                overflow-y: auto;
+                padding: 15px;
+                border: 1px solid #e9ecef;
+                border-radius: 6px;
+                background-color: #ffffff;
+            }
+            .preview-body-content * {
+                max-width: 100%;
+                word-wrap: break-word;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function setupTemplateTabSwitching() {
+        const tabs = document.querySelectorAll('.main-nav .nav-item');
+        const sections = document.querySelectorAll('.main-content .content-section');
+        // ... existing code ...
+    }
+
+    function showSendTestModal(templateId) {
+        if (!templateId) return;
+
+        let modal = document.getElementById('send-test-modal');
+        if (modal) modal.remove();
+
+        modal = createSendTestModal(templateId);
+        document.body.appendChild(modal);
+        addSendTestModalCSS();
+
+        setTimeout(() => modal.style.display = 'flex', 10);
+    }
+
+    function hideSendTestModal() {
+        const modal = document.getElementById('send-test-modal');
+        if (modal) modal.remove();
+    }
+
+    function createSendTestModal(templateId) {
+        const modal = document.createElement('div');
+        modal.id = 'send-test-modal';
+        modal.className = 'template-modal';
+        modal.innerHTML = `
+            <div class="template-modal-content" style="max-width: 450px;">
+                <div class="template-modal-header">
+                    <h3>Send Test Email</h3>
+                    <button class="template-modal-close">&times;</button>
+                </div>
+                <div class="send-test-modal-body">
+                    <label for="test-email-input">Recipient Email Address:</label>
+                    <input type="email" id="test-email-input" value="test@example.com">
+                    <p class="send-test-info">A test version of the template will be sent. This will not use real contact data.</p>
+                </div>
+                <div class="template-modal-footer">
+                    <button type="button" class="btn-secondary" id="cancel-send-test-btn">Cancel</button>
+                    <button type="button" class="btn-primary" id="confirm-send-test-btn">Send</button>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector('.template-modal-close').addEventListener('click', hideSendTestModal);
+        modal.querySelector('#cancel-send-test-btn').addEventListener('click', hideSendTestModal);
+        modal.querySelector('#confirm-send-test-btn').addEventListener('click', () => {
+            const email = document.getElementById('test-email-input').value;
+            if (email && /^\S+@\S+\.\S+$/.test(email)) {
+                console.log(`Sending test for template ${templateId} to: ${email}`);
+                alert(`A test email has been 'sent' to ${email}. Check the console for details.`);
+                hideSendTestModal();
+            } else {
+                alert('Please enter a valid email address.');
+            }
+        });
+
+        return modal;
+    }
+
+    function addSendTestModalCSS() {
+        if (document.getElementById('send-test-modal-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'send-test-modal-styles';
+        style.textContent = `
+            .send-test-modal-body {
+                padding: 20px 30px;
+            }
+            .send-test-modal-body label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 500;
+            }
+            .send-test-modal-body input {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-bottom: 15px;
+            }
+            .send-test-info {
+                font-size: 12px;
+                color: #6c757d;
+                text-align: center;
+            }
+        `;
+        document.head.appendChild(style);
     }
 });
