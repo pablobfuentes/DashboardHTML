@@ -2676,13 +2676,455 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Email Templates Functionality
     function initializeEmailTemplates() {
-        console.log('Initializing Email Templates...');
+        console.log('=== Initializing Email Templates ===');
+        console.log('Current page location:', window.location.href);
+        console.log('Email templates pane exists:', !!document.getElementById('email-templates'));
+        console.log('Email templates pane is active:', document.getElementById('email-templates')?.classList.contains('active'));
+        
+        // Add email templates CSS
+        addEmailTemplatesCSS();
         
         // Set up basic event listeners for the email templates page
         setupEmailTemplateEventListeners();
         
         // Load saved email templates
         loadEmailTemplates();
+        
+        console.log('=== Email Templates Initialization Complete ===');
+    }
+    
+    function addEmailTemplatesCSS() {
+        console.log('addEmailTemplatesCSS called');
+        
+        // Check if CSS already added
+        if (document.getElementById('email-templates-styles')) {
+            console.log('Email templates CSS already exists');
+            return;
+        }
+        
+        console.log('Creating new email templates CSS');
+        const style = document.createElement('style');
+        style.id = 'email-templates-styles';
+        style.textContent = `
+            /* Email Templates Styling - Test */
+            #email-templates {
+                background-color: #f0f8ff !important;
+                border: 2px solid #7c7c7c !important;
+                border-radius: 12px !important;
+                padding: 20px;
+            }
+            
+            /* Email Templates Styling */
+            .email-templates-header {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .email-templates-header h2 {
+                margin: 0 0 10px 0;
+                font-size: 28px;
+                color: #333;
+                font-weight: 600;
+            }
+            .page-description {
+                color: #6c757d;
+                font-size: 16px;
+                margin: 0;
+            }
+            .email-templates-toolbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 30px;
+                padding: 20px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            .email-templates-toolbar .toolbar-left,
+            .email-templates-toolbar .toolbar-right {
+                display: flex;
+                gap: 12px;
+            }
+            .email-templates-toolbar .toolbar-center {
+                flex: 1;
+                display: flex;
+                justify-content: center;
+                max-width: 400px;
+                margin: 0 20px;
+            }
+            .template-search-container {
+                position: relative;
+                width: 100%;
+                max-width: 350px;
+            }
+            .template-search-container input {
+                width: 100%;
+                padding: 12px 45px 12px 18px;
+                border: 2px solid #e1e8ed;
+                border-radius: 25px;
+                font-size: 14px;
+                outline: none;
+                transition: all 0.2s ease;
+            }
+            .template-search-container input:focus {
+                border-color: #007bff;
+                box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+            }
+            .template-search-container .search-icon {
+                position: absolute;
+                right: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #6c757d;
+                pointer-events: none;
+            }
+            .add-template-btn,
+            .import-template-btn,
+            .export-template-btn,
+            .create-first-template-btn {
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 18px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .add-template-btn:hover,
+            .create-first-template-btn:hover {
+                background: #0056b3;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0,123,255,0.25);
+            }
+            .import-template-btn,
+            .export-template-btn {
+                background: #6c757d;
+            }
+            .import-template-btn:hover,
+            .export-template-btn:hover {
+                background: #5a6268;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(108,117,125,0.25);
+            }
+            .email-templates-content {
+                display: flex;
+                flex-direction: row;
+                gap: 25px;
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                min-height: 500px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .templates-main-container {
+                flex: 1 1 70%;
+                min-height: 400px;
+                min-width: 0; /* Prevent overflow */
+                background: #ffffff;
+                border-radius: 8px;
+                border: 1px solid #e9ecef;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            .templates-sidebar {
+                flex: 0 0 30%;
+                max-width: 30%;
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 20px;
+                border: 1px solid #e9ecef;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+            .templates-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                width: 100%;
+                height: auto;
+                box-sizing: border-box;
+            }
+            .empty-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 40px 20px;
+                color: #6c757d;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .empty-state-icon {
+                font-size: 64px;
+                margin-bottom: 20px;
+                opacity: 0.5;
+            }
+            .empty-state h3 {
+                margin: 0 0 10px 0;
+                font-size: 20px;
+                color: #495057;
+            }
+            .empty-state p {
+                margin: 0 0 25px 0;
+                font-size: 16px;
+            }
+            .create-first-template-btn {
+                background: #28a745;
+            }
+            .create-first-template-btn:hover {
+                background: #218838;
+            }
+            
+            /* Template Cards */
+            .template-card {
+                background: white;
+                border: 2px solid #e9ecef;
+                border-radius: 12px;
+                padding: 18px 25px;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .template-card:hover {
+                border-color: #007bff;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(0,123,255,0.15);
+            }
+            .template-card-main {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .template-card-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .template-card-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex: 1;
+                min-width: 0;
+            }
+            .template-name {
+                font-size: 16px;
+                font-weight: 600;
+                color: #333;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .template-subject {
+                font-size: 14px;
+                color: #6c757d;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                flex: 1;
+            }
+            .template-card-actions {
+                display: flex;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+            .template-card-bottom {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .template-category {
+                background: #e9ecef;
+                color: #495057;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            .template-updated {
+                color: #6c757d;
+                font-size: 12px;
+            }
+            .edit-template-btn,
+            .delete-template-btn {
+                background: none;
+                border: none;
+                font-size: 16px;
+                cursor: pointer;
+                padding: 6px;
+                border-radius: 4px;
+                transition: background 0.2s ease;
+            }
+            .edit-template-btn:hover {
+                background: rgba(0,123,255,0.1);
+            }
+            .delete-template-btn:hover {
+                background: rgba(220,53,69,0.1);
+            }
+            
+            /* Sidebar Styling */
+            .sidebar-section {
+                margin-bottom: 20px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .sidebar-section:last-child {
+                margin-bottom: 0;
+            }
+            .sidebar-section h4 {
+                margin: 0 0 12px 0;
+                font-size: 15px;
+                font-weight: 600;
+                color: #333;
+                border-bottom: 2px solid #e9ecef;
+                padding-bottom: 6px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            /* Quick Actions */
+            .quick-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .quick-action-btn {
+                background: white;
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 8px 10px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 500;
+                color: #495057;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                width: 100%;
+                text-align: left;
+                box-sizing: border-box;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .quick-action-btn:hover {
+                background: #007bff;
+                color: white;
+                border-color: #007bff;
+                transform: translateX(2px);
+            }
+            
+            /* Template Categories */
+            .template-categories {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .category-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 10px;
+                background: white;
+                border-radius: 6px;
+                border: 1px solid #dee2e6;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                width: 100%;
+                box-sizing: border-box;
+                min-width: 0;
+            }
+            .category-item:hover {
+                background: #f8f9fa;
+                border-color: #007bff;
+            }
+            .category-name {
+                font-size: 12px;
+                font-weight: 500;
+                color: #495057;
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-right: 8px;
+            }
+            .category-count {
+                background: #e9ecef;
+                color: #6c757d;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 2px 6px;
+                border-radius: 10px;
+                min-width: 18px;
+                text-align: center;
+            }
+            .category-item:hover .category-count {
+                background: #007bff;
+                color: white;
+            }
+            .category-item.active-category {
+                background: #e3f2fd;
+                border-color: #007bff;
+            }
+            .category-item.active-category .category-name {
+                color: #0056b3;
+                font-weight: 600;
+            }
+            .category-item.active-category .category-count {
+                background: #007bff;
+                color: white;
+            }
+            
+            /* Recent Activity */
+            .recent-activity {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .activity-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 10px;
+                background: white;
+                border-radius: 6px;
+                border: 1px solid #dee2e6;
+                width: 100%;
+                box-sizing: border-box;
+                min-width: 0;
+            }
+            .activity-icon {
+                font-size: 16px;
+                opacity: 0.7;
+            }
+            .activity-text {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+            }
+            .activity-text span {
+                font-size: 11px;
+                color: #6c757d;
+                font-style: italic;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: block;
+            }
+                 `;
+        document.head.appendChild(style);
+        console.log('Email templates CSS added to document head');
+        console.log('Style element:', style);
     }
     
     function setupEmailTemplateEventListeners() {
@@ -2693,16 +3135,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (addTemplateBtn) {
             addTemplateBtn.addEventListener('click', () => {
                 console.log('Add Template clicked');
-                // We'll implement the template creation modal later
-                alert('Template creation feature will be implemented next!');
+                showTemplateModal();
             });
         }
         
         if (createFirstTemplateBtn) {
             createFirstTemplateBtn.addEventListener('click', () => {
                 console.log('Create First Template clicked');
-                // Same functionality as add template
-                alert('Template creation feature will be implemented next!');
+                showTemplateModal();
             });
         }
         
@@ -2733,6 +3173,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 // We'll implement search functionality later
             });
         }
+        
+        // Sidebar Quick Actions
+        setupSidebarEventListeners();
+    }
+    
+    function setupSidebarEventListeners() {
+        // Quick Action buttons
+        const quickActionButtons = document.querySelectorAll('.quick-action-btn');
+        quickActionButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.target.textContent.trim();
+                console.log('Quick action clicked:', action);
+                
+                if (action.includes('Preview')) {
+                    alert('Template preview feature will be implemented!');
+                } else if (action.includes('Duplicate')) {
+                    alert('Template duplication feature will be implemented!');
+                } else if (action.includes('Send Test')) {
+                    alert('Test email feature will be implemented!');
+                }
+            });
+        });
+        
+        // Category items
+        const categoryItems = document.querySelectorAll('.category-item');
+        categoryItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const categoryName = e.currentTarget.querySelector('.category-name').textContent;
+                console.log('Category clicked:', categoryName);
+                
+                // Remove active class from all categories
+                categoryItems.forEach(cat => cat.classList.remove('active-category'));
+                
+                // Add active class to clicked category
+                e.currentTarget.classList.add('active-category');
+                
+                // Filter templates by category (will implement later)
+                filterTemplatesByCategory(categoryName);
+            });
+        });
+    }
+    
+    function filterTemplatesByCategory(categoryName) {
+        console.log('Filtering templates by category:', categoryName);
+        // This function will filter the templates grid based on the selected category
+        // Implementation will come when we have actual templates
+    }
+    
+    function updateCategoryCounts() {
+        // Update the count badges next to each category
+        const savedTemplates = localStorage.getItem('emailTemplates');
+        if (savedTemplates) {
+            const templates = JSON.parse(savedTemplates);
+            
+            // Count templates by category/stage
+            const counts = {
+                'Project Kickoff': 0,
+                'Progress Updates': 0,
+                'Milestone Complete': 0,
+                'Project Closure': 0
+            };
+            
+            templates.forEach(template => {
+                if (counts.hasOwnProperty(template.stage)) {
+                    counts[template.stage]++;
+                }
+            });
+            
+            // Update the DOM
+            Object.keys(counts).forEach(category => {
+                const categoryItem = Array.from(document.querySelectorAll('.category-name'))
+                    .find(el => el.textContent === category);
+                if (categoryItem) {
+                    const countElement = categoryItem.parentElement.querySelector('.category-count');
+                    if (countElement) {
+                        countElement.textContent = counts[category];
+                    }
+                }
+            });
+        }
     }
     
     function loadEmailTemplates() {
@@ -2742,9 +3262,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const templates = JSON.parse(savedTemplates);
             console.log('Loaded templates:', templates);
             renderEmailTemplates(templates);
+            updateCategoryCounts();
         } else {
             console.log('No saved templates found');
             // Keep the empty state visible
+            updateCategoryCounts(); // Still update counts (will be 0)
         }
     }
     
@@ -2773,7 +3295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (createFirstTemplateBtn) {
                 createFirstTemplateBtn.addEventListener('click', () => {
                     console.log('Create First Template clicked');
-                    alert('Template creation feature will be implemented next!');
+                    showTemplateModal();
                 });
             }
         } else {
@@ -2789,18 +3311,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = document.createElement('div');
         card.className = 'template-card';
         card.innerHTML = `
-            <div class="template-card-header">
-                <h4>${template.name}</h4>
-                <div class="template-card-actions">
-                    <button class="edit-template-btn" data-id="${template.id}">✏️</button>
-                    <button class="delete-template-btn" data-id="${template.id}">🗑️</button>
+            <div class="template-card-main">
+                <div class="template-card-top">
+                    <div class="template-card-left">
+                        <span class="template-name">${template.name}</span>
+                        <span class="template-subject">${template.subject}</span>
+                    </div>
+                    <div class="template-card-actions">
+                        <button class="edit-template-btn" data-id="${template.id}">✏️</button>
+                        <button class="delete-template-btn" data-id="${template.id}">🗑️</button>
+                    </div>
                 </div>
-            </div>
-            <div class="template-card-body">
-                <p class="template-description">${template.description || 'No description'}</p>
-                <div class="template-meta">
-                    <span class="template-stage">${template.stage}</span>
-                    <span class="template-updated">Updated: ${new Date(template.lastUpdated).toLocaleDateString()}</span>
+                <div class="template-card-bottom">
+                    <span class="template-category">${template.category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                    <span class="template-updated">Updated: ${new Date(template.updatedAt).toLocaleDateString()}</span>
                 </div>
             </div>
         `;
@@ -2810,14 +3334,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const deleteBtn = card.querySelector('.delete-template-btn');
         
         if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                console.log('Edit template:', template.id);
-                alert('Template editing will be implemented next!');
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showTemplateModal(template);
             });
         }
         
         if (deleteBtn) {
-            deleteBtn.addEventListener('click', () => {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 if (confirm(`Are you sure you want to delete "${template.name}"?`)) {
                     deleteEmailTemplate(template.id);
                 }
@@ -2836,6 +3361,42 @@ document.addEventListener('DOMContentLoaded', () => {
             renderEmailTemplates(templates);
             console.log('Template deleted:', templateId);
         }
+    }
+
+    // Make template modal functions global so they can be called from event handlers
+    window.showTemplateModal = showTemplateModal;
+    window.hideTemplateModal = hideTemplateModal;
+
+    function setupTemplateTabSwitching() {
+        // Get all template tab buttons
+        const templateTabButtons = document.querySelectorAll('#template-tabs .tab-button');
+        const templateTabPanes = document.querySelectorAll('#template-content .tab-pane');
+        
+        templateTabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and panes
+                templateTabButtons.forEach(btn => btn.classList.remove('active'));
+                templateTabPanes.forEach(pane => pane.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding pane
+                button.classList.add('active');
+                const targetPane = document.getElementById(targetTab);
+                if (targetPane) {
+                    targetPane.classList.add('active');
+                }
+                
+                // If switching to email templates tab, ensure proper initialization
+                if (targetTab === 'email-templates') {
+                    console.log('Switching to Email Templates tab');
+                    // Re-initialize email templates to ensure CSS and functionality work
+                    setTimeout(() => {
+                        initializeEmailTemplates();
+                    }, 100); // Small delay to ensure DOM is ready
+                }
+            });
+        });
     }
     
     function updateProjectData(projectId, rowIndex, colIndex, newValue) {
@@ -4029,217 +4590,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  .copy-emails-btn .icon {
                      font-size: 14px;
                  }
-                 
-                 /* Email Templates Styling */
-                 .email-templates-header {
-                     text-align: center;
-                     margin-bottom: 30px;
-                 }
-                 .email-templates-header h2 {
-                     margin: 0 0 10px 0;
-                     font-size: 28px;
-                     color: #333;
-                     font-weight: 600;
-                 }
-                 .page-description {
-                     color: #6c757d;
-                     font-size: 16px;
-                     margin: 0;
-                 }
-                 .email-templates-toolbar {
-                     display: flex;
-                     align-items: center;
-                     justify-content: space-between;
-                     margin-bottom: 30px;
-                     padding: 20px;
-                     background: white;
-                     border-radius: 12px;
-                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                 }
-                 .email-templates-toolbar .toolbar-left,
-                 .email-templates-toolbar .toolbar-right {
-                     display: flex;
-                     gap: 12px;
-                 }
-                 .email-templates-toolbar .toolbar-center {
-                     flex: 1;
-                     display: flex;
-                     justify-content: center;
-                     max-width: 400px;
-                     margin: 0 20px;
-                 }
-                 .template-search-container {
-                     position: relative;
-                     width: 100%;
-                     max-width: 350px;
-                 }
-                 .template-search-container input {
-                     width: 100%;
-                     padding: 12px 45px 12px 18px;
-                     border: 2px solid #e1e8ed;
-                     border-radius: 25px;
-                     font-size: 14px;
-                     outline: none;
-                     transition: all 0.2s ease;
-                 }
-                 .template-search-container input:focus {
-                     border-color: #007bff;
-                     box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-                 }
-                 .template-search-container .search-icon {
-                     position: absolute;
-                     right: 18px;
-                     top: 50%;
-                     transform: translateY(-50%);
-                     color: #6c757d;
-                     pointer-events: none;
-                 }
-                 .add-template-btn,
-                 .import-template-btn,
-                 .export-template-btn,
-                 .create-first-template-btn {
-                     background: #007bff;
-                     color: white;
-                     border: none;
-                     border-radius: 8px;
-                     padding: 12px 18px;
-                     cursor: pointer;
-                     font-size: 14px;
-                     font-weight: 500;
-                     transition: all 0.2s ease;
-                     display: flex;
-                     align-items: center;
-                     gap: 8px;
-                 }
-                 .add-template-btn:hover,
-                 .create-first-template-btn:hover {
-                     background: #0056b3;
-                     transform: translateY(-1px);
-                     box-shadow: 0 4px 12px rgba(0,123,255,0.25);
-                 }
-                 .import-template-btn,
-                 .export-template-btn {
-                     background: #6c757d;
-                 }
-                 .import-template-btn:hover,
-                 .export-template-btn:hover {
-                     background: #5a6268;
-                     transform: translateY(-1px);
-                     box-shadow: 0 4px 12px rgba(108,117,125,0.25);
-                 }
-                 .email-templates-content {
-                     background: white;
-                     border-radius: 12px;
-                     padding: 30px;
-                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                     min-height: 400px;
-                 }
-                 .templates-grid {
-                     display: grid;
-                     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                     gap: 20px;
-                 }
-                 .empty-state {
-                     display: flex;
-                     flex-direction: column;
-                     align-items: center;
-                     justify-content: center;
-                     text-align: center;
-                     padding: 60px 20px;
-                     color: #6c757d;
-                     grid-column: 1 / -1;
-                 }
-                 .empty-state-icon {
-                     font-size: 64px;
-                     margin-bottom: 20px;
-                     opacity: 0.5;
-                 }
-                 .empty-state h3 {
-                     margin: 0 0 10px 0;
-                     font-size: 20px;
-                     color: #495057;
-                 }
-                 .empty-state p {
-                     margin: 0 0 25px 0;
-                     font-size: 16px;
-                 }
-                 .create-first-template-btn {
-                     background: #28a745;
-                 }
-                 .create-first-template-btn:hover {
-                     background: #218838;
-                 }
-                 
-                 /* Template Cards */
-                 .template-card {
-                     background: white;
-                     border: 2px solid #e9ecef;
-                     border-radius: 12px;
-                     padding: 20px;
-                     transition: all 0.2s ease;
-                     cursor: pointer;
-                 }
-                 .template-card:hover {
-                     border-color: #007bff;
-                     transform: translateY(-2px);
-                     box-shadow: 0 8px 25px rgba(0,123,255,0.15);
-                 }
-                 .template-card-header {
-                     display: flex;
-                     justify-content: space-between;
-                     align-items: center;
-                     margin-bottom: 15px;
-                 }
-                 .template-card-header h4 {
-                     margin: 0;
-                     font-size: 18px;
-                     font-weight: 600;
-                     color: #333;
-                 }
-                 .template-card-actions {
-                     display: flex;
-                     gap: 8px;
-                 }
-                 .edit-template-btn,
-                 .delete-template-btn {
-                     background: none;
-                     border: none;
-                     font-size: 16px;
-                     cursor: pointer;
-                     padding: 6px;
-                     border-radius: 4px;
-                     transition: background 0.2s ease;
-                 }
-                 .edit-template-btn:hover {
-                     background: rgba(0,123,255,0.1);
-                 }
-                 .delete-template-btn:hover {
-                     background: rgba(220,53,69,0.1);
-                 }
-                 .template-card-body {
-                     color: #6c757d;
-                 }
-                 .template-description {
-                     margin: 0 0 15px 0;
-                     font-size: 14px;
-                     line-height: 1.5;
-                 }
-                 .template-meta {
-                     display: flex;
-                     justify-content: space-between;
-                     align-items: center;
-                     font-size: 12px;
-                 }
-                 .template-stage {
-                     background: #e9ecef;
-                     color: #495057;
-                     padding: 4px 8px;
-                     border-radius: 12px;
-                     font-weight: 500;
-                 }
-                 .template-updated {
-                     color: #6c757d;
-                 }
                 .filter-dropdown::-webkit-scrollbar {
                     width: 6px;
                 }
@@ -4677,20 +5027,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Add contacts initialization to the section change handler
+    // Add initialization to the section change handler
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const section = item.dataset.section;
             if (section === 'consulta') {
                 initializeContacts();
+            } else if (section === 'templates') {
+                console.log('Templates section clicked - initializing email templates');
+                setTimeout(() => {
+                    initializeEmailTemplates();
+                }, 100);
             }
         });
     });
 
+        // Force add CSS immediately when script loads
+    function forceAddEmailTemplatesCSS() {
+        console.log('Force adding email templates CSS at script load time');
+        if (!document.getElementById('email-templates-styles')) {
+            addEmailTemplatesCSS();
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM Content Loaded - starting initialization');
+        
+        // Force add CSS first thing
+        forceAddEmailTemplatesCSS();
+        
         // Initialize navigation
         initializeNavigation();
-        
+       
         // Initialize projects
         initializeProjects();
         
@@ -4702,6 +5070,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize Email Templates
     initializeEmailTemplates();
+    
+    // Set up template tab switching
+    setupTemplateTabSwitching();
+    
+    // Check if email templates tab is initially active and re-initialize if needed
+    const emailTemplatesTab = document.querySelector('[data-tab="email-templates"]');
+    const emailTemplatesPane = document.getElementById('email-templates');
+    if (emailTemplatesTab && emailTemplatesPane && emailTemplatesPane.classList.contains('active')) {
+        console.log('Email Templates tab is initially active - ensuring proper initialization');
+        setTimeout(() => {
+            initializeEmailTemplates();
+        }, 200);
+    }
+    
+    // Additional fallback - try to apply CSS again after a delay
+    setTimeout(() => {
+        console.log('Fallback CSS application after 1 second');
+        forceAddEmailTemplatesCSS();
+    }, 1000);
         
         // Load initial state
         loadAndRenderState();
@@ -4974,5 +5361,382 @@ document.addEventListener('DOMContentLoaded', () => {
         saveContacts();
         renderContacts();
         alert('Contacts directory has been synced with project info.');
+    }
+
+    // Template Modal Functions
+    function showTemplateModal(templateData = null) {
+        console.log('Showing template modal', templateData ? 'for editing' : 'for creation');
+        
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('template-modal');
+        if (!modal) {
+            modal = createTemplateModal();
+            document.body.appendChild(modal);
+        }
+        
+        // Populate form if editing
+        if (templateData) {
+            populateTemplateForm(templateData);
+            document.getElementById('template-modal-title').textContent = 'Edit Template';
+            document.getElementById('template-submit-btn').textContent = 'Update Template';
+            modal.setAttribute('data-editing', templateData.id);
+        } else {
+            clearTemplateForm();
+            document.getElementById('template-modal-title').textContent = 'Create New Template';
+            document.getElementById('template-submit-btn').textContent = 'Create Template';
+            modal.removeAttribute('data-editing');
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus on template name field
+        setTimeout(() => {
+            document.getElementById('template-name').focus();
+        }, 100);
+    }
+    
+    function hideTemplateModal() {
+        const modal = document.getElementById('template-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            clearTemplateForm();
+        }
+    }
+    
+    function createTemplateModal() {
+        const modal = document.createElement('div');
+        modal.id = 'template-modal';
+        modal.className = 'template-modal';
+        
+        modal.innerHTML = `
+            <div class="template-modal-content">
+                <div class="template-modal-header">
+                    <h3 id="template-modal-title">Create New Template</h3>
+                    <button class="template-modal-close" onclick="hideTemplateModal()">&times;</button>
+                </div>
+                <form class="template-form" id="template-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="template-name">Template Name *</label>
+                            <input type="text" id="template-name" name="name" required placeholder="Enter template name">
+                        </div>
+                        <div class="form-group">
+                            <label for="template-category">Category *</label>
+                            <select id="template-category" name="category" required>
+                                <option value="">Select category...</option>
+                                <option value="meeting-request">Meeting Request</option>
+                                <option value="meeting-minutes">Meeting Minutes</option>
+                                <option value="availability-request">Availability Request</option>
+                                <option value="project-kickoff">Project Kickoff</option>
+                                <option value="progress-update">Progress Update</option>
+                                <option value="milestone-complete">Milestone Complete</option>
+                                <option value="project-closure">Project Closure</option>
+                                <option value="follow-up">Follow Up</option>
+                                <option value="status-request">Status Request</option>
+                                <option value="reminder">Reminder</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="template-subject">Subject *</label>
+                        <input type="text" id="template-subject" name="subject" required placeholder="Enter email subject">
+                    </div>
+                    <div class="form-group">
+                        <label for="template-body">Body *</label>
+                        <textarea id="template-body" name="body" required rows="12" placeholder="Enter email body content..."></textarea>
+                    </div>
+                    <div class="template-modal-footer">
+                        <button type="button" class="btn-secondary" onclick="hideTemplateModal()">Cancel</button>
+                        <button type="submit" id="template-submit-btn" class="btn-primary">Create Template</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideTemplateModal();
+            }
+        });
+        
+        const form = modal.querySelector('#template-form');
+        form.addEventListener('submit', handleTemplateSubmit);
+        
+        // Add modal CSS
+        addTemplateModalCSS();
+        
+        return modal;
+    }
+    
+    function addTemplateModalCSS() {
+        if (document.getElementById('template-modal-styles')) {
+            return;
+        }
+        
+        const style = document.createElement('style');
+        style.id = 'template-modal-styles';
+        style.textContent = `
+            .template-modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(3px);
+            }
+            
+            .template-modal-content {
+                background: white;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 600px;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                animation: modalSlideIn 0.3s ease-out;
+            }
+            
+            @keyframes modalSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .template-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 25px 30px 20px;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .template-modal-header h3 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: 600;
+                color: #333;
+            }
+            
+            .template-modal-close {
+                background: none;
+                border: none;
+                font-size: 28px;
+                color: #999;
+                cursor: pointer;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: all 0.2s ease;
+            }
+            
+            .template-modal-close:hover {
+                background: #f8f9fa;
+                color: #666;
+            }
+            
+            .template-form {
+                padding: 30px;
+            }
+            
+            .form-row {
+                display: flex;
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .form-row .form-group {
+                flex: 1;
+            }
+            
+            .form-group {
+                margin-bottom: 20px;
+            }
+            
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #333;
+                font-size: 14px;
+            }
+            
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid #e1e8ed;
+                border-radius: 8px;
+                font-size: 14px;
+                transition: border-color 0.2s ease;
+                font-family: inherit;
+                box-sizing: border-box;
+            }
+            
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                outline: none;
+                border-color: #007bff;
+                box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+            }
+            
+            .form-group textarea {
+                resize: vertical;
+                min-height: 120px;
+                line-height: 1.5;
+            }
+            
+            .template-modal-footer {
+                display: flex;
+                gap: 12px;
+                justify-content: flex-end;
+                padding-top: 20px;
+                border-top: 1px solid #e9ecef;
+                margin-top: 20px;
+            }
+            
+            .btn-primary, .btn-secondary {
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border: none;
+            }
+            
+            .btn-primary {
+                background: #007bff;
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                background: #0056b3;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25);
+            }
+            
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+            
+            .btn-secondary:hover {
+                background: #5a6268;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    function populateTemplateForm(templateData) {
+        document.getElementById('template-name').value = templateData.name || '';
+        document.getElementById('template-category').value = templateData.category || '';
+        document.getElementById('template-subject').value = templateData.subject || '';
+        document.getElementById('template-body').value = templateData.body || '';
+    }
+    
+    function clearTemplateForm() {
+        document.getElementById('template-form').reset();
+    }
+    
+    function handleTemplateSubmit(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const templateData = {
+            name: formData.get('name').trim(),
+            category: formData.get('category'),
+            subject: formData.get('subject').trim(),
+            body: formData.get('body').trim()
+        };
+        
+        // Validate required fields
+        if (!templateData.name || !templateData.category || !templateData.subject || !templateData.body) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        // Check if editing or creating
+        const modal = document.getElementById('template-modal');
+        const editingId = modal.getAttribute('data-editing');
+        
+        if (editingId) {
+            updateEmailTemplate(editingId, templateData);
+        } else {
+            createEmailTemplate(templateData);
+        }
+        
+        hideTemplateModal();
+    }
+    
+    function createEmailTemplate(templateData) {
+        // Generate unique ID
+        const id = Date.now().toString();
+        
+        const template = {
+            id: id,
+            name: templateData.name,
+            category: templateData.category,
+            subject: templateData.subject,
+            body: templateData.body,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        // Save to localStorage
+        const savedTemplates = localStorage.getItem('emailTemplates');
+        const templates = savedTemplates ? JSON.parse(savedTemplates) : [];
+        templates.push(template);
+        localStorage.setItem('emailTemplates', JSON.stringify(templates));
+        
+        // Re-render templates
+        renderEmailTemplates(templates);
+        updateCategoryCounts();
+        
+        console.log('Template created:', template);
+    }
+    
+    function updateEmailTemplate(templateId, templateData) {
+        const savedTemplates = localStorage.getItem('emailTemplates');
+        if (!savedTemplates) return;
+        
+        const templates = JSON.parse(savedTemplates);
+        const templateIndex = templates.findIndex(t => t.id === templateId);
+        
+        if (templateIndex !== -1) {
+            templates[templateIndex] = {
+                ...templates[templateIndex],
+                name: templateData.name,
+                category: templateData.category,
+                subject: templateData.subject,
+                body: templateData.body,
+                updatedAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('emailTemplates', JSON.stringify(templates));
+            renderEmailTemplates(templates);
+            updateCategoryCounts();
+            
+            console.log('Template updated:', templates[templateIndex]);
+        }
     }
 });
