@@ -632,7 +632,8 @@ document.addEventListener('DOMContentLoaded', () => {
             icons = [
                 { id: 'insert-row-above', text: '⬆️', title: 'Insert Row Above' },
                 { id: 'insert-row-below', text: '⬇️', title: 'Insert Row Below' },
-                { id: 'delete-row', text: '🗑️', title: 'Delete Row' }
+                { id: 'delete-row', text: '🗑️', title: 'Delete Row' },
+                { id: 'send-with-template', text: '📧', title: 'Send Email with Template...' }
             ];
         } else if (type === 'column') {
             icons = [
@@ -701,6 +702,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (currentTemplateRows.length === 0) { alert("No rows to delete."); break; }
                 if (!confirm(`Are you sure you want to delete row ${contextMenuTargetIndex + 1}?`)) { return; }
                 currentTemplateRows.splice(contextMenuTargetIndex, 1);
+                break;
+            case 'send-with-template':
+                const projectId = getCurrentProjectId();
+                showTemplateSelectionModal(projectId, contextMenuTargetIndex);
                 break;
             case 'insert-col-left':
                 newColumnName = prompt("Enter new column name:");
@@ -5506,49 +5511,77 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3 id="template-modal-title">Create New Template</h3>
                     <button class="template-modal-close" onclick="hideTemplateModal()">&times;</button>
                 </div>
-                <form class="template-form" id="template-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="template-name">Template Name *</label>
-                            <input type="text" id="template-name" name="name" required placeholder="Enter template name">
+                <div class="template-modal-layout">
+                    <form class="template-form" id="template-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="template-name">Template Name *</label>
+                                <input type="text" id="template-name" name="name" required placeholder="Enter template name">
+                            </div>
+                            <div class="form-group">
+                                <label for="template-category">Category *</label>
+                                <select id="template-category" name="category" required>
+                                    <option value="">Select category...</option>
+                                    <option value="meeting-request">Meeting Request</option>
+                                    <option value="meeting-minutes">Meeting Minutes</option>
+                                    <option value="availability-request">Availability Request</option>
+                                    <option value="project-kickoff">Project Kickoff</option>
+                                    <option value="progress-update">Progress Update</option>
+                                    <option value="milestone-complete">Milestone Complete</option>
+                                    <option value="project-closure">Project Closure</option>
+                                    <option value="follow-up">Follow Up</option>
+                                    <option value="status-request">Status Request</option>
+                                    <option value="reminder">Reminder</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="template-category">Category *</label>
-                            <select id="template-category" name="category" required>
-                                <option value="">Select category...</option>
-                                <option value="meeting-request">Meeting Request</option>
-                                <option value="meeting-minutes">Meeting Minutes</option>
-                                <option value="availability-request">Availability Request</option>
-                                <option value="project-kickoff">Project Kickoff</option>
-                                <option value="progress-update">Progress Update</option>
-                                <option value="milestone-complete">Milestone Complete</option>
-                                <option value="project-closure">Project Closure</option>
-                                <option value="follow-up">Follow Up</option>
-                                <option value="status-request">Status Request</option>
-                                <option value="reminder">Reminder</option>
-                            </select>
+                            <label for="template-to">To:</label>
+                            <div class="recipient-input-wrapper">
+                                <input type="text" id="template-to" name="to" placeholder="Enter recipient emails, separated by commas">
+                                <button type="button" class="add-group-btn" id="add-from-groups-btn">Add from Groups</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="template-subject">Subject *</label>
+                            <input type="text" id="template-subject" name="subject" required placeholder="Enter email subject">
+                        </div>
+                        <div class="form-group">
+                            <label for="template-body">Body *</label>
+                            <textarea id="template-body" name="body" required rows="12" placeholder="Enter email body content..."></textarea>
+                        </div>
+                        <div class="template-modal-footer">
+                            <button type="button" class="btn-secondary" onclick="hideTemplateModal()">Cancel</button>
+                            <button type="submit" id="template-submit-btn" class="btn-primary">Create Template</button>
+                        </div>
+                    </form>
+                    <div class="placeholder-panel">
+                        <h4>Available Placeholders</h4>
+                        <p class="placeholder-info">Click any placeholder to copy it to your clipboard.</p>
+                        <div class="placeholder-groups">
+                            <div class="placeholder-group">
+                                <h5>Project Information</h5>
+                                <div class="placeholder-tag" data-placeholder="{{ProjectName}}">{{ProjectName}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{ProjectPhase}}">{{ProjectPhase}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{Milestone}}">{{Milestone}}</div>
+                            </div>
+                            <div class="placeholder-group">
+                                <h5>Task Details</h5>
+                                <div class="placeholder-tag" data-placeholder="{{TaskID}}">{{TaskID}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{TaskName}}">{{TaskName}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{TaskStatus}}">{{TaskStatus}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{TaskDuration}}">{{TaskDuration}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{ExpectedDate}}">{{ExpectedDate}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{Responsible}}">{{Responsible}}</div>
+                            </div>
+                            <div class="placeholder-group">
+                                <h5>Latest Updates</h5>
+                                <div class="placeholder-tag" data-placeholder="{{LatestComment}}">{{LatestComment}}</div>
+                                <div class="placeholder-tag" data-placeholder="{{CommentHistory}}">{{CommentHistory}}</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="template-to">To:</label>
-                        <div class="recipient-input-wrapper">
-                            <input type="text" id="template-to" name="to" placeholder="Enter recipient emails, separated by commas">
-                            <button type="button" class="add-group-btn" id="add-from-groups-btn">Add from Groups</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="template-subject">Subject *</label>
-                        <input type="text" id="template-subject" name="subject" required placeholder="Enter email subject">
-                    </div>
-                    <div class="form-group">
-                        <label for="template-body">Body *</label>
-                        <textarea id="template-body" name="body" required rows="12" placeholder="Enter email body content..."></textarea>
-                    </div>
-                    <div class="template-modal-footer">
-                        <button type="button" class="btn-secondary" onclick="hideTemplateModal()">Cancel</button>
-                        <button type="submit" id="template-submit-btn" class="btn-primary">Create Template</button>
-                    </div>
-                </form>
+                </div>
             </div>
         `;
         
@@ -5566,6 +5599,20 @@ document.addEventListener('DOMContentLoaded', () => {
         addGroupBtn.addEventListener('click', () => {
             showGroupSelectionModal();
         });
+
+        // Add placeholder click-to-copy functionality
+        const placeholderTags = modal.querySelectorAll('.placeholder-tag');
+        placeholderTags.forEach(tag => {
+            tag.addEventListener('click', () => {
+                const placeholder = tag.dataset.placeholder;
+                navigator.clipboard.writeText(placeholder)
+                    .then(() => {
+                        tag.classList.add('copied');
+                        setTimeout(() => tag.classList.remove('copied'), 1000);
+                    })
+                    .catch(err => console.error('Failed to copy:', err));
+            });
+        });
         
         // Add modal CSS
         addTemplateModalCSS();
@@ -5574,9 +5621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function addTemplateModalCSS() {
-        if (document.getElementById('template-modal-styles')) {
-            return;
-        }
+        if (document.getElementById('template-modal-styles')) return;
         
         const style = document.createElement('style');
         style.id = 'template-modal-styles';
@@ -5588,73 +5633,117 @@ document.addEventListener('DOMContentLoaded', () => {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.5);
                 z-index: 1000;
-                align-items: center;
                 justify-content: center;
-                backdrop-filter: blur(3px);
+                align-items: center;
             }
             
             .template-modal-content {
                 background: white;
-                border-radius: 12px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
                 width: 90%;
-                max-width: 600px;
+                max-width: 1200px;
                 max-height: 90vh;
-                overflow-y: auto;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-                animation: modalSlideIn 0.3s ease-out;
-            }
-            
-            @keyframes modalSlideIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(-20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
+                overflow: hidden;
+                position: relative;
             }
             
             .template-modal-header {
+                padding: 20px 30px;
+                border-bottom: 1px solid #e9ecef;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 25px 30px 20px;
-                border-bottom: 1px solid #e9ecef;
             }
             
             .template-modal-header h3 {
                 margin: 0;
-                font-size: 24px;
-                font-weight: 600;
-                color: #333;
+                font-size: 1.5rem;
+                color: #212529;
             }
             
             .template-modal-close {
                 background: none;
                 border: none;
-                font-size: 28px;
-                color: #999;
+                font-size: 1.5rem;
                 cursor: pointer;
                 padding: 0;
-                width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                transition: all 0.2s ease;
+                color: #6c757d;
             }
             
             .template-modal-close:hover {
-                background: #f8f9fa;
-                color: #666;
+                color: #343a40;
+            }
+
+            .template-modal-layout {
+                display: flex;
+                gap: 30px;
+                padding: 30px;
+                max-height: calc(90vh - 80px);
+                overflow: auto;
             }
             
             .template-form {
-                padding: 30px;
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .placeholder-panel {
+                width: 300px;
+                flex-shrink: 0;
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 20px;
+                border: 1px solid #e9ecef;
+            }
+            
+            .placeholder-panel h4 {
+                margin: 0 0 10px 0;
+                color: #212529;
+                font-size: 1.1rem;
+            }
+            
+            .placeholder-info {
+                color: #6c757d;
+                font-size: 0.9rem;
+                margin-bottom: 20px;
+            }
+            
+            .placeholder-groups {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .placeholder-group h5 {
+                margin: 0 0 10px 0;
+                color: #495057;
+                font-size: 1rem;
+                font-weight: 500;
+            }
+            
+            .placeholder-tag {
+                display: inline-block;
+                background: #e9ecef;
+                padding: 6px 12px;
+                border-radius: 4px;
+                margin: 4px;
+                cursor: pointer;
+                font-family: monospace;
+                font-size: 0.9rem;
+                color: #495057;
+                transition: all 0.2s ease;
+            }
+            
+            .placeholder-tag:hover {
+                background: #dee2e6;
+            }
+            
+            .placeholder-tag.copied {
+                background: #28a745;
+                color: white;
             }
             
             .form-row {
@@ -5674,55 +5763,58 @@ document.addEventListener('DOMContentLoaded', () => {
             .form-group label {
                 display: block;
                 margin-bottom: 8px;
-                font-weight: 600;
-                color: #333;
-                font-size: 14px;
+                font-weight: 500;
+                color: #212529;
             }
             
             .form-group input,
             .form-group select,
             .form-group textarea {
                 width: 100%;
-                padding: 12px 16px;
-                border: 2px solid #e1e8ed;
-                border-radius: 8px;
-                font-size: 14px;
-                transition: border-color 0.2s ease;
-                font-family: inherit;
-                box-sizing: border-box;
-            }
-            
-            .form-group input:focus,
-            .form-group select:focus,
-            .form-group textarea:focus {
-                outline: none;
-                border-color: #007bff;
-                box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+                padding: 8px 12px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 1rem;
             }
             
             .form-group textarea {
                 resize: vertical;
-                min-height: 120px;
-                line-height: 1.5;
+                min-height: 200px;
+            }
+            
+            .recipient-input-wrapper {
+                display: flex;
+                gap: 10px;
+            }
+            
+            .add-group-btn {
+                white-space: nowrap;
+                padding: 8px 16px;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            
+            .add-group-btn:hover {
+                background: #5a6268;
             }
             
             .template-modal-footer {
+                margin-top: 30px;
                 display: flex;
-                gap: 12px;
                 justify-content: flex-end;
-                padding-top: 20px;
-                border-top: 1px solid #e9ecef;
-                margin-top: 20px;
+                gap: 10px;
             }
             
-            .btn-primary, .btn-secondary {
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s ease;
+            .btn-primary,
+            .btn-secondary {
+                padding: 10px 20px;
+                border-radius: 4px;
                 border: none;
+                cursor: pointer;
+                font-size: 1rem;
             }
             
             .btn-primary {
@@ -5732,8 +5824,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             .btn-primary:hover {
                 background: #0056b3;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25);
             }
             
             .btn-secondary {
@@ -5743,67 +5833,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             .btn-secondary:hover {
                 background: #5a6268;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
-            }
-            
-            .recipient-input-wrapper {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .recipient-input-wrapper input {
-                flex: 1;
-            }
-
-            .add-group-btn {
-                padding: 12px 16px;
-                background-color: #6c757d;
-                color: white;
-                border: 2px solid #6c757d;
-                border-radius: 0 8px 8px 0;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: 500;
-                white-space: nowrap;
-                transition: background-color 0.2s ease;
-            }
-
-            .add-group-btn:hover {
-                background-color: #5a6268;
-                border-color: #5a6268;
-            }
-
-            .form-group input:focus,
-            .form-group select:focus,
-            .form-group textarea:focus {
-                outline: none;
-                border-color: #007bff;
-                box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-            }
-
-            .recipient-input-wrapper input:focus {
-                 border-color: #007bff;
-                 box-shadow: none;
-            }
-            
-            .recipient-input-wrapper input:focus + .add-group-btn {
-                border-color: #007bff;
-            }
-
-            .form-group textarea {
-                resize: vertical;
-                min-height: 120px;
-                line-height: 1.5;
-            }
-            
-            .template-modal-footer {
-                transform: translateY(-1px);
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
             }
         `;
+        
         document.head.appendChild(style);
     }
     
@@ -6917,5 +6949,494 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         `;
         document.head.appendChild(style);
+    }
+
+    function getContextFromRow(projectId, rowIndex) {
+        const project = projectsData[projectId];
+        if (!project || !project.content[rowIndex]) {
+            console.error('Project or row not found');
+            return null;
+        }
+
+        const headers = project.headers;
+        const row = project.content[rowIndex];
+        
+        // Helper function to find column value
+        const getColumnValue = (columnName) => {
+            const index = headers.findIndex(h => h.toLowerCase().includes(columnName.toLowerCase()));
+            return index !== -1 ? row[index] : '';
+        };
+
+        // Get all the values we need from the row
+        const context = {
+            ProjectName: project.name || '',
+            ProjectPhase: getColumnValue('fase'),
+            Milestone: getColumnValue('milestone'),
+            TaskID: getColumnValue('id'),
+            TaskName: getColumnValue('actividad'),
+            TaskStatus: getColumnValue('status'),
+            TaskDuration: getColumnValue('duracion'),
+            ExpectedDate: getColumnValue('fecha esperada'),
+            Responsible: getColumnValue('responsable'),
+            LatestComment: '',
+            CommentHistory: ''
+        };
+
+        // Special handling for comments
+        const commentIndex = headers.findIndex(h => isCommentColumn(h));
+        if (commentIndex !== -1) {
+            const commentHistory = row[commentIndex] || '';
+            context.CommentHistory = commentHistory;
+            context.LatestComment = getLatestComment(commentHistory);
+        }
+
+        return context;
+    }
+
+    function replacePlaceholders(content, context) {
+        if (!content || !context) return content;
+
+        // Create a regex that matches any placeholder
+        const placeholderRegex = /{{([^}]+)}}/g;
+
+        // Replace all placeholders with their corresponding values
+        return content.replace(placeholderRegex, (match, placeholder) => {
+            const value = context[placeholder];
+            return value !== undefined ? value : match; // Keep placeholder if no value found
+        });
+    }
+
+    function showTemplateSelectionModal(projectId, rowIndex) {
+        let modal = document.getElementById('template-selector-modal');
+        if (!modal) {
+            modal = createTemplateSelectionModal();
+            document.body.appendChild(modal);
+        }
+
+        // Store the context for later use
+        modal.dataset.projectId = projectId;
+        modal.dataset.rowIndex = rowIndex;
+
+        // Load and display templates
+        const templates = JSON.parse(localStorage.getItem('emailTemplates') || '[]');
+        const templateList = modal.querySelector('.template-list');
+        templateList.innerHTML = '';
+
+        if (templates.length === 0) {
+            templateList.innerHTML = `
+                <div class="no-templates">
+                    <p>No email templates found.</p>
+                    <button class="btn-primary create-template-btn">Create New Template</button>
+                </div>
+            `;
+            const createBtn = templateList.querySelector('.create-template-btn');
+            createBtn.addEventListener('click', () => {
+                hideTemplateSelectionModal();
+                showTemplateModal();
+            });
+        } else {
+            templates.forEach(template => {
+                const templateCard = document.createElement('div');
+                templateCard.className = 'template-select-card';
+                templateCard.innerHTML = `
+                    <div class="template-select-info">
+                        <h4>${template.name}</h4>
+                        <p class="template-category">${template.category}</p>
+                        <p class="template-subject">${template.subject}</p>
+                    </div>
+                    <button class="use-template-btn" data-template-id="${template.id}">Use Template</button>
+                `;
+                templateList.appendChild(templateCard);
+
+                const useBtn = templateCard.querySelector('.use-template-btn');
+                useBtn.addEventListener('click', () => {
+                    processAndPreviewTemplate(template, projectId, rowIndex);
+                });
+            });
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function hideTemplateSelectionModal() {
+        const modal = document.getElementById('template-selector-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function createTemplateSelectionModal() {
+        const modal = document.createElement('div');
+        modal.id = 'template-selector-modal';
+        modal.className = 'template-selector-modal';
+
+        modal.innerHTML = `
+            <div class="template-selector-content">
+                <div class="template-selector-header">
+                    <h3>Select Email Template</h3>
+                    <button class="template-selector-close" onclick="hideTemplateSelectionModal()">&times;</button>
+                </div>
+                <div class="template-list">
+                    <!-- Templates will be loaded here -->
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideTemplateSelectionModal();
+            }
+        });
+
+        // Add CSS
+        addTemplateSelectionModalCSS();
+
+        return modal;
+    }
+
+    function addTemplateSelectionModalCSS() {
+        if (document.getElementById('template-selector-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'template-selector-modal-styles';
+        style.textContent = `
+            .template-selector-modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .template-selector-content {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                width: 90%;
+                max-width: 800px;
+                max-height: 90vh;
+                overflow: hidden;
+            }
+
+            .template-selector-header {
+                padding: 20px 30px;
+                border-bottom: 1px solid #e9ecef;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .template-selector-header h3 {
+                margin: 0;
+                font-size: 1.5rem;
+                color: #212529;
+            }
+
+            .template-selector-close {
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                padding: 0;
+                color: #6c757d;
+            }
+
+            .template-selector-close:hover {
+                color: #343a40;
+            }
+
+            .template-list {
+                padding: 20px;
+                max-height: calc(90vh - 90px);
+                overflow-y: auto;
+            }
+
+            .template-select-card {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 20px;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                transition: all 0.2s ease;
+            }
+
+            .template-select-card:hover {
+                border-color: #007bff;
+                box-shadow: 0 2px 5px rgba(0, 123, 255, 0.1);
+            }
+
+            .template-select-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .template-select-info h4 {
+                margin: 0 0 5px 0;
+                font-size: 1.1rem;
+                color: #212529;
+            }
+
+            .template-category {
+                color: #6c757d;
+                font-size: 0.9rem;
+                margin: 0 0 5px 0;
+            }
+
+            .template-subject {
+                color: #495057;
+                margin: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .use-template-btn {
+                padding: 8px 16px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.9rem;
+                white-space: nowrap;
+                margin-left: 20px;
+            }
+
+            .use-template-btn:hover {
+                background: #0056b3;
+            }
+
+            .no-templates {
+                text-align: center;
+                padding: 40px 20px;
+                color: #6c757d;
+            }
+
+            .no-templates p {
+                margin: 0 0 20px 0;
+            }
+
+            .create-template-btn {
+                padding: 10px 20px;
+                font-size: 1rem;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    function processAndPreviewTemplate(template, projectId, rowIndex) {
+        // Get the context data from the selected row
+        const context = getContextFromRow(projectId, rowIndex);
+        if (!context) {
+            alert('Error: Could not get task data');
+            return;
+        }
+
+        // Process the template
+        const processedSubject = replacePlaceholders(template.subject, context);
+        const processedBody = replacePlaceholders(template.body, context);
+
+        // Show preview modal
+        showEmailPreviewModal({
+            ...template,
+            subject: processedSubject,
+            body: processedBody
+        });
+
+        // Hide the template selector modal
+        hideTemplateSelectionModal();
+    }
+
+    function showEmailPreviewModal(emailData) {
+        let modal = document.getElementById('email-preview-modal');
+        if (!modal) {
+            modal = createEmailPreviewModal();
+            document.body.appendChild(modal);
+        }
+
+        // Populate the preview
+        modal.querySelector('.preview-to').textContent = emailData.to || '(No recipients)';
+        modal.querySelector('.preview-subject').textContent = emailData.subject;
+        modal.querySelector('.preview-body').textContent = emailData.body;
+
+        modal.style.display = 'flex';
+    }
+
+    function hideEmailPreviewModal() {
+        const modal = document.getElementById('email-preview-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function createEmailPreviewModal() {
+        const modal = document.createElement('div');
+        modal.id = 'email-preview-modal';
+        modal.className = 'email-preview-modal';
+
+        modal.innerHTML = `
+            <div class="email-preview-content">
+                <div class="email-preview-header">
+                    <h3>Email Preview</h3>
+                    <button class="email-preview-close" onclick="hideEmailPreviewModal()">&times;</button>
+                </div>
+                <div class="email-preview-body">
+                    <div class="preview-field">
+                        <label>To:</label>
+                        <div class="preview-to"></div>
+                    </div>
+                    <div class="preview-field">
+                        <label>Subject:</label>
+                        <div class="preview-subject"></div>
+                    </div>
+                    <div class="preview-field">
+                        <label>Message:</label>
+                        <div class="preview-body"></div>
+                    </div>
+                </div>
+                <div class="email-preview-footer">
+                    <button class="btn-secondary" onclick="hideEmailPreviewModal()">Cancel</button>
+                    <button class="btn-primary" onclick="handleSendEmail()">Send Email</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideEmailPreviewModal();
+            }
+        });
+
+        // Add CSS
+        addEmailPreviewModalCSS();
+
+        return modal;
+    }
+
+    function addEmailPreviewModalCSS() {
+        if (document.getElementById('email-preview-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'email-preview-modal-styles';
+        style.textContent = `
+            .email-preview-modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .email-preview-content {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                width: 90%;
+                max-width: 800px;
+                max-height: 90vh;
+                overflow: hidden;
+            }
+
+            .email-preview-header {
+                padding: 20px 30px;
+                border-bottom: 1px solid #e9ecef;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .email-preview-header h3 {
+                margin: 0;
+                font-size: 1.5rem;
+                color: #212529;
+            }
+
+            .email-preview-close {
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                padding: 0;
+                color: #6c757d;
+            }
+
+            .email-preview-close:hover {
+                color: #343a40;
+            }
+
+            .email-preview-body {
+                padding: 30px;
+                max-height: calc(90vh - 180px);
+                overflow-y: auto;
+            }
+
+            .preview-field {
+                margin-bottom: 20px;
+            }
+
+            .preview-field label {
+                display: block;
+                font-weight: 500;
+                color: #6c757d;
+                margin-bottom: 8px;
+            }
+
+            .preview-field div {
+                padding: 10px;
+                background: #f8f9fa;
+                border-radius: 4px;
+                color: #212529;
+            }
+
+            .preview-body {
+                white-space: pre-wrap;
+                font-family: inherit;
+                line-height: 1.5;
+                min-height: 200px;
+            }
+
+            .email-preview-footer {
+                padding: 20px 30px;
+                border-top: 1px solid #e9ecef;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    function handleSendEmail() {
+        // For now, just log to console
+        console.log('Sending email...');
+        const previewModal = document.getElementById('email-preview-modal');
+        const to = previewModal.querySelector('.preview-to').textContent;
+        const subject = previewModal.querySelector('.preview-subject').textContent;
+        const body = previewModal.querySelector('.preview-body').textContent;
+
+        console.log('Email Details:', {
+            to,
+            subject,
+            body
+        });
+
+        hideEmailPreviewModal();
+        alert('Email would be sent here. For now, check the console for details.');
     }
 });
