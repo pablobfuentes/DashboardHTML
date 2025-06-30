@@ -2166,6 +2166,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Get status column index for completion calculation
         const statusColIndex = project.headers.findIndex(header => header.toLowerCase().includes('status'));
+        
+        // Get expected date column index
+        const expectedDateColIndex = project.headers.findIndex(header => isExpectedDateColumn(header));
+        if (expectedDateColIndex === -1) return 'No expected date column found';
 
         // Function to calculate completion percentage for a milestone
         function calculateMilestoneCompletion(milestone) {
@@ -2202,6 +2206,48 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate spacing between milestones
         const timelineWidth = svgWidth - margin.left - margin.right;
         const spacing = timelineWidth / (Math.max(1, milestones.length - 1));
+
+        // Calculate current progress marker position
+        const today = new Date();
+        let markerX = margin.left; // Default to start
+        let currentMilestoneIndex = -1;
+
+        // Find which milestone we should be at based on expected dates
+        for (let i = 0; i < milestones.length; i++) {
+            const milestone = milestones[i];
+            const milestoneRows = project.content.filter(row => row[milestoneColIndex] === milestone);
+            const milestoneDates = milestoneRows
+                .map(row => parseCustomDate(row[expectedDateColIndex]))
+                .filter(date => date !== null)
+                .sort((a, b) => b - a); // Sort descending to get latest date
+
+            if (milestoneDates.length > 0) {
+                const latestDate = milestoneDates[0];
+                if (today <= latestDate) {
+                    if (currentMilestoneIndex === -1) {
+                        currentMilestoneIndex = i;
+                        // Calculate position between previous and current milestone
+                        if (i > 0) {
+                            const prevMilestone = milestones[i - 1];
+                            const prevMilestoneDates = project.content
+                                .filter(row => row[milestoneColIndex] === prevMilestone)
+                                .map(row => parseCustomDate(row[expectedDateColIndex]))
+                                .filter(date => date !== null)
+                                .sort((a, b) => b - a);
+
+                            if (prevMilestoneDates.length > 0) {
+                                const prevDate = prevMilestoneDates[0];
+                                const totalDays = (latestDate - prevDate) / (1000 * 60 * 60 * 24);
+                                const daysFromPrev = (today - prevDate) / (1000 * 60 * 60 * 24);
+                                const progress = daysFromPrev / totalDays;
+                                markerX = margin.left + (i - 1) * spacing + (spacing * progress);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
 
         // Create SVG content with a viewBox to ensure proper scaling
         let svgContent = `
@@ -2257,6 +2303,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </g>
             `;
         });
+
+        // Add current progress marker if we found a valid position
+        if (currentMilestoneIndex !== -1) {
+            svgContent += `
+                <!-- Current progress marker -->
+                <g class="current-progress-marker" transform="translate(${markerX}, ${lineY})">
+                    <circle r="10" fill="#ff5722" stroke="#fff" stroke-width="2"/>
+                    <text y="-15" text-anchor="middle" fill="#ff5722" font-weight="bold">Today</text>
+                </g>
+            `;
+        }
 
         svgContent += '</svg>';
         return svgContent;
