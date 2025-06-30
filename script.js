@@ -3957,6 +3957,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Get status column index for completion calculation
         const statusColIndex = project.headers.findIndex(header => header.toLowerCase().includes('status'));
+        
+        // Get expected date column index
+        const expectedDateColIndex = project.headers.findIndex(header => isExpectedDateColumn(header));
+        if (expectedDateColIndex === -1) return 'No expected date column found';
 
         // Function to calculate completion percentage for a milestone
         function calculateMilestoneCompletion(milestone) {
@@ -3975,82 +3979,133 @@ document.addEventListener('DOMContentLoaded', () => {
             return Math.round((completedTasks / milestoneRows.length) * 100);
         }
 
-        // Get unique milestones (excluding empty ones)
-        const milestones = project.content
-            .map(row => row[milestoneColIndex])
-            .filter(milestone => milestone && milestone.trim() !== '')
-            .filter((value, index, self) => self.indexOf(value) === index);
+        // Get unique milestones and their dates
+        const milestones = [...new Set(project.content.map(row => row[milestoneColIndex]))].filter(Boolean);
+        
+        // Calculate timeline dimensions
+        const width = 800;
+        const height = 150;
+        const padding = 40;
+        const lineY = height - padding;
+        const markerTopY = padding; // Position markers at the top
+        const markerBottomY = lineY + 30; // Position for actual progress marker
+        
+        // Create SVG
+        let svg = `<svg width="${width}" height="${height + 40}" class="timeline-svg">`; // Added height for bottom marker
+        
+        // Draw timeline line
+        svg += `<line x1="${padding}" y1="${lineY}" x2="${width - padding}" y2="${lineY}" stroke="#ccc" stroke-width="2"/>`;
 
-        if (milestones.length === 0) return 'No milestones found';
-
-        // Calculate dimensions
-        const svgWidth = 900;
-        const svgHeight = Math.max(200, milestones.length * 80);
-        const margin = { top: 40, right: 100, bottom: 60, left: 100 };
-        const lineY = svgHeight / 2;
-        const diamondSize = 30; // Increased size to fit percentage text
-
-        // Calculate spacing between milestones
-        const timelineWidth = svgWidth - margin.left - margin.right;
-        const spacing = timelineWidth / (Math.max(1, milestones.length - 1));
-
-        // Create SVG content with a viewBox to ensure proper scaling
-        let svgContent = `
-            <svg width="${svgWidth}" height="${svgHeight}" class="timeline-svg" viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet">
-                <!-- Main horizontal line -->
-                <line 
-                    x1="${margin.left}" 
-                    y1="${lineY}" 
-                    x2="${svgWidth - margin.right}" 
-                    y2="${lineY}" 
-                    stroke="#007bff" 
-                    stroke-width="2"
-                />
-        `;
-
-        // Add milestones
+        // Calculate positions for milestones
+        const step = (width - 2 * padding) / (milestones.length - 1);
+        
+        // Draw milestones
         milestones.forEach((milestone, index) => {
-            const x = margin.left + (index * spacing);
+            const x = padding + step * index;
             const completion = calculateMilestoneCompletion(milestone);
             
-            // Add diamond with transform-origin at center
-            svgContent += `
-                <g class="milestone-marker" data-milestone="${milestone}" style="transform-origin: ${x}px ${lineY}px;">
-                    <!-- Diamond -->
-                    <path 
-                        d="M ${x} ${lineY - diamondSize} 
-                           L ${x + diamondSize} ${lineY} 
-                           L ${x} ${lineY + diamondSize} 
-                           L ${x - diamondSize} ${lineY} Z" 
-                        fill="${completion === 100 ? '#28a745' : '#007bff'}" 
-                        stroke="#fff" 
-                        stroke-width="2"
-                    />
-                    
-                    <!-- Percentage text inside diamond -->
-                    <text 
-                        x="${x}" 
-                        y="${lineY + 6}" 
-                        text-anchor="middle" 
-                        class="milestone-percentage"
-                        fill="#fff"
-                        font-size="14px"
-                        font-weight="bold"
-                    >${completion}%</text>
-                    
-                    <!-- Milestone label -->
-                    <text 
-                        x="${x}" 
-                        y="${lineY + diamondSize + 25}" 
-                        text-anchor="middle" 
-                        class="milestone-label"
-                    >${milestone}</text>
-                </g>
-            `;
+            // Draw milestone circle
+            svg += `<circle cx="${x}" cy="${lineY}" r="8" fill="${completion === 100 ? '#4CAF50' : '#fff'}" 
+                          stroke="#666" stroke-width="2"/>`;
+            
+            // Draw milestone label
+            svg += `<text x="${x}" y="${lineY + 25}" text-anchor="middle" class="milestone-label">${milestone}</text>`;
+            
+            // Draw completion percentage
+            svg += `<text x="${x}" y="${lineY - 15}" text-anchor="middle" class="milestone-label">${completion}%</text>`;
         });
 
-        svgContent += '</svg>';
-        return svgContent;
+        // Calculate planned progress marker position
+        const today = new Date();
+        let plannedX = padding;
+        let foundPosition = false;
+
+        // Get all milestone dates and their positions
+        const milestoneDates = milestones.map((milestone, index) => {
+            const rows = project.content.filter(row => row[milestoneColIndex] === milestone);
+            const dates = rows
+                .map(row => parseCustomDate(row[expectedDateColIndex]))
+                .filter(date => date !== null)
+                .sort((a, b) => a - b); // Sort ascending
+            return {
+                milestone,
+                index,
+                startDate: dates[0],
+                endDate: dates[dates.length - 1]
+            };
+        }).filter(item => item.startDate && item.endDate);
+
+        // Find position between appropriate milestones for planned marker
+        for (let i = 0; i < milestoneDates.length - 1; i++) {
+            const current = milestoneDates[i];
+            const next = milestoneDates[i + 1];
+            
+            if (today >= current.startDate && today <= next.endDate) {
+                const totalDuration = next.endDate - current.startDate;
+                const progressDuration = today - current.startDate;
+                const progress = progressDuration / totalDuration;
+                
+                plannedX = padding + (current.index * step) + (step * progress);
+                foundPosition = true;
+                break;
+            }
+        }
+
+        // If not found between milestones, check if we're at the last milestone
+        if (!foundPosition && milestoneDates.length > 0) {
+            const last = milestoneDates[milestoneDates.length - 1];
+            if (today >= last.startDate) {
+                plannedX = padding + (last.index * step);
+            }
+        }
+
+        // Draw the planned marker connecting line
+        svg += `<line x1="${plannedX}" y1="${markerTopY}" x2="${plannedX}" y2="${lineY}" 
+                      stroke="#FF9800" stroke-width="2" stroke-dasharray="4"/>`;
+
+        // Draw the planned marker at the top
+        svg += `<g class="current-progress-marker" transform="translate(${plannedX},${markerTopY})">
+            <circle cx="0" cy="0" r="10" fill="#FF9800" stroke="#fff" stroke-width="2"/>
+            <text x="0" y="-15" text-anchor="middle" fill="#666">Planned</text>
+        </g>`;
+
+        // Calculate actual progress marker position
+        let actualX = padding;
+        let lastCompletedIndex = -1;
+        let nextMilestoneCompletion = 0;
+
+        // Find the last completed milestone and next milestone's completion percentage
+        for (let i = 0; i < milestones.length; i++) {
+            const completion = calculateMilestoneCompletion(milestones[i]);
+            if (completion === 100) {
+                lastCompletedIndex = i;
+            } else if (lastCompletedIndex !== -1 && i === lastCompletedIndex + 1) {
+                nextMilestoneCompletion = completion;
+                break;
+            }
+        }
+
+        // Calculate actual progress position
+        if (lastCompletedIndex !== -1) {
+            actualX = padding + (lastCompletedIndex * step);
+            // If there's a next milestone, add the partial progress
+            if (lastCompletedIndex < milestones.length - 1) {
+                actualX += (step * (nextMilestoneCompletion / 100));
+            }
+        }
+
+        // Draw the actual progress connecting line
+        svg += `<line x1="${actualX}" y1="${markerBottomY}" x2="${actualX}" y2="${lineY}" 
+                      stroke="#4CAF50" stroke-width="2" stroke-dasharray="4"/>`;
+
+        // Draw the actual progress marker at the bottom
+        svg += `<g class="actual-progress-marker" transform="translate(${actualX},${markerBottomY})">
+            <circle cx="0" cy="0" r="10" fill="#4CAF50" stroke="#fff" stroke-width="2"/>
+            <text x="0" y="25" text-anchor="middle" fill="#666">Actual</text>
+        </g>`;
+
+        svg += '</svg>';
+        return svg;
     }
 
     function updateProjectTimeline(projectId) {

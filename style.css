@@ -1104,6 +1104,24 @@ h2.project-name-editable:focus {
     dominant-baseline: middle;
 }
 
+/* Current progress marker styles */
+.current-progress-marker {
+    cursor: pointer;
+}
+
+.current-progress-marker circle {
+    transition: r 0.2s ease;
+}
+
+.current-progress-marker:hover circle {
+    r: 12;
+}
+
+.current-progress-marker text {
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+}
+
 /* Ensure the timeline container expands properly */
 .dashboard-tab-content[data-tab="timeline"].active {
     min-height: 300px;
@@ -2061,11 +2079,7 @@ h2.project-name-editable:focus {
 
 /* Project Contacts Styles */
 .project-contacts {
-    margin-top: 20px;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: none; /* Hide the contacts section */
 }
 
 .project-contacts .add-contact {
