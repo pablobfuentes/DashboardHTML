@@ -58,11 +58,16 @@ export function renderContactsTable() {
     console.log('Rendering contacts table, tbody found:', !!tbody);
     if (!tbody) return;
 
+    const searchInput = document.getElementById('contact-search');
+    const projectFilter = document.getElementById('contact-project-filter');
+    const companyFilter = document.getElementById('contact-company-filter');
+    const positionFilter = document.getElementById('contact-position-filter');
+
     const filters = {
-        search: document.getElementById('contact-search').value.toLowerCase(),
-        project: document.getElementById('contact-project-filter').value,
-        company: document.getElementById('contact-company-filter').value,
-        position: document.getElementById('contact-position-filter').value,
+        search: searchInput ? searchInput.value.toLowerCase() : '',
+        project: projectFilter ? projectFilter.value : 'all',
+        company: companyFilter ? companyFilter.value : 'all',
+        position: positionFilter ? positionFilter.value : 'all',
     };
 
     const filteredContacts = state.contacts.filter(contact => {

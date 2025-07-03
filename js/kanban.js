@@ -174,8 +174,11 @@ function renderKanbanBoard() {
     const board = document.getElementById('kanban-board');
     if (!board) return;
 
-    const projectFilter = document.getElementById('kanban-project-filter').value;
-    const dateFilter = document.getElementById('kanban-due-date-filter').value;
+    const projectFilterEl = document.getElementById('kanban-project-filter');
+    const dateFilterEl = document.getElementById('kanban-due-date-filter');
+
+    const projectFilter = projectFilterEl ? projectFilterEl.value : 'all';
+    const dateFilter = dateFilterEl ? dateFilterEl.value : '';
 
     const allTasks = getAllTasks();
     // Exclude completed tasks from the Kanban board unless they were completed in this session
