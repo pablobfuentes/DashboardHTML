@@ -1,0 +1,275 @@
+/* Comment System Styles */
+.new-comment-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 24px;
+    position: relative;
+}
+
+.comment-content {
+    flex: 1;
+    min-height: 24px;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+    background: #fff;
+}
+
+.comment-content:empty:before {
+    content: attr(placeholder);
+    color: #999;
+}
+
+.submit-comment-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    margin-right: 4px;
+}
+
+.submit-comment-icon:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+}
+
+.submit-comment-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Comment History Cell Styles */
+.comment-cell {
+    cursor: pointer;
+    white-space: pre-wrap;
+    max-height: 60px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.comment-cell.expanded {
+    max-height: none;
+    background-color: #f8f9fa;
+}
+
+.comment-cell.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Add a subtle indicator for expandable content */
+.comment-cell.collapsed:after {
+    content: '...';
+    position: absolute;
+    bottom: 0;
+    right: 4px;
+    background: #f8f9fa;
+    padding: 0 4px;
+}
+
+/* Status for new comments */
+.new-comment-cell {
+    padding: 0;
+    position: relative;
+    background: #fff;
+    min-height: 40px;
+}
+
+.new-comment-cell .new-comment-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    width: 100%;
+    height: 100%;
+    min-height: 40px;
+}
+
+.new-comment-cell .comment-content {
+    flex: 1;
+    min-height: 24px;
+    padding: 4px 8px;
+    margin: 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+}
+
+.new-comment-cell .comment-content:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.new-comment-cell .submit-comment-icon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.new-comment-cell .submit-comment-icon.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.new-comment-cell .submit-comment-icon:hover {
+    background-color: #45a049;
+    transform: translateY(-50%) scale(1.05);
+}
+
+/* Evidencia Column Styles */
+.evidencia-cell {
+    position: relative;
+    padding: 4px 8px;
+}
+
+.evidencia-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.evidencia-required {
+    background-color: #fff3cd !important; /* Muted yellow */
+}
+
+.evidencia-cell.has-attachment {
+    background-color: #d4edda !important; /* Light green */
+}
+
+/* Style for the checkbox in main template */
+.evidencia-cell .evidencia-checkbox {
+    margin: 0;
+    position: relative;
+    top: 2px;
+}
+
+/* Evidence type toggle styles */
+.evidence-type-toggle {
+    display: none;
+    margin-left: 8px;
+    position: relative;
+    cursor: pointer;
+}
+
+.evidence-type-toggle.visible {
+    display: inline-block;
+}
+
+/* File input and attachment styles */
+.evidencia-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+}
+
+.file-input {
+    display: none !important;
+}
+
+.attach-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    color: #666;
+    transition: color 0.2s ease;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.attach-button:hover {
+    color: #000;
+}
+
+.file-name {
+    margin-right: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.delete-button {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    color: #dc3545;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: color 0.2s ease;
+}
+
+.delete-button.visible {
+    display: block;
+}
+
+.delete-button:hover {
+    color: #c82333;
+}
+
+/* Text input styles */
+.evidence-text {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-right: 30px;
+    outline: none;
+}
+
+.evidence-text:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* File path styles */
+.file-path {
+    margin-right: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-path a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.file-path a:hover {
+    text-decoration: underline;
+} 

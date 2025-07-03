@@ -1,0 +1,2195 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* App Container */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    background-color: #2c3e50;
+    color: white;
+    width: 250px;
+    transition: width 0.3s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.nav-menu.collapsed {
+    width: 60px;
+}
+
+.nav-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: transparent;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    transition: color 0.3s;
+}
+
+.nav-toggle:hover {
+    color: #3498db;
+}
+
+.nav-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-header {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border-bottom: 1px solid #34495e;
+    min-height: 60px;
+}
+
+.nav-header h2 {
+    flex: 1;
+    margin: 0;
+    font-size: 1.5em;
+    padding: 0 20px;
+}
+
+.nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-item {
+    padding: 15px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.nav-item:hover {
+    background-color: #34495e;
+}
+
+.nav-item.active {
+    background-color: #3498db;
+}
+
+.nav-icon {
+    width: 60px;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.nav-text {
+    padding-right: 20px;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+/* Collapsed state styles */
+.nav-menu.collapsed .nav-text {
+    opacity: 0;
+    width: 0;
+    padding: 0;
+}
+
+.nav-menu.collapsed .nav-header h2 {
+    opacity: 0;
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    background-color: #f5f6fa;
+    overflow-x: hidden;
+}
+
+.content-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.content-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+}
+
+.tab-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 4px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    overflow-x: auto;
+}
+
+#template-tabs, #tabs {
+    display: flex;
+    gap: 4px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    overflow-x: auto;
+}
+
+#template-content, #tab-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+}
+
+.tab-button {
+    padding: 8px 16px;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    background-color: #e9ecef;
+}
+
+.tab-button.active {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #0056b3;
+}
+
+.tab-button.add-tab-button {
+    font-size: 20px;
+    padding: 4px 12px;
+    background-color: #28a745;
+    color: #fff;
+    border-color: #28a745;
+}
+
+.tab-button.add-tab-button:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+.tab-pane {
+    display: none;
+    height: 100%;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Template actions container */
+.template-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.template-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+#toggle-edit-mode {
+    background-color: #6c757d;
+    color: white;
+}
+
+#toggle-edit-mode:hover {
+    background-color: #5a6268;
+}
+
+.template-actions button.refresh-button {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.template-actions button.refresh-button:hover {
+    background-color: #e0a800;
+}
+
+.template-actions button.reset-button {
+    background-color: #dc3545;
+    color: white;
+}
+
+.template-actions button.reset-button:hover {
+    background-color: #c82333;
+}
+
+#toggle-edit-mode.active-edit-mode {
+    background-color: #28a745;
+}
+
+#toggle-edit-mode.active-edit-mode:hover {
+    background-color: #218838;
+}
+
+.selected-row > td, .selected-row > th {
+    background-color: #f0f0f0 !important;
+}
+
+.selected-column-header {
+    background-color: #e0e0e0 !important;
+}
+
+.selected-column {
+    background-color: #f0f0f0 !important;
+}
+
+.context-menu {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 1000;
+    display: flex;
+    gap: 5px;
+}
+
+.context-menu-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.context-menu-icon:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+}
+
+.evidencia-cell {
+    position: relative;
+    padding: 8px !important;
+}
+
+.evidencia-content {
+    min-height: 20px;
+    padding-right: 30px;
+}
+
+/* Hide attach button by default */
+.attach-button {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 16px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #666;
+    display: none;
+    z-index: 1;
+}
+
+/* Show attach button on hover only for file mode */
+.evidencia-cell:not(.text-mode):hover .attach-button {
+    display: block;
+}
+
+/* Text input styles */
+.evidence-text {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: inherit;
+    display: none;
+}
+
+/* Show text input on hover for text mode */
+.evidencia-cell.text-mode:hover .evidence-text {
+    display: block;
+}
+
+.evidencia-cell.text-mode .attach-button,
+.evidencia-cell.text-mode .delete-button {
+    display: none !important;
+}
+
+.file-path {
+    margin-top: 2px;
+}
+
+.file-path a {
+    color: #0066cc;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.file-path a:hover {
+    text-decoration: underline;
+    color: #003366;
+}
+
+.evidencia-required {
+    background-color: rgba(255, 255, 200, 0.5) !important;
+}
+
+.evidencia-required.has-attachment,
+.evidencia-required.has-text {
+    background-color: rgba(200, 255, 200, 0.5) !important;
+}
+
+.delete-button {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 16px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #ff4444;
+    display: none;
+    z-index: 1;
+}
+
+.evidencia-cell:hover .delete-button.visible {
+    display: block;
+}
+
+/* Toggle switch styles */
+.evidence-type-toggle {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 24px;
+    margin-left: 10px;
+    vertical-align: middle;
+    display: none; /* Hidden by default, shown when checkbox is checked */
+}
+
+.evidence-type-toggle.visible {
+    display: inline-block;
+}
+
+.evidence-type-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.evidence-type-toggle input:checked + .toggle-slider {
+    background-color: #2196F3;
+}
+
+.evidence-type-toggle input:checked + .toggle-slider:before {
+    transform: translateX(36px);
+}
+
+.toggle-labels {
+    position: absolute;
+    width: 100%;
+    top: 4px;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 6px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+/* Evidence cell styles for text input mode */
+.evidencia-cell.text-mode .evidencia-content {
+    position: relative;
+    min-height: 24px;
+}
+
+.evidencia-cell.text-mode .evidence-text {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: inherit;
+}
+
+.evidencia-cell.text-mode.evidencia-required {
+    background-color: rgba(255, 255, 200, 0.5) !important;
+}
+
+.evidencia-cell.text-mode.evidencia-required.has-text {
+    background-color: rgba(200, 255, 200, 0.5) !important;
+}
+
+/* Project Dashboard Styles */
+.project-dashboard {
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Dashboard top section */
+.dashboard-top {
+    display: flex;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+    align-items: stretch;
+}
+
+.completion-percentage {
+    width: 25%;
+    text-align: center;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+}
+
+.percentage-number {
+    padding-top: 15px;
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.percentage-label {
+    font-size: 1em;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+/* Time Display Styles */
+.time-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #dee2e6;
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: auto;
+}
+
+.current-time {
+    font-weight: bold;
+}
+
+.timezone-select {
+    background: none;
+    border: none;
+    font-size: 1em;
+    cursor: pointer;
+    padding: 0;
+    margin-left: -4px;
+    transition: transform 0.2s;
+}
+
+.timezone-select:hover {
+    transform: scale(1.2);
+}
+
+/* Timezone Modal Styles */
+.timezone-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+}
+
+.timezone-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timezone-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 90%;
+}
+
+.timezone-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.timezone-modal-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #212529;
+}
+
+.timezone-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #6c757d;
+}
+
+.timezone-modal-close:hover {
+    color: #212529;
+}
+
+.timezone-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.timezone-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.timezone-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.timezone-apply-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+.timezone-apply-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Info tabs container */
+.info-tabs-container {
+    display: flex;
+    padding: 0 5px;
+}
+
+.info-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 0;
+}
+
+.info-tab {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    background: #f8f9fa;
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-tab:hover {
+    background: #e9ecef;
+}
+
+.info-tab.active {
+    background: #007bff;
+    color: white;
+    border-left-color: #0056b3;
+}
+
+.info-icon, .contact-icon {
+    font-style: normal;
+    font-size: 20px;
+}
+
+/* Quick info table */
+.quick-info-table {
+    flex: 1;
+    padding: 10px 20px;
+    position: relative;
+}
+
+.info-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s;
+}
+
+.info-content.active {
+    display: block;
+    position: relative;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* General info section */
+.info-tables-container {
+    display: flex;
+    gap: 20px;
+}
+
+.info-table-section {
+    flex: 1;
+}
+
+.info-table-section h3 {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Tables styling */
+.quick-info-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.quick-info-table th,
+.quick-info-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.quick-info-table th {
+    color: #666;
+    font-weight: normal;
+    width: 30%;
+}
+
+/* Remove old card styles */
+.contact-card,
+.contact-card-header,
+.contact-info,
+.contacts-table-header {
+    display: none;
+}
+
+/* Contacts Table Styles */
+.contacts-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+.contacts-table thead th {
+    background: #f8f9fa;
+    color: #555;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    padding: 15px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 2px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+.contacts-table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e0e0e0;
+    color: #666;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.contacts-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.contacts-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Action buttons in the table */
+.contact-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.contact-actions button {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.contact-actions .edit-contact {
+    color: #667eea;
+}
+
+.contact-actions .edit-contact:hover {
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.contact-actions .delete-contact {
+    color: #dc3545;
+}
+
+.contact-actions .delete-contact:hover {
+    background: rgba(220, 53, 69, 0.1);
+}
+
+/* Empty state within table */
+.contacts-list-empty {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.contacts-list-empty h3 {
+    color: #666;
+    font-size: 18px;
+    margin-bottom: 10px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.contacts-list-empty p {
+    color: #888;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Container adjustments */
+.contacts-container {
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Update contacts header layout */
+.contacts-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.contacts-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.search-container {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+    position: relative;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.search-container input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-container .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 14px;
+}
+
+.contacts-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.add-contact-btn, .pull-contacts-btn {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.add-contact-btn i, .pull-contacts-btn i {
+    font-size: 16px;
+}
+
+.add-contact-btn:hover, .pull-contacts-btn:hover {
+    background: #5a6fd6;
+    transform: translateY(-1px);
+}
+
+.dashboard-collapsible {
+    border-top: 1px solid #eee;
+}
+
+.collapsible-header {
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+}
+
+.collapsible-header:hover {
+    background-color: #e9ecef;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.expanded {
+    max-height: 500px;
+}
+
+.dashboard-tabs {
+    display: flex;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    background-color: #fff;
+}
+
+.dashboard-tab {
+    padding: 8px 16px;
+    margin-right: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #666;
+    border-radius: 4px;
+}
+
+.dashboard-tab:hover {
+    background-color: #f8f9fa;
+}
+
+.dashboard-tab.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.dashboard-tab-content {
+    display: none;
+    padding: 20px;
+}
+
+.dashboard-tab-content.active {
+    display: block;
+}
+
+.timeline-container,
+.gantt-container {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Ensure project name is editable and styled properly */
+.project-name-editable {
+    outline: none;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.project-name-editable:hover {
+    background-color: #f8f9fa;
+}
+
+.project-name-editable:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 2px #007bff40;
+}
+
+/* Close tab button styles */
+.close-tab {
+    margin-left: 8px;
+    color: #999;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.close-tab:hover {
+    color: #333;
+}
+
+/* Project name heading */
+h2.project-name-editable {
+    margin: 0 0 20px 0;
+    padding: 10px;
+    font-size: 24px;
+    color: #333;
+    border-radius: 4px;
+}
+
+h2.project-name-editable:hover {
+    background-color: #f8f9fa;
+}
+
+h2.project-name-editable:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 2px #007bff40;
+    outline: none;
+}
+
+/* Timeline styles */
+.timeline-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    overflow: visible;
+}
+
+.timeline-svg {
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.milestone-marker {
+    cursor: pointer;
+}
+
+.milestone-percentage {
+    font-family: Arial, sans-serif;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+
+.milestone-label {
+    font-size: 12px;
+    fill: #666;
+    font-family: Arial, sans-serif;
+    dominant-baseline: middle;
+}
+
+/* Ensure the timeline container expands properly */
+.dashboard-tab-content[data-tab="timeline"].active {
+    min-height: 300px;
+    overflow: visible;
+}
+
+.collapsible-content {
+    overflow: visible !important;
+}
+
+.project-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.project-table th,
+.project-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    position: relative;
+}
+
+.project-table th {
+    background-color: #f2f2f2;
+    user-select: none; /* Prevent text selection during resize */
+}
+
+.project-table th::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 1;
+}
+
+.project-table th:hover::after {
+    background: rgba(0, 123, 255, 0.2);
+}
+
+/* Visual feedback during resize */
+.project-table.resizing {
+    user-select: none;
+}
+
+.project-table.resizing th::after {
+    background: rgba(0, 123, 255, 0.4);
+}
+
+.project-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.project-table td[contenteditable="true"] {
+    background-color: #fff;
+    cursor: text;
+}
+
+.project-table td[contenteditable="false"] {
+    background-color: #e9e9e9;
+    cursor: not-allowed;
+}
+
+/* Remove padding from the TD itself for date cells to prevent layout issues */
+.project-table td.date-cell-td {
+    padding: 0 !important;
+}
+
+/* This wrapper will now contain the text and icon, and provide the positioning context */
+.date-cell-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* The editable text content div */
+.date-cell-wrapper .cell-content {
+    padding: 8px; /* This replicates the original cell padding */
+    padding-right: 30px; /* Make extra space for the icon */
+    min-height: 21px; /* Ensures cell height is consistent */
+}
+
+/* The calendar icon, positioned relative to the wrapper */
+.date-cell-wrapper .calendar-icon {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    display: none; /* Hide by default */
+}
+
+/* Show the icon on hover of the wrapper OR when the content is being edited */
+.date-cell-wrapper:hover .calendar-icon,
+.date-cell-wrapper .cell-content:focus + .calendar-icon {
+    display: block;
+}
+
+.calendar-icon:hover {
+    color: #000;
+}
+
+/* Context menu styles */
+.context-menu {
+    position: fixed;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 1000;
+    display: flex;
+    gap: 5px;
+}
+
+.context-menu-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.context-menu-icon:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+}
+
+.status-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.2s ease;
+}
+
+.status-completo {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-en-proceso {
+    background-color: #2196F3;
+    color: white;
+}
+
+.status-pendiente {
+    background-color: #FFC107;
+    color: black;
+}
+
+.status-na {
+    background-color: #9E9E9E;
+    color: white;
+}
+
+/* Status selector modal styles */
+.status-selector-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.status-selector-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+}
+
+.status-selector-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1002;
+    min-width: 200px;
+}
+
+.status-option {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin: 4px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.status-option:hover {
+    opacity: 0.9;
+}
+
+.status-option[data-status="completo"] {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-option[data-status="en proceso"] {
+    background-color: #2196F3;
+    color: white;
+}
+
+.status-option[data-status="pendiente"] {
+    background-color: #FFC107;
+    color: black;
+}
+
+.status-option[data-status="n/a"] {
+    background-color: #9E9E9E;
+    color: white;
+}
+
+.status-selector-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px;
+}
+
+.status-selector-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+}
+
+.status-selector-close:hover {
+    color: #333;
+}
+
+.seguimiento-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    background: #f5f5f5;
+}
+
+.seguimiento-tab {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.seguimiento-tab:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.seguimiento-tab.active {
+    background: #007bff;
+    color: white;
+}
+
+.seguimiento-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.seguimiento-view {
+    display: none;
+    width: 100%;
+    height: 100%;
+}
+
+.seguimiento-view.active {
+    display: flex;
+    flex-direction: column;
+}
+
+#kanban-board {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    height: 100%;
+}
+
+.kanban-filters {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: #666;
+}
+
+.kanban-columns {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.kanban-column {
+    flex: 1;
+    background: #f5f5f5;
+    border-radius: 4px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-width: 250px;
+}
+
+.kanban-column h3 {
+    margin: 0 0 10px 0;
+    padding: 12px 15px;
+    text-align: center;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.kanban-cards {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kanban-card {
+    background: white;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-left: 4px solid #667eea;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.kanban-card.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.kanban-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kanban-card-title h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #667eea;
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+}
+
+.kanban-card-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.due-date {
+    color: #666;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.activity-text {
+    margin: 0;
+    color: #444;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.kanban-card-notes {
+    margin: 10px 0 0 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.kanban-card-notes textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 13px;
+    resize: vertical;
+    background: white;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.project-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f0f2ff;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+    color: #667eea;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.project-tag:hover {
+    transform: translateY(-1px);
+}
+
+.project-tag.selected {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+.project-tag.unselected {
+    background: #f0f2ff;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.kanban-column[data-status="todo"] h3 {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.kanban-column[data-status="in-progress"] h3 {
+    background: linear-gradient(135deg, #ffd700, #ffa500);
+}
+
+.kanban-column[data-status="completed"] h3 {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+/* Consulta Section Styles */
+.consulta-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    background: #f5f5f5;
+}
+
+.consulta-tab {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.consulta-tab:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.consulta-tab.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.consulta-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.consulta-view {
+    display: none;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+}
+
+.consulta-view.active {
+    display: block;
+}
+
+/* Contacts Styles */
+.contacts-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.contacts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.contacts-header h2 {
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+}
+
+.add-contact-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.add-contact-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.contacts-search {
+    margin-bottom: 20px;
+}
+
+.contacts-search input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.contacts-search input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.contacts-list {
+    display: grid;
+    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.contact-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.contact-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.contact-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.contact-card-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+}
+
+.contact-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.contact-actions button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.contact-actions button:hover {
+    background: #f0f0f0;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.contact-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.contact-info strong {
+    color: #333;
+    font-weight: 500;
+}
+
+/* Contact Form Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+/* Contact Form Styles */
+.contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.submit-btn,
+.cancel-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.submit-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+}
+
+.submit-btn:hover {
+    background: #5a6fd6;
+}
+
+.cancel-btn {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.cancel-btn:hover {
+    background: #e5e7eb;
+}
+
+/* Empty State - Updated for table */
+.contacts-list-empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 8px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.contacts-list-empty h3 {
+    color: #666;
+    font-size: 18px;
+    margin-bottom: 10px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.contacts-list-empty p {
+    color: #888;
+    font-size: 14px;
+    margin: 0;
+}
+
+.contacts-table-header {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #555;
+    font-family: 'Poppins', sans-serif;
+}
+
+.contacts-table-header span {
+    font-size: 14px;
+}
+
+/* Project Tags Styles */
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-height: 32px;
+    padding: 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.project-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f0f2ff;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+    color: #667eea;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.project-tag:hover {
+    transform: translateY(-1px);
+}
+
+.project-tag.selected {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+.project-tag.unselected {
+    background: #f0f2ff;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.project-selector {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.project-select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #333;
+}
+
+.project-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.add-project-tag {
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-project-tag:hover {
+    background: #5a6fd6;
+}
+
+.add-project-tag:disabled {
+    background: #e0e0e0;
+    cursor: not-allowed;
+}
+
+/* Update contact table to show project tags */
+.contacts-table td.project-tags-cell {
+    padding: 8px;
+}
+
+.contacts-table .project-tag {
+    margin: 2px;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Pull Contacts Button */
+.pull-contacts-btn {
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pull-contacts-btn i {
+    font-size: 16px;
+}
+
+.pull-contacts-btn:hover {
+    background: #5a6fd6;
+}
+
+/* Project Contacts Styles */
+.project-contacts {
+    margin-top: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.project-contacts .add-contact {
+    margin-bottom: 16px;
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.project-contacts .add-contact:hover {
+    background: #5a6fd6;
+}
+
+.project-contacts .add-contact i {
+    font-size: 16px;
+}
+
+.contact-box {
+    margin-bottom: 16px;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #f9fafb;
+}
+
+.contact-box:last-child {
+    margin-bottom: 0;
+}
+
+.contact-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.contact-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.contact-fields input {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+.contact-fields input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.contact-box .delete-contact {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.contact-box .delete-contact:hover {
+    background: #fee2e2;
+}
+
+/* Project Tags Selector */
+.project-tags-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    min-height: 50px;
+}
+
+.project-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.project-tag.selected {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.project-tag.unselected {
+    background: #f0f2ff;
+    border: 1px solid #667eea;
+    color: #667eea;
+}
+
+.project-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Make tags in contacts table non-interactive */
+.contacts-table .project-tag {
+    cursor: default;
+    pointer-events: none;
+    margin: 2px;
+}
