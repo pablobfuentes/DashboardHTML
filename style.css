@@ -2207,3 +2207,115 @@ h2.project-name-editable:focus {
     pointer-events: none;
     margin: 2px;
 }
+
+/* Project Section Styles */
+.project-pane {
+    display: none;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.project-pane.active {
+    display: block;
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.project-name {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.project-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.project-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.project-table th,
+.project-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #dee2e6;
+}
+
+.project-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.project-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.project-table tr:hover {
+    background-color: #f2f2f2;
+}
+
+/* Quick Info Panel */
+.quick-info-panel {
+    margin-top: 20px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quick-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.quick-info-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.quick-info-content {
+    display: flex;
+    gap: 20px;
+}
+
+.quick-info-left,
+.quick-info-right {
+    flex: 1;
+}
+
+.info-section {
+    margin-bottom: 20px;
+}
+
+.info-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+/* Delete Tab Icon */
+.delete-tab-icon {
+    margin-left: 8px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.delete-tab-icon:hover {
+    opacity: 1;
+}
