@@ -3,186 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Dashboard de Seguimiento de Proyectos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker.min.css">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css?v=1.1">
+    <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
 </head>
 <body>
     <div class="app-container">
         <!-- Navigation Menu -->
         <nav class="nav-menu">
-            <div class="nav-content">
-                <div class="nav-header">
-                    <button class="nav-toggle" title="Toggle Navigation">☰</button>
-                    <h2>Dashboard</h2>
-                </div>
-                <ul class="nav-links">
-                    <li class="nav-item active" data-section="seguimiento">
-                        <span class="nav-icon">📊</span>
-                        <span class="nav-text">Seguimiento</span>
-                    </li>
-                    <li class="nav-item" data-section="consulta">
-                        <span class="nav-icon">🔍</span>
-                        <span class="nav-text">Consulta</span>
-                    </li>
-                    <li class="nav-item" data-section="templates">
-                        <span class="nav-icon">📋</span>
-                        <span class="nav-text">Templates</span>
-                    </li>
-                    <li class="nav-item" data-section="reportes">
-                        <span class="nav-icon">📈</span>
-                        <span class="nav-text">Reportes</span>
-                    </li>
-                </ul>
+            <div class="nav-header">
+                <button class="nav-toggle" title="Toggle Navigation">☰</button>
+                <h2>Dashboard</h2>
             </div>
+            <ul class="nav-links">
+                <li class="nav-item active" data-section="seguimiento">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Seguimiento</span>
+                </li>
+                <li class="nav-item" data-section="consulta">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-text">Consulta</span>
+                </li>
+                <li class="nav-item" data-section="templates">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Templates</span>
+                </li>
+                <li class="nav-item" data-section="reportes">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">Reportes</span>
+                </li>
+            </ul>
         </nav>
 
-        <!-- Main Content Area -->
+        <!-- Main Content -->
         <main class="main-content">
-            <!-- Section: Seguimiento -->
-            <section class="content-section active" id="seguimiento">
-                <div class="seguimiento-tabs">
-                    <button class="seguimiento-tab active" data-view="kanban">Kanban</button>
-                    <button class="seguimiento-tab" data-view="projects">Projects</button>
+            <section id="seguimiento" class="content-section active">
+                <div class="seguimiento-tabs tab-buttons">
+                    <button class="seguimiento-tab tab-button active" data-view="projects">Projects</button>
+                    <button class="seguimiento-tab tab-button" data-view="kanban">Kanban</button>
                 </div>
-                <div class="seguimiento-content">
-                    <div class="seguimiento-view active" id="kanban-view">
-                        <!-- Kanban board will be initialized here -->
-                        <div id="kanban-board"></div>
+                <div id="projects-view" class="seguimiento-view active">
+                    <div id="tabs" class="tab-buttons">
+                        <button id="add-project-button" class="tab-button">+</button>
                     </div>
-                    <div class="seguimiento-view" id="projects-view">
-                        <div class="tab-container">
-                            <div class="tab-buttons" id="tabs">
-                                <button class="tab-button add-tab-button" id="add-project-button">+</button>
-                            </div>
-                            <div class="tab-content" id="tab-content">
-                            </div>
-                        </div>
+                    <div id="tab-content">
+                        <!-- Project panes will be loaded here -->
+                    </div>
+                </div>
+                <div id="kanban-view" class="seguimiento-view">
+                    <div class="kanban-filters">
+                        <label for="kanban-project-filter">Project:</label>
+                        <select id="kanban-project-filter">
+                            <option value="all">All Projects</option>
+                        </select>
+                        <label for="kanban-due-date-filter">Due Date:</label>
+                        <input type="text" id="kanban-due-date-filter" placeholder="mm/dd/yyyy">
+                        <button id="kanban-clear-date-filter" class="kanban-filter-btn">Clear</button>
+                    </div>
+                    <div id="kanban-board" class="kanban-board">
+                        <!-- Kanban columns will be rendered here -->
                     </div>
                 </div>
             </section>
 
-            <!-- Section: Templates -->
-            <section class="content-section" id="templates">
+            <section id="consulta" class="content-section">
+                <div class="contacts-header">
+                    <h2>Directorio de Contactos</h2>
+                </div>
+                <div class="contacts-toolbar">
+                    <button class="add-contact-btn"><i class="fas fa-plus"></i> Agregar Contacto</button>
+                    <input type="text" id="contact-search" placeholder="Buscar contactos...">
+                    <button class="pull-contacts-btn"><i class="fas fa-sync"></i> Sincronizar Contactos</button>
+                </div>
+                <div class="contacts-filters">
+                    <select id="contact-project-filter" class="contact-filter">
+                        <option value="all">Proyecto</option>
+                    </select>
+                    <select id="contact-company-filter" class="contact-filter">
+                        <option value="all">Empresa</option>
+                    </select>
+                    <select id="contact-position-filter" class="contact-filter">
+                        <option value="all">Cargo</option>
+                    </select>
+                    <button id="clear-contact-filters">Limpiar Todo</button>
+                    <button id="copy-emails-btn"><i class="fas fa-copy"></i> Copiar Emails</button>
+                </div>
+                <div class="contacts-table-container">
+                    <table class="contacts-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Cargo</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Empresa</th>
+                                <th>Proyectos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Contact rows will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="templates" class="content-section">
                 <div class="tab-container">
                     <div class="tab-buttons" id="template-tabs">
-                        <button class="tab-button active" data-tab="main-template">
-                            <span class="project-name-editable" contenteditable="true">Main Template</span>
-                        </button>
-                        <button class="tab-button" data-tab="email-templates">
-                            <span class="tab-name">Email Templates</span>
-                        </button>
+                        <button class="tab-button active" data-tab="main-template-pane">Main Template</button>
+                        <button class="tab-button" data-tab="email-templates-pane">Email Templates</button>
                     </div>
                     <div class="tab-content" id="template-content">
-                        <div class="tab-pane active" id="main-template">
-                            <h2>Main Template</h2>
+                        <div id="main-template-pane" class="tab-pane active">
                             <div class="template-actions">
                                 <button id="toggle-edit-mode">Enable Edit Mode</button>
-                                <button id="refresh-projects-button" class="refresh-button">Refresh All Projects</button>
-                                <button id="reset-state-button" class="reset-button">Reset All Data</button>
+                                <button id="refresh-projects-button">Refresh All Projects</button>
                             </div>
-                            <table id="main-template-table" class="project-table">
-                                <thead>
-                                    <tr>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                </tbody>
-                            </table>
-                            <div id="context-menu" class="context-menu" style="display: none;"></div>
+                            <table id="main-template-table" class="project-table"></table>
                         </div>
-                        <div class="tab-pane" id="email-templates">
-                            <div class="email-templates-header">
+                        <div id="email-templates-pane" class="tab-pane">
+                            <div class="templates-header">
                                 <h2>Email Templates</h2>
-                                <p class="page-description">Manage email templates for different project stages and communications</p>
+                                <p>Manage email templates for different project stages and communications</p>
                             </div>
-                            
-                            <div class="email-templates-toolbar">
-                                <div class="toolbar-left">
-                                    <button class="add-template-btn">
-                                        <i class="fas fa-plus"></i> New Template
-                                    </button>
+                            <div class="templates-toolbar">
+                                <button class="add-email-template-btn btn btn-primary"><i class="fas fa-plus"></i> New Template</button>
+                                <div class="search-container">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" placeholder="Search templates...">
                                 </div>
-                                <div class="toolbar-center">
-                                    <div class="template-search-container">
-                                        <input type="text" id="template-search" placeholder="Search templates...">
-                                        <i class="fas fa-search search-icon"></i>
-                                    </div>
-                                </div>
-                                <div class="toolbar-right">
-                                    <button class="import-template-btn">
-                                        <i class="fas fa-upload"></i> Import
-                                    </button>
-                                    <button class="export-template-btn">
-                                        <i class="fas fa-download"></i> Export
-                                    </button>
+                                <div class="templates-actions">
+                                    <button id="import-templates-btn" class="btn btn-secondary"><i class="fas fa-upload"></i> Import</button>
+                                    <button id="export-templates-btn" class="btn btn-secondary"><i class="fas fa-download"></i> Export</button>
                                 </div>
                             </div>
-
-                            <div class="email-templates-content">
-                                <div class="templates-main-container">
-                                    <div class="templates-grid">
-                                        <!-- Email templates will be dynamically added here -->
-                                        <div class="empty-state">
-                                            <div class="empty-state-icon">📧</div>
-                                            <h3>No Email Templates Yet</h3>
-                                            <p>Create your first email template to get started</p>
-                                            <button class="create-first-template-btn">
-                                                <i class="fas fa-plus"></i> Create First Template
-                                            </button>
-                                        </div>
-                                    </div>
+                            <div class="templates-main-content">
+                                <div id="email-templates-list" class="templates-list">
+                                    <!-- Templates will be rendered here. -->
                                 </div>
                                 <div class="templates-sidebar">
                                     <div class="sidebar-section">
                                         <h4>Quick Actions</h4>
-                                        <div class="quick-actions">
-                                            <button class="quick-action-btn">
-                                                <i class="fas fa-eye"></i> Preview Template
-                                            </button>
-                                            <button class="quick-action-btn">
-                                                <i class="fas fa-copy"></i> Duplicate Template
-                                            </button>
-                                            <button class="quick-action-btn">
-                                                <i class="fas fa-paper-plane"></i> Send Test Email
-                                            </button>
-                                        </div>
+                                        <ul class="quick-actions-list">
+                                            <li><button disabled><i class="fas fa-eye"></i> Preview Template</button></li>
+                                            <li><button disabled><i class="fas fa-copy"></i> Duplicate Template</button></li>
+                                            <li><button disabled><i class="fas fa-paper-plane"></i> Send Test Email</button></li>
+                                        </ul>
                                     </div>
-                                    
                                     <div class="sidebar-section">
                                         <h4>Template Categories</h4>
-                                        <div class="template-categories">
-                                            <div class="category-item">
-                                                <span class="category-name">Project Kickoff</span>
-                                                <span class="category-count">0</span>
-                                            </div>
-                                            <div class="category-item">
-                                                <span class="category-name">Progress Updates</span>
-                                                <span class="category-count">0</span>
-                                            </div>
-                                            <div class="category-item">
-                                                <span class="category-name">Milestone Complete</span>
-                                                <span class="category-count">0</span>
-                                            </div>
-                                            <div class="category-item">
-                                                <span class="category-name">Project Closure</span>
-                                                <span class="category-count">0</span>
-                                            </div>
-                                        </div>
+                                        <ul class="category-list">
+                                            <li><span>Project Kickoff</span><span class="badge">0</span></li>
+                                            <li><span>Progress Updates</span><span class="badge">0</span></li>
+                                            <li><span>Milestone Complete</span><span class="badge">0</span></li>
+                                            <li><span>Project Closure</span><span class="badge">0</span></li>
+                                        </ul>
                                     </div>
-                                    
                                     <div class="sidebar-section">
                                         <h4>Recent Activity</h4>
-                                        <div class="recent-activity">
-                                            <div class="activity-item">
-                                                <div class="activity-icon">📝</div>
-                                                <div class="activity-text">
-                                                    <span>No recent activity</span>
-                                                </div>
-                                            </div>
+                                        <div class="recent-activity-item">
+                                            <p>No recent activity</p>
                                         </div>
                                     </div>
                                 </div>
@@ -191,183 +175,109 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Section: Consulta -->
-            <section class="content-section" id="consulta">
-                <div class="consulta-tabs">
-                    <button class="consulta-tab active" data-view="contactos">Contactos</button>
-                </div>
-                <div class="consulta-content">
-                    <div id="contactos-view" class="view-content">
-                        <div class="contacts-header">
-                            <h2>Directorio de Contactos</h2>
-                        </div>
-                        <div class="contacts-toolbar">
-                            <div class="toolbar-left">
-                                <button class="add-contact-btn">
-                                    <i class="fas fa-plus"></i> Agregar Contacto
-                                </button>
-                            </div>
-                            <div class="toolbar-center">
-                                <div class="search-container">
-                                    <input type="text" id="contact-search" placeholder="Buscar contactos...">
-                                    <i class="fas fa-search search-icon"></i>
-                                </div>
-                            </div>
-                            <div class="toolbar-right">
-                                <button class="pull-contacts-btn">
-                                    <i class="fas fa-sync"></i> Sincronizar Contactos
-                                </button>
-                            </div>
-                        </div>
-                        <div class="contacts-container">
-                            <table class="contacts-table">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Cargo</th>
-                                        <th>Email</th>
-                                        <th>Teléfono</th>
-                                        <th>Empresa</th>
-                                        <th>Proyectos</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Contact rows will be dynamically added here -->
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Add Contact Modal -->
-                        <div id="contact-modal" class="modal">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h3>Agregar Contacto</h3>
-                                    <button class="close-modal">&times;</button>
-                                </div>
-                                <form id="contact-form" class="contact-form">
-                                    <div class="form-group">
-                                        <label for="contact-name">Nombre*</label>
-                                        <input type="text" id="contact-name" name="name" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="contact-position">Cargo*</label>
-                                        <input type="text" id="contact-position" name="position" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="contact-email">Email*</label>
-                                        <input type="email" id="contact-email" name="email" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="contact-phone">Teléfono</label>
-                                        <input type="tel" id="contact-phone" name="phone">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="contact-company">Empresa*</label>
-                                        <input type="text" id="contact-company" name="company" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Proyectos Relacionados</label>
-                                        <div class="project-tags-selector" id="contact-project-tags">
-                                            <!-- Project tags will be dynamically added here -->
-                                        </div>
-                                    </div>
-                                    <div class="form-actions">
-                                        <button type="submit" class="submit-btn">Guardar</button>
-                                        <button type="button" class="cancel-btn">Cancelar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Edit Contact Modal -->
-                        <div id="edit-contact-modal" class="modal">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h3>Editar Contacto</h3>
-                                    <button class="close-modal">&times;</button>
-                                </div>
-                                <form id="edit-contact-form" class="contact-form">
-                                    <input type="hidden" id="edit-contact-id" name="id">
-                                    <div class="form-group">
-                                        <label for="edit-contact-name">Nombre*</label>
-                                        <input type="text" id="edit-contact-name" name="name" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="edit-contact-position">Cargo*</label>
-                                        <input type="text" id="edit-contact-position" name="position" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="edit-contact-email">Email*</label>
-                                        <input type="email" id="edit-contact-email" name="email" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="edit-contact-phone">Teléfono</label>
-                                        <input type="tel" id="edit-contact-phone" name="phone">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="edit-contact-company">Empresa*</label>
-                                        <input type="text" id="edit-contact-company" name="company" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Proyectos Relacionados</label>
-                                        <div class="project-tags-selector" id="edit-contact-project-tags">
-                                            <!-- Project tags will be dynamically added here -->
-                                        </div>
-                                    </div>
-                                    <div class="form-actions">
-                                        <button type="submit" class="submit-btn">Guardar Cambios</button>
-                                        <button type="button" class="cancel-btn">Cancelar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Section: Reportes -->
-            <section class="content-section" id="reportes">
+            
+            <section id="reportes" class="content-section">
                 <h2>Reportes</h2>
                 <p>Sección de reportes en desarrollo...</p>
             </section>
         </main>
-    </div>
-    
-    <!-- Date picker modal -->
-    <div id="date-picker-modal" class="date-picker-modal" style="display: none;">
-        <div class="date-picker-overlay"></div>
-        <div class="date-picker-content">
-            <div class="date-picker-header">
-                <span>Select Date</span>
-                <button class="date-picker-close">&times;</button>
-            </div>
-            <div id="date-picker-container"></div>
-            <div class="date-picker-footer">
-                <button id="date-picker-tbd">TBD</button>
-                <button id="date-picker-clear">Clear</button>
+
+        <!-- Modals -->
+        <div id="contact-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3 id="contact-modal-title">Add Contact</h3>
+                <form id="contact-form">
+                    <input type="text" name="name" placeholder="Name" required>
+                    <input type="text" name="position" placeholder="Position">
+                    <input type="email" name="email" placeholder="Email">
+                    <input type="tel" name="phone" placeholder="Phone">
+                    <input type="text" name="company" placeholder="Company">
+                    <button type="submit" class="save-btn">Save</button>
+                    <button type="button" class="cancel-btn">Cancel</button>
+                </form>
             </div>
         </div>
-    </div>
-    
-    <!-- Status selector modal -->
-    <div id="status-selector-modal" class="status-selector-modal">
-        <div class="status-selector-overlay"></div>
-        <div class="status-selector-content">
-            <div class="status-selector-header">
-                <button class="status-selector-close">&times;</button>
+
+        <div id="email-template-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3 id="template-modal-title">Add New Email Template</h3>
+                <form id="email-template-form">
+                    <input type="text" name="template-name" placeholder="Template Name" required>
+                    <input type="text" name="template-subject" placeholder="Subject">
+                    <textarea name="template-body" rows="10" placeholder="Email Body"></textarea>
+                    <button type="submit" class="save-btn">Save Template</button>
+                    <button type="button" class="cancel-btn">Cancel</button>
+                </form>
             </div>
-            <div class="status-options">
-                <button class="status-option" data-status="completo">Completo</button>
-                <button class="status-option" data-status="en proceso">En Proceso</button>
-                <button class="status-option" data-status="pendiente">Pendiente</button>
-                <button class="status-option" data-status="n/a">N/A</button>
+        </div>
+
+        <div id="date-picker-modal" class="date-picker-overlay" style="display: none;">
+            <div class="date-picker-content">
+                <div class="date-picker-header">
+                    <span>Select Date</span>
+                    <button class="date-picker-close">&times;</button>
+                </div>
+                <div id="date-picker-container"></div>
+                <div class="date-picker-footer">
+                    <button id="date-picker-tbd">TBD</button>
+                    <button id="date-picker-clear">Clear</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="status-selector-modal" class="modal" style="display:none;">
+            <div class="modal-overlay"></div>
+            <div class="modal-content status-modal-content">
+                <h3>Select Status</h3>
+                <div class="status-options">
+                    <div class="status-option" data-status="pendiente">
+                        <span class="status-tag status-pending">Pendiente</span>
+                    </div>
+                    <div class="status-option" data-status="en proceso">
+                        <span class="status-tag status-in-progress">En Proceso</span>
+                    </div>
+                    <div class="status-option" data-status="completo">
+                        <span class="status-tag status-complete">Completo</span>
+                    </div>
+                    <div class="status-option" data-status="n/a">
+                        <span class="status-tag status-na">N/A</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="context-menu" class="context-menu"></div>
+        
+        <!-- Comment Panel -->
+        <div id="comment-panel" class="comment-panel" style="display: none;">
+            <div class="comment-panel-overlay"></div>
+            <div class="comment-panel-content">
+                <div class="comment-panel-header">
+                    <h3>Comments</h3>
+                    <button class="comment-panel-close">&times;</button>
+                </div>
+                <div class="comment-panel-body">
+                    <div class="comment-activity-info">
+                        <span class="activity-label">Activity:</span>
+                        <span id="comment-activity-name"></span>
+                    </div>
+                    <div class="comment-input-section">
+                        <textarea id="comment-input" placeholder="Add a new comment..." rows="3"></textarea>
+                        <button id="comment-submit-btn" class="comment-submit-btn">Add Comment</button>
+                    </div>
+                    <div class="comment-history-section">
+                        <h4>Comment History</h4>
+                        <div id="comment-history-list" class="comment-history-list">
+                            <!-- Comments will be rendered here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
-    <script src="script.js"></script>
+    <script src="js/main.js?v=1.3" type="module"></script>
 </body>
 </html>
