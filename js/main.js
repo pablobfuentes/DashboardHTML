@@ -4,6 +4,7 @@ import { initializeUI } from './ui.js';
 import { initializeEventListeners } from './events.js';
 import { initializeKanban } from './kanban.js';
 import { initializeTimezone } from './timezone.js';
+import { initializeContacts } from './contacts.js';
 // import { initializeTemplates } from './templates.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTimezone(); // Initialize timezone settings
     initializeUI(); // Renders tables, etc. based on loaded state
     initializeEventListeners(); // Sets up all click/input handlers
+    initializeContacts();
     // The Kanban view is now initialized on-demand when the user clicks the tab.
     // The Contacts view is now initialized on-demand when the user clicks the tab.
     // initializeTemplates();

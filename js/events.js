@@ -162,30 +162,114 @@ function initDelegatedEventListeners() {
 }
 
 function initGlobalListeners() {
+    initDelegatedEventListeners();
+
     // --- Contact Modal ---
     const contactModal = document.getElementById('contact-modal');
+    const contactForm = document.getElementById('contact-form');
+    const editContactForm = document.getElementById('edit-contact-form');
+    const editContactModal = document.getElementById('edit-contact-modal');
+    const contactsTableBody = document.querySelector('.contacts-table tbody');
+
+    // Contact table action buttons
+    if (contactsTableBody) {
+        console.log('Contact table body found, adding click listener');
+        contactsTableBody.addEventListener('click', (e) => {
+            console.log('Click event in contacts table body');
+            const target = e.target.closest('button');
+            console.log('Clicked target:', target);
+            if (!target) return;
+
+            if (target.classList.contains('edit-btn')) {
+                console.log('Edit button clicked for ID:', target.dataset.id);
+                handleEditContact(target.dataset.id);
+            } else if (target.classList.contains('delete-btn')) {
+                console.log('Delete button clicked for ID:', target.dataset.id);
+                handleDeleteContact(target.dataset.id);
+            }
+        });
+    } else {
+        console.log('Contact table body not found');
+    }
+
+    // Contact form and modal handlers
     if (contactModal) {
-        const contactForm = document.getElementById('contact-form');
         contactModal.addEventListener('click', (e) => {
             if (e.target.matches('.close-modal, .cancel-btn, .modal')) {
                 contactModal.style.display = 'none';
             }
         });
+    }
+
+    if (contactForm) {
         contactForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            const formData = new FormData(e.target);
+            const selectedProjects = Array.from(document.querySelectorAll('#contact-project-tags .project-tag.selected'))
+                .map(tag => tag.getAttribute('data-project'));
+            
             const newContact = {
-                name: contactForm.elements['name'].value,
-                position: contactForm.elements['position'].value,
-                email: contactForm.elements['email'].value,
-                phone: contactForm.elements['phone'].value,
-                company: contactForm.elements['company'].value,
-                projects: []
+                name: formData.get('name'),
+                position: formData.get('position'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                company: formData.get('company'),
+                projects: selectedProjects,
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
             };
+
+            // Add contact to state.contacts
             state.contacts.push(newContact);
-            renderContacts();
+
+            // Add contact to each selected project's quickInfoContacts
+            selectedProjects.forEach(projectName => {
+                const projectEntry = Object.entries(state.projectsData)
+                    .find(([_, project]) => project.name === projectName);
+                
+                if (projectEntry) {
+                    const [projectId, project] = projectEntry;
+                    if (!project.quickInfoContacts) {
+                        project.quickInfoContacts = {
+                            address: '',
+                            contacts: []
+                        };
+                    }
+                    
+                    // Add contact to project's contacts if not already present
+                    const existingContact = project.quickInfoContacts.contacts
+                        .find(c => c.email === newContact.email);
+                    
+                    if (!existingContact) {
+                        project.quickInfoContacts.contacts.push({
+                            position: newContact.position,
+                            name: newContact.name,
+                            email: newContact.email,
+                            phone: newContact.phone || ''
+                        });
+                    }
+                }
+            });
+
             saveState();
-            contactForm.reset();
-            contactModal.style.display = 'none';
+            // Import and use syncAndRenderContacts instead of renderContacts
+            import('./contacts.js').then(module => {
+                module.syncAndRenderContacts();
+                contactForm.reset();
+                contactModal.style.display = 'none';
+            });
+        });
+    }
+
+    // Edit contact form handlers
+    if (editContactForm) {
+        editContactForm.addEventListener('submit', handleEditContactSubmit);
+    }
+
+    if (editContactModal) {
+        editContactModal.addEventListener('click', (e) => {
+            if (e.target.matches('.close-modal, .cancel-btn, .modal')) {
+                editContactModal.style.display = 'none';
+            }
         });
     }
 
@@ -931,4 +1015,153 @@ function handleAdditionalNotesInput(input) {
 
     state.projectsData[projectId].additionalNotes = value;
     saveState();
+}
+
+function handleEditContact(contactId) {
+    const contact = state.contacts.find(c => c.id === contactId);
+    if (!contact) return;
+
+    const editModal = document.getElementById('edit-contact-modal');
+    const editForm = document.getElementById('edit-contact-form');
+    
+    // Fill form with contact data
+    editForm.elements['id'].value = contact.id;
+    editForm.elements['name'].value = contact.name;
+    editForm.elements['position'].value = contact.position;
+    editForm.elements['email'].value = contact.email;
+    editForm.elements['phone'].value = contact.phone || '';
+    editForm.elements['company'].value = contact.company;
+
+    // Update project tags
+    const tagsContainer = document.getElementById('edit-contact-project-tags');
+    tagsContainer.innerHTML = '';
+    
+    // Add all project names as tags
+    Object.values(state.projectsData).forEach(project => {
+        if (project.name === 'Main Template') return;
+        
+        const tagElement = document.createElement('span');
+        tagElement.className = `project-tag ${contact.projects.includes(project.name) ? 'selected' : 'unselected'}`;
+        tagElement.textContent = project.name;
+        tagElement.setAttribute('data-project', project.name);
+        
+        // Add click handler for selection
+        tagElement.addEventListener('click', () => {
+            if (tagElement.classList.contains('selected')) {
+                tagElement.classList.remove('selected');
+                tagElement.classList.add('unselected');
+            } else {
+                tagElement.classList.remove('unselected');
+                tagElement.classList.add('selected');
+            }
+        });
+        
+        tagsContainer.appendChild(tagElement);
+    });
+
+    editModal.style.display = 'block';
+}
+
+function handleDeleteContact(contactId) {
+    const contact = state.contacts.find(c => c.id === contactId);
+    if (!contact) return;
+
+    if (confirm(`Are you sure you want to delete contact "${contact.name}"?`)) {
+        // Remove contact from all associated projects
+        contact.projects.forEach(projectName => {
+            const project = Object.entries(state.projectsData)
+                .find(([_, p]) => p.name === projectName);
+            if (project) {
+                const [_, projectData] = project;
+                if (projectData.quickInfoContacts && projectData.quickInfoContacts.contacts) {
+                    projectData.quickInfoContacts.contacts = projectData.quickInfoContacts.contacts
+                        .filter(c => c.email !== contact.email);
+                }
+            }
+        });
+
+        // Remove from contacts array
+        state.contacts = state.contacts.filter(c => c.id !== contactId);
+        saveState();
+        import('./contacts.js').then(module => {
+            module.syncAndRenderContacts();
+        });
+    }
+}
+
+function handleEditContactSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const selectedProjects = Array.from(document.querySelectorAll('#edit-contact-project-tags .project-tag.selected'))
+        .map(tag => tag.getAttribute('data-project'));
+    
+    const contactId = formData.get('id');
+    const updatedContact = {
+        id: contactId,
+        name: formData.get('name'),
+        position: formData.get('position'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        company: formData.get('company'),
+        projects: selectedProjects
+    };
+
+    // Find and update the contact in state.contacts
+    const contactIndex = state.contacts.findIndex(c => c.id === contactId);
+    if (contactIndex !== -1) {
+        const oldContact = state.contacts[contactIndex];
+        state.contacts[contactIndex] = updatedContact;
+
+        // Remove contact from projects they were removed from
+        oldContact.projects.forEach(projectName => {
+            if (!selectedProjects.includes(projectName)) {
+                const project = Object.entries(state.projectsData)
+                    .find(([_, p]) => p.name === projectName);
+                if (project) {
+                    const [_, projectData] = project;
+                    if (projectData.quickInfoContacts && projectData.quickInfoContacts.contacts) {
+                        projectData.quickInfoContacts.contacts = projectData.quickInfoContacts.contacts
+                            .filter(c => c.email !== oldContact.email);
+                    }
+                }
+            }
+        });
+
+        // Add/update contact in selected projects
+        selectedProjects.forEach(projectName => {
+            const project = Object.entries(state.projectsData)
+                .find(([_, p]) => p.name === projectName);
+            if (project) {
+                const [_, projectData] = project;
+                if (!projectData.quickInfoContacts) {
+                    projectData.quickInfoContacts = {
+                        address: '',
+                        contacts: []
+                    };
+                }
+
+                const contactData = {
+                    position: updatedContact.position,
+                    name: updatedContact.name,
+                    email: updatedContact.email,
+                    phone: updatedContact.phone || ''
+                };
+
+                const existingIndex = projectData.quickInfoContacts.contacts
+                    .findIndex(c => c.email === oldContact.email);
+                
+                if (existingIndex !== -1) {
+                    projectData.quickInfoContacts.contacts[existingIndex] = contactData;
+                } else {
+                    projectData.quickInfoContacts.contacts.push(contactData);
+                }
+            }
+        });
+
+        saveState();
+        import('./contacts.js').then(module => {
+            module.syncAndRenderContacts();
+            document.getElementById('edit-contact-modal').style.display = 'none';
+        });
+    }
 }

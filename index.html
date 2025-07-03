@@ -183,18 +183,41 @@
         </main>
 
         <!-- Modals -->
-        <div id="contact-modal" class="modal" style="display:none;">
+        <div id="contact-modal" class="modal">
             <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h3 id="contact-modal-title">Add Contact</h3>
-                <form id="contact-form">
-                    <input type="text" name="name" placeholder="Name" required>
-                    <input type="text" name="position" placeholder="Position">
-                    <input type="email" name="email" placeholder="Email">
-                    <input type="tel" name="phone" placeholder="Phone">
-                    <input type="text" name="company" placeholder="Company">
-                    <button type="submit" class="save-btn">Save</button>
-                    <button type="button" class="cancel-btn">Cancel</button>
+                <div class="modal-header">
+                    <h3>Add Contact</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="contact-form" class="contact-form">
+                    <div class="form-group">
+                        <label for="contact-name">Name*</label>
+                        <input type="text" id="contact-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-position">Position*</label>
+                        <input type="text" id="contact-position" name="position" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email*</label>
+                        <input type="email" id="contact-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-phone">Phone</label>
+                        <input type="tel" id="contact-phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-company">Company*</label>
+                        <input type="text" id="contact-company" name="company" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Associated Projects</label>
+                        <div id="contact-project-tags" class="project-tags"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="cancel-btn">Cancel</button>
+                        <button type="submit" class="submit-btn">Save Contact</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -274,6 +297,47 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Edit Contact Modal -->
+        <div id="edit-contact-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Contact</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="edit-contact-form" class="contact-form">
+                    <input type="hidden" id="edit-contact-id" name="id">
+                    <div class="form-group">
+                        <label for="edit-contact-name">Name*</label>
+                        <input type="text" id="edit-contact-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-contact-position">Position*</label>
+                        <input type="text" id="edit-contact-position" name="position" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-contact-email">Email*</label>
+                        <input type="email" id="edit-contact-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-contact-phone">Phone</label>
+                        <input type="tel" id="edit-contact-phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-contact-company">Company*</label>
+                        <input type="text" id="edit-contact-company" name="company" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Associated Projects</label>
+                        <div id="edit-contact-project-tags" class="project-tags"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="cancel-btn">Cancel</button>
+                        <button type="submit" class="submit-btn">Update Contact</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
