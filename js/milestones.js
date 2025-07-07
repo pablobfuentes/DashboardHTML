@@ -1,5 +1,119 @@
 import { state } from './state.js';
 
+function calculateMilestoneProgress(project, milestones) {
+    const milestoneIndex = project.headers.indexOf('Milestone');
+    const statusIndex = project.headers.indexOf('Status');
+    
+    if (milestoneIndex === -1 || statusIndex === -1) {
+        return {};
+    }
+
+    const progress = {};
+    
+    // Calculate progress for each milestone except "Completo"
+    milestones.forEach(milestone => {
+        if (milestone === 'Completo') {
+            // For "Completo", calculate overall project completion
+            const totalActivities = project.content.length;
+            const completedActivities = project.content.filter(row => 
+                row[statusIndex] === 'completo'
+            ).length;
+            progress[milestone] = totalActivities > 0 ? (completedActivities / totalActivities) * 100 : 0;
+        } else {
+            // For other milestones, calculate completion of activities within that milestone
+            const milestoneActivities = project.content.filter(row => 
+                row[milestoneIndex] === milestone
+            );
+            const completedMilestoneActivities = milestoneActivities.filter(row => 
+                row[statusIndex] === 'completo'
+            );
+            
+            progress[milestone] = milestoneActivities.length > 0 ? 
+                (completedMilestoneActivities.length / milestoneActivities.length) * 100 : 0;
+        }
+    });
+
+    return progress;
+}
+
+function createMilestoneProgressSegments(containerEl, diamonds, milestones, milestoneProgress, 
+                                       lineLeft, lineWidth, lineTop, containerRect) {
+    // Calculate segment progress between consecutive milestones
+    for (let i = 0; i < milestones.length - 1; i++) {
+        const currentMilestone = milestones[i];
+        const nextMilestone = milestones[i + 1];
+        
+        // Get diamond positions
+        const currentDiamond = diamonds[i].getBoundingClientRect();
+        const nextDiamond = diamonds[i + 1].getBoundingClientRect();
+        
+        const segmentLeft = currentDiamond.left + currentDiamond.width/2 - containerRect.left;
+        const segmentRight = nextDiamond.left + nextDiamond.width/2 - containerRect.left;
+        const segmentWidth = segmentRight - segmentLeft;
+        
+        // Calculate progress for this segment
+        let segmentProgress = 0;
+        if (nextMilestone === 'Completo') {
+            // Progress toward final completion
+            segmentProgress = milestoneProgress[currentMilestone] || 0;
+        } else {
+            // Progress from current milestone to next milestone
+            const currentProgress = milestoneProgress[currentMilestone] || 0;
+            const nextProgress = milestoneProgress[nextMilestone] || 0;
+            segmentProgress = currentProgress; // Show current milestone's completion
+        }
+        
+        // Create progress bar for this segment
+        const progressSegment = document.createElement('div');
+        progressSegment.className = 'milestone-progress-segment';
+        progressSegment.style.position = 'absolute';
+        progressSegment.style.left = segmentLeft + 'px';
+        progressSegment.style.width = segmentWidth + 'px';
+        progressSegment.style.height = '4px';
+        progressSegment.style.top = lineTop + 'px';
+        progressSegment.style.transform = 'translateY(-2px)';
+        progressSegment.style.zIndex = '2';
+        progressSegment.style.background = 'transparent';
+        
+        // Create the actual progress fill
+        const progressFill = document.createElement('div');
+        progressFill.className = 'milestone-progress-fill';
+        progressFill.style.height = '100%';
+        progressFill.style.width = Math.min(100, Math.max(0, segmentProgress)) + '%';
+        progressFill.style.background = getProgressColor(segmentProgress);
+        progressFill.style.borderRadius = '2px';
+        progressFill.style.transition = 'width 0.3s ease';
+        
+        progressSegment.appendChild(progressFill);
+        containerEl.appendChild(progressSegment);
+        
+        // Add progress label
+        const progressLabel = document.createElement('div');
+        progressLabel.className = 'milestone-progress-label';
+        progressLabel.style.position = 'absolute';
+        progressLabel.style.left = (segmentLeft + segmentWidth/2) + 'px';
+        progressLabel.style.top = (lineTop + 15) + 'px';
+        progressLabel.style.transform = 'translateX(-50%)';
+        progressLabel.style.fontSize = '12px';
+        progressLabel.style.color = '#666';
+        progressLabel.style.fontWeight = 'bold';
+        progressLabel.style.background = 'rgba(255, 255, 255, 0.9)';
+        progressLabel.style.padding = '2px 6px';
+        progressLabel.style.borderRadius = '3px';
+        progressLabel.style.zIndex = '3';
+        progressLabel.textContent = Math.round(segmentProgress) + '%';
+        
+        containerEl.appendChild(progressLabel);
+    }
+}
+
+function getProgressColor(progress) {
+    if (progress >= 80) return '#28a745'; // Green
+    if (progress >= 60) return '#ffc107'; // Yellow
+    if (progress >= 40) return '#fd7e14'; // Orange
+    return '#dc3545'; // Red
+}
+
 function parseProjectDate(dateStr) {
     if (!dateStr || dateStr.trim() === '') return null;
     
@@ -27,24 +141,58 @@ function parseProjectDate(dateStr) {
 export function createMilestonesTimeline(container, projectId) {
     if (!container || !projectId) return;
 
-    // Always show a timeline for testing
+    const project = state.projectsData[projectId];
+    if (!project || !project.content || project.content.length === 0) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No milestone data available</div>';
+        return;
+    }
+
+    // Extract unique milestones from project data
+    const milestoneIndex = project.headers.indexOf('Milestone');
+    if (milestoneIndex === -1) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No milestone data available</div>';
+        return;
+    }
+
+    // Get unique milestones in order
+    const milestones = [];
+    const seen = new Set();
+    
+    project.content.forEach(row => {
+        const milestone = row[milestoneIndex];
+        if (milestone && milestone.trim() !== '' && !seen.has(milestone)) {
+            seen.add(milestone);
+            milestones.push(milestone);
+        }
+    });
+
+    // Add "Completo" milestone at the end
+    milestones.push('Completo');
+
+    // Calculate progress for each milestone
+    const milestoneProgress = calculateMilestoneProgress(project, milestones);
+
+    // Generate milestone nodes HTML
+    const milestoneNodes = milestones.map((milestone, index) => {
+        const progress = milestoneProgress[milestone] || 0;
+        const isComplete = milestone === 'Completo';
+        
+        return `
+            <div class="milestone-node" data-milestone="${milestone}">
+                <div class="milestone-diamond ${isComplete ? 'complete-diamond' : ''}">
+                    <div class="milestone-diamond-inner">${Math.round(progress)}%</div>
+                </div>
+                <div class="milestone-label">${milestone}</div>
+            </div>
+        `;
+    }).join('');
+
     container.innerHTML = `
         <div style="background: white; padding: 20px; border-radius: 8px; min-height: 200px; display: flex; flex-direction: column; justify-content: center;">
             <h3 style="color: #333; margin: 0 0 20px 0; text-align: center;">Project Timeline</h3>
             <div class="milestone-timeline-container" style="width: 100%; min-height: 150px; position: relative; display: flex; align-items: center;">
-                <div class="milestones-wrapper">
-                    <div class="milestone-node">
-                        <div class="milestone-diamond">
-                            <div class="milestone-diamond-inner">50%</div>
-                        </div>
-                        <div class="milestone-label">Contacto Inicial</div>
-                    </div>
-                    <div class="milestone-node">
-                        <div class="milestone-diamond">
-                            <div class="milestone-diamond-inner">0%</div>
-                        </div>
-                        <div class="milestone-label">Perfiles de Telefonia</div>
-                    </div>
+                <div class="milestones-wrapper" style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    ${milestoneNodes}
                 </div>
             </div>
         </div>
@@ -81,7 +229,7 @@ export function createMilestonesTimeline(container, projectId) {
         milestonesTimeline.style.boxSizing = 'border-box';
     }
 
-    // Add timeline line after DOM is ready
+    // Add timeline line and progress segments after DOM is ready
     setTimeout(() => {
         const containerEl = newContainer.querySelector('.milestone-timeline-container');
         const diamonds = newContainer.querySelectorAll('.milestone-diamond');
@@ -96,78 +244,22 @@ export function createMilestonesTimeline(container, projectId) {
             const lineWidth = lineRight - lineLeft;
             const lineTop = firstDiamond.top + firstDiamond.height/2 - containerRect.top;
 
+            // Create main timeline line (background)
             const timelineLineEl = document.createElement('div');
             timelineLineEl.className = 'timeline-line';
             timelineLineEl.style.left = lineLeft + 'px';
             timelineLineEl.style.width = lineWidth + 'px';
             timelineLineEl.style.top = lineTop + 'px';
             timelineLineEl.style.transform = 'translateY(-2px)';
+            timelineLineEl.style.background = '#e0e0e0';
+            timelineLineEl.style.height = '4px';
+            timelineLineEl.style.position = 'absolute';
+            timelineLineEl.style.zIndex = '1';
             containerEl.appendChild(timelineLineEl);
 
-            // Calculate pin positions along the timeline
-            const today = new Date();
-            const allActivities = state.projectsData[projectId].content.map(row => ({
-                date: parseProjectDate(row[state.projectsData[projectId].headers.indexOf('Fecha Esperada')]),
-                status: row[state.projectsData[projectId].headers.indexOf('Estado')]
-            }));
-
-            // 1. Expected Progress Pin - based on dates
-            let expectedProgressPercent = 0;
-            const allDates = allActivities
-                .map(activity => activity.date)
-                .filter(date => date !== null)
-                .sort((a, b) => a - b);
-
-            if (allDates.length > 0) {
-                const startDate = allDates[0];
-                const endDate = allDates[allDates.length - 1];
-                const totalDuration = endDate.getTime() - startDate.getTime();
-
-                if (totalDuration > 0) {
-                    const progressDuration = today.getTime() - startDate.getTime();
-                    expectedProgressPercent = Math.min(100, Math.max(0, (progressDuration / totalDuration) * 100));
-                } else if (today >= startDate) {
-                    expectedProgressPercent = 100;
-                }
-            }
-
-            // 2. Actual Progress Pin - based on completed activities
-            let actualProgressPercent = 0;
-            const completedActivities = allActivities.filter(activity => activity.status === 'completo').length;
-            if (allActivities.length > 0) {
-                actualProgressPercent = (completedActivities / allActivities.length) * 100;
-            }
-
-            // Calculate expected pin position
-            const expectedPinPosition = lineLeft + (expectedProgressPercent / 100) * lineWidth;
-            const actualPinPosition = lineLeft + (actualProgressPercent / 100) * lineWidth;
-
-            // Remove existing pins
-            newContainer.querySelectorAll('.timeline-pin').forEach(pin => pin.remove());
-
-            // Create expected pin (above the line)
-            const expectedPin = document.createElement('div');
-            expectedPin.className = 'timeline-pin expected-pin';
-            expectedPin.style.left = expectedPinPosition + 'px';
-            expectedPin.style.top = (lineTop - 25) + 'px';
-            expectedPin.innerHTML = `
-                <div class="pin-label">Expected</div>
-                <div class="pin-stem"></div>
-                <div class="pin-head"></div>
-            `;
-            containerEl.appendChild(expectedPin);
-
-            // Create actual pin (below the line)
-            const actualPin = document.createElement('div');
-            actualPin.className = 'timeline-pin actual-pin';
-            actualPin.style.left = actualPinPosition + 'px';
-            actualPin.style.top = (lineTop + 8) + 'px';
-            actualPin.innerHTML = `
-                <div class="pin-head"></div>
-                <div class="pin-stem"></div>
-                <div class="pin-label">Actual</div>
-            `;
-            containerEl.appendChild(actualPin);
+            // Create progress segments between milestones
+            createMilestoneProgressSegments(containerEl, diamonds, milestones, milestoneProgress, 
+                                           lineLeft, lineWidth, lineTop, containerRect);
         }
     }, 10);
 }
