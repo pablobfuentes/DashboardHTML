@@ -1,6 +1,6 @@
 // Templates functionality module
 import { state, saveState } from './state.js';
-import { showNotification, createEvidenciaCell, updateProjectCellsVisibility } from './ui.js';
+import { showNotification, createEvidenciaCell, updateProjectCellsVisibility, renderStatusCell } from './ui.js';
 
 // Template state variables (use state object instead of local variables)
 let selectedRowIndex = -1;
@@ -130,8 +130,62 @@ function updateToggleButtonState() {
     }
 }
 
+// Save current values from DOM to state
+function saveCurrentTableValues() {
+    const table = document.getElementById('main-template-table');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    // Update state with current DOM values
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((row, rowIndex) => {
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, colIndex) => {
+            let value = '';
+            
+            // Handle different cell types
+            if (cell.classList.contains('status-cell')) {
+                // For status cells, get the status from the status tag
+                const statusTag = cell.querySelector('.status-tag');
+                if (statusTag && !statusTag.classList.contains('status-empty')) {
+                    value = statusTag.textContent || '';
+                } else {
+                    value = ''; // Empty status
+                }
+            } else if (cell.classList.contains('evidencia-cell')) {
+                // For evidencia cells, get the current state
+                const textInput = cell.querySelector('.evidence-text');
+                const fileLink = cell.querySelector('.file-path a');
+                if (textInput && textInput.style.display !== 'none' && textInput.value) {
+                    value = textInput.value;
+                } else if (fileLink) {
+                    value = fileLink.textContent;
+                } else {
+                    value = '';
+                }
+            } else {
+                // For regular cells, get text content
+                value = cell.textContent || '';
+            }
+            
+            // Update state
+            if (state.currentTemplateRows[rowIndex] && colIndex < state.currentTemplateHeaders.length) {
+                state.currentTemplateRows[rowIndex][colIndex] = value;
+            }
+        });
+    });
+    
+    // Save state to localStorage
+    saveState();
+}
+
 // Toggle edit mode
 function toggleEditMode() {
+    // Save current values from DOM before toggling
+    saveCurrentTableValues();
+    
     state.isEditMode = !state.isEditMode;
     
     // Update button state
@@ -259,7 +313,51 @@ function renderMainTemplateTable() {
                     td.innerHTML = `<div class="cell-content">${cellValue}</div>`;
                 } else if (isStatusColumn(header)) {
                     td.classList.add('status-cell');
-                    td.innerHTML = `<div class="status-badge status-${cellValue}">${cellValue}</div>`;
+                    td.innerHTML = renderStatusCell(cellValue);
+                    td.setAttribute('data-status', cellValue);
+                    td.setAttribute('contenteditable', 'false');
+                    
+                    // Add click handler for status cells (works in both edit and non-edit mode)
+                    td.addEventListener('click', (e) => {
+                        // Only handle clicks on the status tag itself
+                        if (e.target.closest('.status-tag')) {
+                            const cell = e.target.closest('.status-cell');
+                            if (cell) {
+                                // Set the current status cell for the modal
+                                state.currentStatusCell = cell;
+                                
+                                // Populate status options in the modal
+                                const statusOptionsContainer = document.getElementById('status-options');
+                                if (statusOptionsContainer && state.statusTags) {
+                                    statusOptionsContainer.innerHTML = '';
+                                    
+                                    // Sort status tags to put empty status first
+                                    const sortedStatusTags = [...state.statusTags].sort((a, b) => {
+                                        if (!a.name || a.name === '') return -1; // Empty status first
+                                        if (!b.name || b.name === '') return 1;
+                                        return 0; // Keep original order for non-empty statuses
+                                    });
+                                    
+                                    sortedStatusTags.forEach(statusTag => {
+                                        const button = document.createElement('button');
+                                        button.className = 'status-option';
+                                        button.dataset.status = statusTag.name;
+                                        button.textContent = statusTag.name || 'Empty';
+                                        button.style.backgroundColor = statusTag.color;
+                                        button.style.color = getContrastColor(statusTag.color);
+                                        
+                                        statusOptionsContainer.appendChild(button);
+                                    });
+                                }
+                                
+                                // Show the status selector modal
+                                const statusSelectorModal = document.getElementById('status-selector-modal');
+                                if (statusSelectorModal) {
+                                    statusSelectorModal.style.display = 'flex';
+                                }
+                            }
+                        }
+                    });
                 } else if (isCommentColumn(header)) {
                     td.classList.add('comment-cell');
                     td.textContent = cellValue;
@@ -504,7 +602,7 @@ function deleteColumn(index) {
 
 // Row operations
 function addRowAbove(index) {
-    const newRow = new Array(state.currentTemplateHeaders.length).fill('');
+    const newRow = createNewRow();
     state.currentTemplateRows.splice(index, 0, newRow);
     
     saveState();
@@ -513,12 +611,28 @@ function addRowAbove(index) {
 }
 
 function addRowBelow(index) {
-    const newRow = new Array(state.currentTemplateHeaders.length).fill('');
+    const newRow = createNewRow();
     state.currentTemplateRows.splice(index + 1, 0, newRow);
     
     saveState();
     renderMainTemplateTable();
     showNotification(`Row added below row ${index + 1}.`, 'success');
+}
+
+// Create a new row with proper default values
+function createNewRow() {
+    const newRow = new Array(state.currentTemplateHeaders.length);
+    
+    // Fill each column with appropriate default values
+    state.currentTemplateHeaders.forEach((header, index) => {
+        if (isStatusColumn(header)) {
+            newRow[index] = ''; // Empty string for status columns (will render as empty status)
+        } else {
+            newRow[index] = ''; // Empty string for all other columns
+        }
+    });
+    
+    return newRow;
 }
 
 function deleteRow(index) {

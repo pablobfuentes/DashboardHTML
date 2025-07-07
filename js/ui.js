@@ -197,7 +197,9 @@ function getLatestComment(commentHistory) {
 }
 
 export function renderStatusCell(status) {
-    if (!status || status.trim() === '') return '';
+    if (!status || status.trim() === '') {
+        return '<span class="status-tag status-empty"></span>';
+    }
     const statusClass = utils.getStatusClass(status);
     return `<span class="status-tag ${statusClass}">${status}</span>`;
 };

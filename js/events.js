@@ -358,32 +358,52 @@ function initGlobalListeners() {
                     const newStatus = statusOption.dataset.status;
                     const cell = state.currentStatusCell;
 
+                    // Update the cell's display
                     cell.innerHTML = renderStatusCell(newStatus);
                     cell.dataset.status = newStatus;
 
-                    const rowIndex = cell.parentElement.dataset.rowIndex;
-                    const colIndex = cell.dataset.colIndex;
-                    const projectId = cell.closest('.project-pane').id;
-
-                    if (state.projectsData[projectId] && state.projectsData[projectId].content[rowIndex]) {
-                        state.projectsData[projectId].content[rowIndex][colIndex] = newStatus;
-                        saveState();
-                        updateCurrentStatus(projectId);
-                        updateProjectCompletion(projectId);
+                    // Check if this is a template cell or project cell
+                    const isTemplateCell = cell.closest('#main-template-table');
+                    
+                    if (isTemplateCell) {
+                        // Handle template status cell
+                        const tr = cell.closest('tr');
+                        const tbody = tr.parentElement;
+                        const rowIndex = Array.from(tbody.children).indexOf(tr);
+                        const colIndex = Array.from(tr.children).indexOf(cell) - 1; // -1 because first cell is row header
                         
-                        // Update milestone timeline when status changes
-                        const milestonesContainer = document.querySelector(`#${projectId} .milestones-container`);
-                        if (milestonesContainer) {
-                            import('./milestones.js').then(module => {
-                                module.createMilestonesTimeline(milestonesContainer, projectId);
-                            });
+                        // Update template state
+                        if (state.currentTemplateRows[rowIndex] && colIndex >= 0 && colIndex < state.currentTemplateHeaders.length) {
+                            state.currentTemplateRows[rowIndex][colIndex] = newStatus;
+                            saveState();
+                        }
+                    } else {
+                        // Handle project status cell
+                        const rowIndex = cell.parentElement.dataset.rowIndex;
+                        const colIndex = cell.dataset.colIndex;
+                        const projectId = cell.closest('.project-pane').id;
+
+                        if (state.projectsData[projectId] && state.projectsData[projectId].content[rowIndex]) {
+                            state.projectsData[projectId].content[rowIndex][colIndex] = newStatus;
+                            saveState();
+                            updateCurrentStatus(projectId);
+                            updateProjectCompletion(projectId);
+                            
+                            // Update milestone timeline when status changes
+                            const milestonesContainer = document.querySelector(`#${projectId} .milestones-container`);
+                            if (milestonesContainer) {
+                                import('./milestones.js').then(module => {
+                                    module.createMilestonesTimeline(milestonesContainer, projectId);
+                                });
+                            }
                         }
                     }
                 }
                 
+                // Close modal and reset state
                 statusSelectorModal.style.display = 'none';
                 state.currentStatusCell = null;
-            } else if (!e.target.closest('.modal-content')) {
+            } else if (!e.target.closest('.status-selector-content')) {
                 // Clicked outside the modal content, so just close it
                 statusSelectorModal.style.display = 'none';
                 state.currentStatusCell = null;
@@ -590,7 +610,14 @@ function populateStatusOptions() {
     
     statusOptionsContainer.innerHTML = '';
     
-    state.statusTags.forEach(statusTag => {
+    // Sort status tags to put empty status first
+    const sortedStatusTags = [...state.statusTags].sort((a, b) => {
+        if (!a.name || a.name === '') return -1; // Empty status first
+        if (!b.name || b.name === '') return 1;
+        return 0; // Keep original order for non-empty statuses
+    });
+    
+    sortedStatusTags.forEach(statusTag => {
         const button = document.createElement('button');
         button.className = 'status-option';
         button.dataset.status = statusTag.name;

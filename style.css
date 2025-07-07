@@ -1944,6 +1944,39 @@ h2.project-name-editable:focus {
     color: white;
 }
 
+/* Empty status styling - dotted border cue */
+.status-empty {
+    background-color: transparent !important;
+    color: #007bff !important;
+    border: 2px dotted #007bff !important;
+    min-width: 60px;
+    min-height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-empty::before {
+    content: "Select status";
+    font-size: 11px;
+    opacity: 0.7;
+    font-style: italic;
+    position: absolute;
+    pointer-events: none;
+}
+
+/* Ensure status cells are properly centered */
+td.status-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px;
+}
+
 /* Status selector modal styles */
 .status-selector-modal {
     position: fixed;
