@@ -1035,3 +1035,59 @@ function createContactBox() {
 
     return contactBox;
 }
+
+// Show notification function
+export function showNotification(message, type = 'info', duration = 4000) {
+    // Remove existing notification if any
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" title="Close">&times;</button>
+        </div>
+    `;
+    
+    // Add to DOM
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto-hide after duration
+    const hideTimeout = setTimeout(() => {
+        hideNotification(notification);
+    }, duration);
+    
+    // Add close button functionality
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        clearTimeout(hideTimeout);
+        hideNotification(notification);
+    });
+    
+    // Hide on click outside
+    notification.addEventListener('click', (e) => {
+        if (e.target === notification) {
+            clearTimeout(hideTimeout);
+            hideNotification(notification);
+        }
+    });
+}
+
+function hideNotification(notification) {
+    if (notification && notification.parentNode) {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }
+}

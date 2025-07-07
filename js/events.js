@@ -43,7 +43,7 @@ function initDelegatedEventListeners() {
         if (closest('.project-tab')) handleTabSwitch(closest('.project-tab'), '.project-tab', '.project-pane');
         if (closest('#template-tabs .tab-button')) handleTabSwitch(closest('.tab-button'), '#template-tabs .tab-button', '#template-content .tab-pane');
         if (closest('#add-project-button')) handleAddProject();
-        if (closest('#toggle-edit-mode')) handleToggleEditMode(target);
+        // Template edit mode is handled by templates.js module
         if (closest('#refresh-projects-button')) updateAllProjectTables();
         if (closest('.pull-contacts-btn')) syncContactsWithProjects();
         if (closest('.seguimiento-tab')) handleSeguimientoViewSwitch(closest('.seguimiento-tab'));
@@ -154,10 +154,11 @@ function initDelegatedEventListeners() {
     // Listeners that are truly specific to the main content area
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {
-        // Delegated context menu listener for table headers
+        // Delegated context menu listener for table headers (exclude main template table)
         mainContent.addEventListener('contextmenu', (e) => {
             const header = e.target.closest('.column-header, .row-header');
-            if (state.isEditMode && header) {
+            const isMainTemplate = e.target.closest('#main-template-table');
+            if (state.isEditMode && header && !isMainTemplate) {
                 e.preventDefault();
                 showContextMenu(e, header);
             }
@@ -907,14 +908,7 @@ function handleAddProject() {
     saveState();
 }
 
-function handleToggleEditMode(button) {
-    state.isEditMode = !state.isEditMode;
-    button.textContent = state.isEditMode ? 'Disable Edit Mode' : 'Enable Edit Mode';
-    button.classList.toggle('active', state.isEditMode);
-    
-    const mainTemplateTable = document.getElementById('main-template-table');
-    renderTable(mainTemplateTable, state.currentTemplateHeaders, state.currentTemplateRows, true);
-}
+// handleToggleEditMode function removed - now handled by templates.js module
 
 
 // --- Context Menu Specific Handlers ---
