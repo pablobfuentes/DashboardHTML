@@ -173,7 +173,7 @@ export function renderNewCommentCell(commentHistory) {
     const hasComments = latestComment && latestComment.trim() !== '';
     
     return `
-        <div class="comment-cell-content ${hasComments ? '' : 'empty'}">
+        <div class="comment-cell-content ${hasComments ? '' : 'empty'}" title="Click to view and edit comments">
             ${hasComments ? latestComment : 'No comments'}
         </div>
         <button class="comment-add-btn" title="Add comment">+</button>

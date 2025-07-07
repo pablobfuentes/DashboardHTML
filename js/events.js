@@ -1,7 +1,7 @@
 import { state, saveState } from './state.js';
 import { createProjectTab, renderTable, renderContacts, renderStatusCell, renderCommentCell, renderNewCommentCell, updateProjectNameInUI, renderEmailTemplates, showEmailTemplateModal, renderMainTemplate, updateAllProjectTables, updateCurrentStatus, updateProjectCompletion } from './ui.js';
 import { initializeKanban } from './kanban.js';
-import { syncAndRenderContacts } from './contacts.js';
+import { syncContactsWithProjects } from './contacts.js';
 import * as utils from './utils.js';
 import { createMilestonesTimeline, createGanttChart } from './milestones.js';
 import { updateTime } from './timezone.js';
@@ -27,7 +27,7 @@ function initDelegatedEventListeners() {
 
         if (closest('.nav-item')) handleMainNavigation(closest('.nav-item'));
         
-        if (closest('.add-contact-btn')) document.getElementById('contact-modal').style.display = 'block';
+        if (closest('.add-contact-btn')) document.getElementById('contact-modal').classList.add('active');
         if (closest('.calendar-icon')) handleCalendarIconClick(target);
         if (closest('.status-cell')) handleStatusCellClick(closest('td'));
         if (closest('.comment-add-btn')) handleCommentAddClick(target);
@@ -36,13 +36,16 @@ function initDelegatedEventListeners() {
         if (closest('.timezone-modal-close')) handleTimezoneModalClose(closest('.timezone-modal'));
         if (closest('.timezone-apply-btn')) handleTimezoneApply(closest('.timezone-modal'));
         if (target.matches('.timezone-modal')) handleTimezoneModalClose(target);
+        if (closest('#comment-panel-close')) handleCommentPanelClose();
+        if (closest('#comment-save-btn')) handleCommentSubmit();
+        if (target.matches('.comment-panel-overlay')) handleCommentPanelClose();
         if (closest('.delete-tab-icon')) { e.stopPropagation(); handleProjectDelete(closest('.delete-tab-icon')); }
         if (closest('.project-tab')) handleTabSwitch(closest('.project-tab'), '.project-tab', '.project-pane');
         if (closest('#template-tabs .tab-button')) handleTabSwitch(closest('.tab-button'), '#template-tabs .tab-button', '#template-content .tab-pane');
         if (closest('#add-project-button')) handleAddProject();
         if (closest('#toggle-edit-mode')) handleToggleEditMode(target);
         if (closest('#refresh-projects-button')) updateAllProjectTables();
-        if (closest('.pull-contacts-btn')) syncAndRenderContacts();
+        if (closest('.pull-contacts-btn')) syncContactsWithProjects();
         if (closest('.seguimiento-tab')) handleSeguimientoViewSwitch(closest('.seguimiento-tab'));
 
         // --- Quick Info Panel Tabs ---
@@ -178,6 +181,22 @@ function initDelegatedEventListeners() {
                 handleAdditionalNotesInput(notesInput);
             }
         });
+
+        // Keyboard shortcuts for comment panel
+        mainContent.addEventListener('keydown', e => {
+            const commentInput = e.target.closest('#comment-input');
+            if (commentInput) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    // Ctrl+Enter or Cmd+Enter to save
+                    e.preventDefault();
+                    handleCommentSubmit();
+                } else if (e.key === 'Escape') {
+                    // Escape to close panel
+                    e.preventDefault();
+                    handleCommentPanelClose();
+                }
+            }
+        });
     }
 }
 
@@ -192,107 +211,18 @@ function initGlobalListeners() {
     const editContactModal = document.getElementById('edit-contact-modal');
     const contactsTableBody = document.querySelector('.contacts-table tbody');
 
-    // Contact table action buttons
-    if (contactsTableBody) {
-        console.log('Contact table body found, adding click listener');
-        contactsTableBody.addEventListener('click', (e) => {
-            console.log('Click event in contacts table body');
-            const target = e.target.closest('button');
-            console.log('Clicked target:', target);
-            if (!target) return;
-
-            if (target.classList.contains('edit-btn')) {
-                console.log('Edit button clicked for ID:', target.dataset.id);
-                handleEditContact(target.dataset.id);
-            } else if (target.classList.contains('delete-btn')) {
-                console.log('Delete button clicked for ID:', target.dataset.id);
-                handleDeleteContact(target.dataset.id);
-            }
-        });
-    } else {
-        console.log('Contact table body not found');
-    }
-
     // Contact form and modal handlers
     if (contactModal) {
         contactModal.addEventListener('click', (e) => {
             if (e.target.matches('.close-modal, .cancel-btn, .modal')) {
-                contactModal.style.display = 'none';
+                contactModal.classList.remove('active');
             }
         });
     }
 
-    if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const selectedProjects = Array.from(document.querySelectorAll('#contact-project-tags .project-tag.selected'))
-                .map(tag => tag.getAttribute('data-project'));
-            
-            const newContact = {
-                name: formData.get('name'),
-                position: formData.get('position'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
-                company: formData.get('company'),
-                projects: selectedProjects,
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
-            };
+    // Edit contact form handlers are handled in contacts.js module
 
-            // Add contact to state.contacts
-            state.contacts.push(newContact);
-
-            // Add contact to each selected project's quickInfoContacts
-            selectedProjects.forEach(projectName => {
-                const projectEntry = Object.entries(state.projectsData)
-                    .find(([_, project]) => project.name === projectName);
-                
-                if (projectEntry) {
-                    const [projectId, project] = projectEntry;
-                    if (!project.quickInfoContacts) {
-                        project.quickInfoContacts = {
-                            address: '',
-                            contacts: []
-                        };
-                    }
-                    
-                    // Add contact to project's contacts if not already present
-                    const existingContact = project.quickInfoContacts.contacts
-                        .find(c => c.email === newContact.email);
-                    
-                    if (!existingContact) {
-                        project.quickInfoContacts.contacts.push({
-                            position: newContact.position,
-                            name: newContact.name,
-                            email: newContact.email,
-                            phone: newContact.phone || ''
-                        });
-                    }
-                }
-            });
-
-            saveState();
-            // Import and use syncAndRenderContacts instead of renderContacts
-            import('./contacts.js').then(module => {
-                module.syncAndRenderContacts();
-                contactForm.reset();
-                contactModal.style.display = 'none';
-            });
-        });
-    }
-
-    // Edit contact form handlers
-    if (editContactForm) {
-        editContactForm.addEventListener('submit', handleEditContactSubmit);
-    }
-
-    if (editContactModal) {
-        editContactModal.addEventListener('click', (e) => {
-            if (e.target.matches('.close-modal, .cancel-btn, .modal')) {
-                editContactModal.style.display = 'none';
-            }
-        });
-    }
+    // Edit contact modal handlers are now handled in contacts.js module to avoid conflicts
 
     // --- Email Template Modal ---
     const templateModal = document.getElementById('email-template-modal');
@@ -475,25 +405,31 @@ function initGlobalListeners() {
     // --- Comment Panel ---
     const commentPanel = document.getElementById('comment-panel');
     if (commentPanel) {
-        const commentSubmitBtn = document.getElementById('comment-submit-btn');
+        const commentSubmitBtn = document.getElementById('comment-save-btn');
         const commentInput = document.getElementById('comment-input');
         
         commentPanel.addEventListener('click', (e) => {
             if (e.target.matches('.comment-panel-close, .comment-panel-overlay')) {
-                commentPanel.style.display = 'none';
-                state.currentCommentCell = null;
+                handleCommentPanelClose();
             }
         });
         
-        commentSubmitBtn.addEventListener('click', () => {
-            handleCommentSubmit();
-        });
-        
-        commentInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
+        if (commentSubmitBtn) {
+            commentSubmitBtn.addEventListener('click', () => {
                 handleCommentSubmit();
-            }
-        });
+            });
+        }
+        
+        if (commentInput) {
+            commentInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    handleCommentSubmit();
+                }
+                if (e.key === 'Escape') {
+                    handleCommentPanelClose();
+                }
+            });
+        }
     }
 
     // --- Timezone Modal (delegated to handle multiple project modals) ---
@@ -739,10 +675,26 @@ function openCommentPanel(activityName, commentHistory) {
     renderCommentHistory(historyList, commentHistory);
     
     // Show panel
-    commentPanel.style.display = 'flex';
+    commentPanel.classList.add('active');
     
     // Focus on input
     setTimeout(() => commentInput.focus(), 100);
+}
+
+function handleCommentPanelClose() {
+    const commentPanel = document.getElementById('comment-panel');
+    if (commentPanel) {
+        commentPanel.classList.remove('active');
+        
+        // Clear the input
+        const commentInput = document.getElementById('comment-input');
+        if (commentInput) {
+            commentInput.value = '';
+        }
+        
+        // Clear current comment context
+        state.currentCommentCell = null;
+    }
 }
 
 function renderCommentHistory(container, commentHistory) {
@@ -783,9 +735,11 @@ function renderCommentHistory(container, commentHistory) {
 
 function handleCommentSubmit() {
     const commentInput = document.getElementById('comment-input');
-    const commentText = commentInput.value.trim();
+    const commentText = commentInput ? commentInput.value.trim() : '';
     
-    if (!commentText || !state.currentCommentCell) return;
+    if (!commentText || !state.currentCommentCell) {
+        return;
+    }
     
     // Format current date as dd-mmm
     const now = new Date();
@@ -798,7 +752,13 @@ function handleCommentSubmit() {
     
     // Get current comment history
     const { projectId, rowIndex, colIndex, cell } = state.currentCommentCell;
+    
     const project = state.projectsData[projectId];
+    if (!project) {
+        console.error('Project not found:', projectId);
+        return;
+    }
+    
     const currentHistory = project.content[rowIndex][colIndex] || '';
     
     // Add new comment to the beginning (newest first)
@@ -881,7 +841,10 @@ function handleMainNavigation(navItem) {
 
     // Run specific initializers for sections
     if (targetSectionId === 'consulta') {
-        syncAndRenderContacts();
+        // Just render the existing contacts, don't sync automatically
+        import('./contacts.js').then(module => {
+            module.renderContactsTable();
+        });
     } else if (targetSectionId === 'seguimiento') {
         // This will default to showing the projects view
         initializeKanban(); // Still useful to run to prep filters if user switches
@@ -1136,87 +1099,12 @@ function handleDeleteContact(contactId) {
         state.contacts = state.contacts.filter(c => c.id !== contactId);
         saveState();
         import('./contacts.js').then(module => {
-            module.syncAndRenderContacts();
+            module.syncContactsWithProjects();
         });
     }
 }
 
-function handleEditContactSubmit(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const selectedProjects = Array.from(document.querySelectorAll('#edit-contact-project-tags .project-tag.selected'))
-        .map(tag => tag.getAttribute('data-project'));
-    
-    const contactId = formData.get('id');
-    const updatedContact = {
-        id: contactId,
-        name: formData.get('name'),
-        position: formData.get('position'),
-        email: formData.get('email'),
-        phone: formData.get('phone'),
-        company: formData.get('company'),
-        projects: selectedProjects
-    };
-
-    // Find and update the contact in state.contacts
-    const contactIndex = state.contacts.findIndex(c => c.id === contactId);
-    if (contactIndex !== -1) {
-        const oldContact = state.contacts[contactIndex];
-        state.contacts[contactIndex] = updatedContact;
-
-        // Remove contact from projects they were removed from
-        oldContact.projects.forEach(projectName => {
-            if (!selectedProjects.includes(projectName)) {
-                const project = Object.entries(state.projectsData)
-                    .find(([_, p]) => p.name === projectName);
-                if (project) {
-                    const [_, projectData] = project;
-                    if (projectData.quickInfoContacts && projectData.quickInfoContacts.contacts) {
-                        projectData.quickInfoContacts.contacts = projectData.quickInfoContacts.contacts
-                            .filter(c => c.email !== oldContact.email);
-                    }
-                }
-            }
-        });
-
-        // Add/update contact in selected projects
-        selectedProjects.forEach(projectName => {
-            const project = Object.entries(state.projectsData)
-                .find(([_, p]) => p.name === projectName);
-            if (project) {
-                const [_, projectData] = project;
-                if (!projectData.quickInfoContacts) {
-                    projectData.quickInfoContacts = {
-                        address: '',
-                        contacts: []
-                    };
-                }
-
-                const contactData = {
-                    position: updatedContact.position,
-                    name: updatedContact.name,
-                    email: updatedContact.email,
-                    phone: updatedContact.phone || ''
-                };
-
-                const existingIndex = projectData.quickInfoContacts.contacts
-                    .findIndex(c => c.email === oldContact.email);
-                
-                if (existingIndex !== -1) {
-                    projectData.quickInfoContacts.contacts[existingIndex] = contactData;
-                } else {
-                    projectData.quickInfoContacts.contacts.push(contactData);
-                }
-            }
-        });
-
-        saveState();
-        import('./contacts.js').then(module => {
-            module.syncAndRenderContacts();
-            document.getElementById('edit-contact-modal').style.display = 'none';
-        });
-    }
-}
+// handleEditContactSubmit function moved to contacts.js to avoid conflicts
 
 function setupProjectTabHandlers() {
     document.addEventListener('click', (e) => {

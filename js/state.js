@@ -28,6 +28,7 @@ export const state = {
     currentTemplateHeaders: [],
     currentTemplateRows: [],
     nonEditableColumns: ['ID', 'Fase', 'Milestone', 'Actividad'],
+    currentCommentCell: null,
 };
 
 // Initialize headers and rows from csvData

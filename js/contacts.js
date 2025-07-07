@@ -3,50 +3,222 @@ import { state, saveState } from './state.js';
 import { renderTable } from './ui.js';
 
 /**
- * Syncs contacts from all projects into a master list in the state,
- * then renders them to the UI.
+ * Comprehensive contact synchronization system
+ * This function performs bidirectional sync between contacts directory and project tabs
  */
-export function syncAndRenderContacts() {
-    const allContactsMap = new Map();
-
-    // First, preserve existing contacts from state
-    state.contacts.forEach(contact => {
-        if (contact.email && contact.email.trim() !== '') {
-            allContactsMap.set(contact.email, {
-                ...contact,
-                id: contact.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                projects: contact.projects || []
-            });
-        }
-    });
-
-    // Then sync with project contacts
-    Object.entries(state.projectsData).forEach(([projectId, project]) => {
-        if (project.quickInfoContacts && project.quickInfoContacts.contacts) {
-            project.quickInfoContacts.contacts.forEach(contact => {
-                if (contact.email && contact.email.trim() !== '') {
-                    if (allContactsMap.has(contact.email)) {
-                        const existingContact = allContactsMap.get(contact.email);
-                        if (!existingContact.projects.includes(project.name)) {
-                            existingContact.projects.push(project.name);
-                        }
-                    } else {
-                        allContactsMap.set(contact.email, {
-                            ...contact,
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                            projects: [project.name]
-                        });
-                    }
-                }
-            });
-        }
-    });
+export function syncContactsWithProjects() {
+    console.log('Starting comprehensive contact sync...');
     
-    state.contacts = Array.from(allContactsMap.values());
+    let importedCount = 0;
+    let exportedCount = 0;
+    let updatedCount = 0;
+    
+    // STEP 1: Import contacts from project tabs to directory
+    const importResults = importContactsFromProjects();
+    importedCount = importResults.imported;
+    updatedCount = importResults.updated;
+    
+    // STEP 2: Export contacts from directory to project tabs
+    const exportResults = exportContactsToProjects();
+    exportedCount = exportResults.exported;
+    
+    // STEP 3: Save and refresh UI
     saveState();
-    
     populateContactFilters();
     renderContactsTable();
+    
+    // STEP 4: Update all project tables to reflect changes
+    updateAllProjectTables();
+    
+    // STEP 5: Show sync results
+    showSyncResults(importedCount, exportedCount, updatedCount);
+    
+    console.log('Contact sync completed successfully');
+}
+
+/**
+ * Import contacts from project tabs into the contacts directory
+ */
+function importContactsFromProjects() {
+    console.log('Importing contacts from project tabs...');
+    
+    const contactsMap = new Map();
+    let importedCount = 0;
+    let updatedCount = 0;
+    
+    // First, index existing directory contacts by email
+    state.contacts.forEach(contact => {
+        if (contact.email && contact.email.trim() !== '') {
+            contactsMap.set(contact.email.toLowerCase(), contact);
+        }
+    });
+    
+    // Then, process each project's contacts
+    Object.entries(state.projectsData).forEach(([projectId, project]) => {
+        if (!project.quickInfoContacts?.contacts) return;
+        
+        project.quickInfoContacts.contacts.forEach(projectContact => {
+            const email = projectContact.email?.trim();
+            if (!email) return;
+            
+            const emailKey = email.toLowerCase();
+            
+            if (contactsMap.has(emailKey)) {
+                // Update existing contact
+                const existingContact = contactsMap.get(emailKey);
+                
+                // Update fields if they're missing or different
+                let wasUpdated = false;
+                
+                if (!existingContact.name && projectContact.name) {
+                    existingContact.name = projectContact.name;
+                    wasUpdated = true;
+                }
+                if (!existingContact.position && projectContact.position) {
+                    existingContact.position = projectContact.position;
+                    wasUpdated = true;
+                }
+                if (!existingContact.phone && projectContact.phone) {
+                    existingContact.phone = projectContact.phone;
+                    wasUpdated = true;
+                }
+                if (!existingContact.company && projectContact.company) {
+                    existingContact.company = projectContact.company;
+                    wasUpdated = true;
+                }
+                
+                // Add project to projects array if not already there
+                if (!existingContact.projects) existingContact.projects = [];
+                if (!existingContact.projects.includes(project.name)) {
+                    existingContact.projects.push(project.name);
+                    wasUpdated = true;
+                }
+                
+                if (wasUpdated) {
+                    updatedCount++;
+                    console.log(`Updated contact: ${existingContact.name} (${existingContact.email})`);
+                }
+            } else {
+                // Create new contact
+                const newContact = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    name: projectContact.name || '',
+                    position: projectContact.position || '',
+                    email: projectContact.email,
+                    phone: projectContact.phone || '',
+                    company: projectContact.company || '',
+                    projects: [project.name]
+                };
+                
+                contactsMap.set(emailKey, newContact);
+                importedCount++;
+                console.log(`Imported new contact: ${newContact.name} (${newContact.email})`);
+            }
+        });
+    });
+    
+    // Update the state with the merged contacts
+    state.contacts = Array.from(contactsMap.values());
+    
+    return { imported: importedCount, updated: updatedCount };
+}
+
+/**
+ * Export contacts from directory to project tabs
+ */
+function exportContactsToProjects() {
+    console.log('Exporting contacts to project tabs...');
+    
+    let exportedCount = 0;
+    
+    // Clear existing project contacts first
+    Object.values(state.projectsData).forEach(project => {
+        if (project.quickInfoContacts) {
+            project.quickInfoContacts.contacts = [];
+        }
+    });
+    
+    // Export directory contacts to their assigned projects
+    state.contacts.forEach(contact => {
+        if (!contact.projects || contact.projects.length === 0) return;
+        
+        contact.projects.forEach(projectName => {
+            const projectEntry = Object.entries(state.projectsData).find(([_, p]) => p.name === projectName);
+            if (!projectEntry) return;
+            
+            const [projectId, project] = projectEntry;
+            
+            // Ensure project has contacts structure
+            if (!project.quickInfoContacts) {
+                project.quickInfoContacts = {
+                    address: '',
+                    contacts: []
+                };
+            }
+            
+            // Add contact to project (only fields that exist in project tabs)
+            const projectContact = {
+                name: contact.name || '',
+                position: contact.position || '',
+                email: contact.email || '',
+                phone: contact.phone || '',
+                company: contact.company || ''
+            };
+            
+            project.quickInfoContacts.contacts.push(projectContact);
+            exportedCount++;
+            console.log(`Exported contact ${contact.name} to project ${projectName}`);
+        });
+    });
+    
+    return { exported: exportedCount };
+}
+
+/**
+ * Update all project tables to reflect contact changes
+ */
+function updateAllProjectTables() {
+    Object.entries(state.projectsData).forEach(([projectId, project]) => {
+        const projectTable = document.querySelector(`#${projectId} .project-table`);
+        if (projectTable) {
+            renderTable(projectTable, project.headers, project.content, false);
+        }
+    });
+}
+
+/**
+ * Show sync results to user
+ */
+function showSyncResults(importedCount, exportedCount, updatedCount) {
+    const messages = [];
+    
+    if (importedCount > 0) {
+        messages.push(`${importedCount} new contact${importedCount > 1 ? 's' : ''} imported from project tabs`);
+    }
+    
+    if (updatedCount > 0) {
+        messages.push(`${updatedCount} existing contact${updatedCount > 1 ? 's' : ''} updated with project data`);
+    }
+    
+    if (exportedCount > 0) {
+        messages.push(`${exportedCount} contact assignment${exportedCount > 1 ? 's' : ''} synced to project tabs`);
+    }
+    
+    if (messages.length === 0) {
+        messages.push('No changes needed - contacts are already synchronized');
+    }
+    
+    const resultMessage = '✅ Sync Complete!\n\n' + messages.join('\n');
+    alert(resultMessage);
+}
+
+/**
+ * Legacy sync function - now redirects to comprehensive sync
+ * @deprecated Use syncContactsWithProjects() instead
+ */
+export function syncAndRenderContacts() {
+    console.log('Legacy sync called - redirecting to comprehensive sync');
+    syncContactsWithProjects();
 }
 
 /**
@@ -118,6 +290,11 @@ function populateContactFilters() {
     const projectFilter = document.getElementById('contact-project-filter');
     const companyFilter = document.getElementById('contact-company-filter');
     const positionFilter = document.getElementById('contact-position-filter');
+
+    // Skip if filter elements don't exist
+    if (!projectFilter || !companyFilter || !positionFilter) {
+        return;
+    }
 
     const projects = new Set();
     const companies = new Set();
@@ -211,12 +388,26 @@ function setupContactListeners() {
     const editForm = document.getElementById('edit-contact-form');
 
     if (editModal) {
-        editModal.querySelector('.close-modal')?.addEventListener('click', hideEditContactForm);
-        editModal.querySelector('.cancel-btn')?.addEventListener('click', hideEditContactForm);
+        const closeBtn = editModal.querySelector('.close-modal');
+        const cancelBtn = editModal.querySelector('.cancel-btn');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                hideEditContactForm();
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                hideEditContactForm();
+            });
+        }
         
         // Close on outside click
         editModal.addEventListener('click', (e) => {
-            if (e.target === editModal) hideEditContactForm();
+            if (e.target === editModal) {
+                hideEditContactForm();
+            }
         });
     }
 
@@ -240,7 +431,7 @@ function hideContactForm() {
     if (modal) modal.classList.remove('active');
 }
 
-function showEditContactForm(contactId) {
+export function showEditContactForm(contactId) {
     const contact = state.contacts.find(c => c.id === contactId);
     if (!contact) return;
 
@@ -263,8 +454,14 @@ function showEditContactForm(contactId) {
 }
 
 function hideEditContactForm() {
+    console.log('hideEditContactForm called');
     const modal = document.getElementById('edit-contact-modal');
-    if (modal) modal.classList.remove('active');
+    console.log('Modal found:', !!modal);
+    if (modal) {
+        console.log('Modal classes before removal:', modal.className);
+        modal.classList.remove('active');
+        console.log('Modal classes after removal:', modal.className);
+    }
 }
 
 function handleAddContact(e) {
@@ -395,14 +592,16 @@ function handleEditContact(e) {
 
         saveState();
         renderContactsTable();
+        console.log('About to call hideEditContactForm');
         hideEditContactForm();
+        console.log('hideEditContactForm called');
         
         // Show success message
         alert('Contact updated successfully!');
     }
 }
 
-function deleteContact(contactId) {
+export function deleteContact(contactId) {
     if (confirm('Are you sure you want to delete this contact?')) {
         const contact = state.contacts.find(c => c.id === contactId);
         if (contact) {
@@ -563,4 +762,25 @@ function handleCopyEmails() {
     } else {
         alert('No email addresses to copy');
     }
-} 
+}
+
+// Set up event delegation for dynamically created contact buttons
+function setupDynamicEventListeners() {
+    // Use event delegation to handle edit/delete buttons in the contacts table
+    document.addEventListener('click', (e) => {
+        if (e.target.matches('.contacts-table .edit-btn')) {
+            showEditContactForm(e.target.dataset.id);
+        } else if (e.target.matches('.edit-btn') && e.target.closest('.contacts-table')) {
+            showEditContactForm(e.target.dataset.id);
+        }
+        
+        if (e.target.matches('.contacts-table .delete-btn')) {
+            deleteContact(e.target.dataset.id);
+        } else if (e.target.matches('.delete-btn') && e.target.closest('.contacts-table')) {
+            deleteContact(e.target.dataset.id);
+        }
+    });
+}
+
+// Initialize event delegation when the module loads
+setupDynamicEventListeners(); 

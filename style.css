@@ -113,7 +113,7 @@
 /* Main Content Area */
 .main-content {
     flex: 1;
-    padding: 20px;
+    padding: 0;
     background-color: #f5f6fa;
     overflow-x: hidden;
 }
@@ -121,6 +121,8 @@
 .content-section {
     display: none;
     animation: fadeIn 0.3s ease;
+    width: 100%;
+    height: 100vh;
 }
 
 .content-section.active {
@@ -134,7 +136,8 @@
 
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
+    margin: 0;
+    padding: 0;
     background-color: #f4f4f4;
 }
 
@@ -165,7 +168,7 @@ body {
 #template-content, #tab-content {
     flex: 1;
     overflow: auto;
-    padding: 20px;
+    padding: 1.5rem;
 }
 
 .tab-button {
@@ -1169,6 +1172,9 @@ body {
 .contacts-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: auto;
+    min-width: 600px;
+    max-width: 100%;
 }
 
 .contacts-table thead th {
@@ -1237,12 +1243,14 @@ body {
 
 /* Container adjustments */
 .contacts-container {
-    padding: 20px;
+    padding: 1.5rem;
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     width: 100%;
+    max-width: none;
     box-sizing: border-box;
+    overflow-x: auto;
 }
 
 /* Update contacts header layout */
@@ -1266,7 +1274,6 @@ body {
 .search-container {
     flex: 1;
     min-width: 200px;
-    max-width: 400px;
     position: relative;
 }
 
@@ -1324,6 +1331,39 @@ body {
 .add-contact-btn:hover, .pull-contacts-btn:hover {
     background: #5a6fd6;
     transform: translateY(-1px);
+}
+
+/* Contacts Toolbar Styles */
+.contacts-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.toolbar-center {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+    min-width: 200px;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .dashboard-collapsible {
@@ -2213,13 +2253,16 @@ h2.project-name-editable:focus {
     flex: 1;
     display: flex;
     overflow: hidden;
+    width: 100%;
 }
 
 .consulta-view {
     display: none;
     width: 100%;
     height: 100%;
-    padding: 20px;
+    padding: 1.5rem;
+    overflow-x: auto;
+    box-sizing: border-box;
 }
 
 .consulta-view.active {
@@ -2368,6 +2411,10 @@ h2.project-name-editable:focus {
     z-index: 1000;
     justify-content: center;
     align-items: center;
+}
+
+.modal.active {
+    display: flex;
 }
 
 .modal-content {
@@ -3062,6 +3109,362 @@ h2.project-name-editable:focus {
     border-radius: 4px;
     margin-top: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== COMMENT PANEL ===== */
+.comment-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1050;
+    display: none;
+    pointer-events: none;
+}
+
+.comment-panel.active {
+    display: flex;
+    pointer-events: all;
+}
+
+.comment-panel-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+    z-index: 1050;
+}
+
+.comment-panel.active .comment-panel-overlay {
+    opacity: 1;
+}
+
+.comment-panel-content {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1051;
+}
+
+.comment-panel.active .comment-panel-content {
+    transform: translateX(0);
+}
+
+.comment-panel-header {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+.comment-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.comment-panel-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comment-panel-close:hover {
+    color: #333;
+}
+
+.comment-panel-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.comment-input-section {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+
+.comment-input-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.comment-input {
+    width: 100%;
+    min-height: 80px;
+    max-height: 120px;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.comment-save-btn {
+    margin-top: 12px;
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.comment-save-btn:hover {
+    background: #0056b3;
+}
+
+.comment-save-btn:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.comment-history-section {
+    flex: 1;
+    padding: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.comment-history-section h4 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.comment-history-list {
+    flex: 1;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+}
+
+.comment-history-item {
+    margin-bottom: 15px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #007bff;
+    transition: transform 0.2s ease;
+}
+
+.comment-history-item:hover {
+    transform: translateX(2px);
+}
+
+.comment-date {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.comment-text {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.no-comments {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .comment-panel-content {
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    /* Contacts responsive styles */
+    .contacts-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .toolbar-center {
+        max-width: 100%;
+        order: 1;
+    }
+    
+    .toolbar-left {
+        order: 2;
+    }
+    
+    .toolbar-right {
+        order: 3;
+    }
+    
+    .consulta-view {
+        padding: 0.5rem;
+    }
+    
+    .contacts-container {
+        padding: 0.5rem;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    
+    .contacts-table {
+        font-size: 0.875rem;
+    }
+    
+    .contacts-table th,
+    .contacts-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* Medium screens */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .contacts-toolbar {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    
+    .toolbar-center {
+        min-width: 250px;
+        max-width: 500px;
+    }
+    
+    .consulta-view {
+        padding: 0.75rem;
+    }
+    
+    .contacts-container {
+        padding: 0.75rem;
+    }
+}
+
+/* Custom scrollbar for comment history */
+.comment-history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.comment-history-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.comment-history-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.comment-history-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Comment cell styling */
+.comment-cell-new {
+    cursor: pointer;
+    position: relative;
+}
+
+.comment-cell-new:hover {
+    background-color: #f8f9fa;
+}
+
+.comment-cell-content {
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.comment-cell-content.empty {
+    color: #666;
+    font-style: italic;
+}
+
+.comment-add-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.comment-cell-new:hover .comment-add-btn {
+    display: flex;
+}
+
+.comment-add-btn:hover {
+    background: #0056b3;
+    transform: scale(1.1);
 }
 
 /* ===== TIMEZONE MODAL ===== */
