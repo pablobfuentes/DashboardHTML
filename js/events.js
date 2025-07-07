@@ -4,6 +4,7 @@ import { initializeKanban } from './kanban.js';
 import { syncAndRenderContacts } from './contacts.js';
 import * as utils from './utils.js';
 import { createMilestonesTimeline, createGanttChart } from './milestones.js';
+import { updateTime } from './timezone.js';
 import { updateDatesBasedOnDependencies, formatCustomDate } from './dependencies.js';
 
 // --- Main Initializer ---
@@ -32,6 +33,9 @@ function initDelegatedEventListeners() {
         if (closest('.comment-add-btn')) handleCommentAddClick(target);
         if (closest('.comment-cell-new')) handleCommentCellClick(closest('.comment-cell-new'));
         if (closest('.timezone-select')) handleTimezoneButtonClick(closest('.timezone-select'));
+        if (closest('.timezone-modal-close')) handleTimezoneModalClose(closest('.timezone-modal'));
+        if (closest('.timezone-apply-btn')) handleTimezoneApply(closest('.timezone-modal'));
+        if (target.matches('.timezone-modal')) handleTimezoneModalClose(target);
         if (closest('.delete-tab-icon')) { e.stopPropagation(); handleProjectDelete(closest('.delete-tab-icon')); }
         if (closest('.project-tab')) handleTabSwitch(closest('.project-tab'), '.project-tab', '.project-pane');
         if (closest('#template-tabs .tab-button')) handleTabSwitch(closest('.tab-button'), '#template-tabs .tab-button', '#template-content .tab-pane');
@@ -73,11 +77,19 @@ function initDelegatedEventListeners() {
         // --- Project Analytics Toggle ---
         const analyticsHeader = closest('.analytics-header');
         if (analyticsHeader) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const content = analyticsHeader.nextElementSibling;
             const icon = analyticsHeader.querySelector('.toggle-icon-analytics');
-            const isCollapsed = content.style.display === 'none' || content.style.display === '';
             
-            // Initialize timeline when opening for the first time
+            // Check current state - prefer inline style, fallback to computed style
+            const currentInlineDisplay = content.style.display;
+            const computedStyle = window.getComputedStyle(content);
+            const isCollapsed = currentInlineDisplay === 'none' || 
+                               (currentInlineDisplay === '' && computedStyle.display === 'none');
+            
+            // Initialize timeline when opening
             if (isCollapsed) {
                 const projectId = analyticsHeader.closest('.project-pane').id;
                 const milestonesContainer = content.querySelector('.milestones-container');
@@ -86,8 +98,16 @@ function initDelegatedEventListeners() {
                 }
             }
 
-            content.style.display = isCollapsed ? 'block' : 'none';
-            icon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+            content.style.setProperty('display', isCollapsed ? 'block' : 'none', 'important');
+            
+            // Change arrow direction
+            if (isCollapsed) {
+                icon.style.setProperty('transform', 'rotate(180deg)', 'important');
+                icon.textContent = '▲';
+            } else {
+                icon.style.setProperty('transform', 'rotate(0deg)', 'important');
+                icon.textContent = '▼';
+            }
         }
 
         // --- Analytics Tabs Switching ---
@@ -107,7 +127,7 @@ function initDelegatedEventListeners() {
             targetView.classList.add('active');
 
             // Lazy load gantt chart
-            if (viewType === 'gantt' && targetView.innerHTML.trim().startsWith('<!--')) {
+            if (viewType === 'gantt' && targetView.innerHTML.trim() === '') {
                 const projectId = closest('.project-pane').id;
                 targetView.innerHTML = createGanttChart(projectId);
             }
@@ -162,7 +182,8 @@ function initDelegatedEventListeners() {
 }
 
 function initGlobalListeners() {
-    initDelegatedEventListeners();
+    // Note: initDelegatedEventListeners() is already called in initializeEventListeners()
+    // Don't call it again here to avoid duplicate event handlers
 
     // --- Contact Modal ---
     const contactModal = document.getElementById('contact-modal');
@@ -640,6 +661,37 @@ function handleTimezoneButtonClick(button) {
                 input.value = currentOffset;
             }
         }
+    }
+}
+
+function handleTimezoneModalClose(modal) {
+    modal.classList.remove('active');
+}
+
+function handleTimezoneApply(modal) {
+    const input = modal.querySelector('.timezone-input');
+    const projectPane = modal.closest('.project-pane');
+    
+    if (input && projectPane) {
+        const newOffset = parseInt(input.value) || 0;
+        
+        // Update timezone offset display
+        const offsetDisplay = projectPane.querySelector('.timezone-offset');
+        if (offsetDisplay) {
+            offsetDisplay.textContent = `UTC${newOffset >= 0 ? '+' : ''}${newOffset}`;
+        }
+        
+        // Update the timezone in the timezone module
+        import('./timezone.js').then(module => {
+            module.setTimezoneOffset(newOffset);
+        });
+        
+        // Update time display for this project
+        const projectId = projectPane.id;
+        updateTime(projectId);
+        
+        // Close modal
+        modal.classList.remove('active');
     }
 }
 
@@ -1163,5 +1215,113 @@ function handleEditContactSubmit(e) {
             module.syncAndRenderContacts();
             document.getElementById('edit-contact-modal').style.display = 'none';
         });
+    }
+}
+
+function setupProjectTabHandlers() {
+    document.addEventListener('click', (e) => {
+        // Info tab switching
+        if (e.target.matches('.info-tab-vertical')) {
+            const tabPane = e.target.closest('.project-pane');
+            if (!tabPane) return;
+
+            const tabClass = e.target.dataset.tabClass;
+            if (!tabClass) return;
+
+            // Update active tab
+            tabPane.querySelectorAll('.info-tab-vertical').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            e.target.classList.add('active');
+
+            // Show corresponding content
+            tabPane.querySelectorAll('.info-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            tabPane.querySelector(`.${tabClass}`).classList.add('active');
+        }
+
+        // Analytics section toggle
+        if (e.target.closest('.analytics-header')) {
+            const content = e.target.closest('.analytics-section').querySelector('.analytics-content');
+            const toggleIcon = e.target.closest('.analytics-section').querySelector('.toggle-icon-analytics');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggleIcon.style.transform = 'rotate(180deg)';
+            } else {
+                content.style.display = 'none';
+                toggleIcon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Analytics tab switching
+        if (e.target.matches('.analytics-tab')) {
+            const tabPane = e.target.closest('.project-pane');
+            if (!tabPane) return;
+
+            const viewType = e.target.dataset.analyticsView;
+            if (!viewType) return;
+
+            // Update active tab
+            tabPane.querySelectorAll('.analytics-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            e.target.classList.add('active');
+
+            // Show corresponding view
+            tabPane.querySelectorAll('.analytics-view').forEach(view => {
+                view.classList.remove('active');
+            });
+            tabPane.querySelector(`#${viewType}-view-${tabPane.id}`).classList.add('active');
+        }
+
+        // Contact row actions
+        if (e.target.matches('.delete-contact-row-btn')) {
+            const row = e.target.closest('tr');
+            if (row) {
+                // If this is the last row, don't delete it
+                const tbody = row.closest('tbody');
+                if (tbody.querySelectorAll('tr').length <= 3) {
+                    alert('Cannot delete the last contact row');
+                    return;
+                }
+                row.remove();
+                updateLastContactRow(tbody);
+            }
+        }
+
+        if (e.target.matches('.add-contact-row-btn')) {
+            const tbody = e.target.closest('tbody');
+            if (tbody) {
+                const newRow = document.createElement('tr');
+                newRow.classList.add('last-contact-row');
+                newRow.innerHTML = `
+                    <td contenteditable="true"></td>
+                    <td contenteditable="true"></td>
+                    <td contenteditable="true"></td>
+                    <td contenteditable="true"></td>
+                    <td class="action-column">
+                        <button class="delete-contact-row-btn" title="Delete row">🗑️</button>
+                        <button class="add-contact-row-btn" title="Add new row">➕</button>
+                    </td>
+                `;
+                tbody.appendChild(newRow);
+                updateLastContactRow(tbody);
+            }
+        }
+    });
+}
+
+function updateLastContactRow(tbody) {
+    // Remove last-contact-row class from all rows
+    tbody.querySelectorAll('tr').forEach(row => {
+        row.classList.remove('last-contact-row');
+    });
+
+    // Add last-contact-row class to the last data row
+    const rows = tbody.querySelectorAll('tr:not(:first-child):not(:nth-child(2))');
+    if (rows.length > 0) {
+        rows[rows.length - 1].classList.add('last-contact-row');
     }
 }

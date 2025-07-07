@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadState();
 
     // Initialize all parts of the application
-    initializeTimezone(); // Initialize timezone settings
-    initializeUI(); // Renders tables, etc. based on loaded state
+    initializeUI(); // Renders tables, etc. based on loaded state FIRST
+    initializeTimezone(); // Initialize timezone settings AFTER UI is created
     initializeEventListeners(); // Sets up all click/input handlers
     initializeContacts();
     // The Kanban view is now initialized on-demand when the user clicks the tab.

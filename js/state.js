@@ -66,6 +66,7 @@ export function saveState() {
         projectCount: state.projectCount,
         columnWidths: state.columnWidths,
         contacts: state.contacts,
+        timezoneOffset: state.timezoneOffset,
     };
     localStorage.setItem('dashboardState', JSON.stringify(dataToSave));
     console.log("Dashboard state saved.");
@@ -85,6 +86,7 @@ export function loadState() {
     state.projectCount = loadedData.projectCount || 0;
     state.columnWidths = loadedData.columnWidths || {};
     state.contacts = loadedData.contacts || [];
+    state.timezoneOffset = loadedData.timezoneOffset || 0;
 }
 
 export function loadAndRenderState(projectsData, currentTemplateHeaders, currentTemplateRows, projectCount, columnWidths, csvData) {

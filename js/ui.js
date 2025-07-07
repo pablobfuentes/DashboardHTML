@@ -1,6 +1,6 @@
 import { state, saveState } from './state.js';
 import * as utils from './utils.js';
-import { setupTimezoneHandlers } from './timezone.js';
+import { setupTimezoneHandlers, getTimezoneOffset } from './timezone.js';
 import { createMilestonesTimeline } from './milestones.js';
 
 export function initializeUI() {
@@ -202,126 +202,137 @@ export function renderStatusCell(status) {
     return `<span class="status-tag ${statusClass}">${status}</span>`;
 };
 
-export function createProjectTab(project, projectId) {
-    const projectName = project.name;
+export function createProjectTab(projectData, projectId) {
     const tabButton = document.createElement('button');
-    tabButton.className = 'tab-button project-tab';
-    tabButton.dataset.tab = projectId;
+    tabButton.className = 'project-tab';
+    tabButton.setAttribute('data-tab', projectId);
+    tabButton.innerHTML = `
+        <span class="project-name-editable" contenteditable="true">${projectData.name}</span>
+        <span class="delete-tab-icon">&times;</span>
+    `;
     
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'project-name-span';
-    nameSpan.textContent = projectName;
-    tabButton.appendChild(nameSpan);
-
-    const deleteIcon = document.createElement('span');
-    deleteIcon.className = 'delete-tab-icon';
-    deleteIcon.innerHTML = '&#128465;';
-    tabButton.appendChild(deleteIcon);
-
     const tabPane = document.createElement('div');
-    tabPane.className = 'tab-pane project-pane';
     tabPane.id = projectId;
-    tabPane.innerHTML = `
-        <h2 class="project-name-editable" contenteditable="true" data-project-id="${projectId}">${projectName}</h2>
-        <div class="quick-info-panel">
-            <div class="quick-info-left">
-                <div class="completion-ring-container">
-                    <div class="completion-percentage">0%</div>
-                    <div class="completion-label">Project Completion</div>
-                </div>
-                <div class="time-display">
-                    <span class="current-time">--:--</span>
-                    <span class="timezone-offset">UTC+0</span>
-                    <button class="timezone-select" title="Select Timezone">🌐</button>
-                </div>
-            </div>
-            <div class="quick-info-right">
-                <div class="info-tabs-vertical">
-                    <button class="info-tab-vertical active" data-tab-class="quick-info-content-pane">
-                        <span class="info-icon">ⓘ</span>
-                    </button>
-                    <button class="info-tab-vertical" data-tab-class="contacts-content-pane">
-                        <span class="contact-icon">👤</span>
-                    </button>
-                </div>
-                <div class="info-content-container">
-                    <div class="info-content quick-info-content-pane active">
-                        <div class="info-column">
-                            <h4>Evidence</h4>
-                            <div class="evidence-section">
-                                <div class="evidence-item">
-                                    <label for="solicitud-inversion-${projectId}">Solicitud de Inversion</label>
-                                    <input type="text" id="solicitud-inversion-${projectId}" class="evidence-input" data-field="solicitudInversion" value="${project.evidence?.solicitudInversion || ''}">
-                                </div>
-                                <div class="evidence-item">
-                                    <label for="orden-compra-${projectId}">Orden de Compra</label>
-                                    <input type="text" id="orden-compra-${projectId}" class="evidence-input" data-field="ordenCompra" value="${project.evidence?.ordenCompra || ''}">
-                                </div>
-                                <div class="evidence-item">
-                                    <label for="fecha-implementacion-${projectId}">Fecha de Implementacion</label>
-                                    <input type="text" id="fecha-implementacion-${projectId}" class="evidence-input" data-field="fechaImplementacion" value="${project.evidence?.fechaImplementacion || ''}">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="info-column">
-                            <h4>Current Status</h4>
-                            <ul>
-                                <li><span>Next Milestone</span><span></span></li>
-                                <li><span>Current Activity</span><span></span></li>
-                            </ul>
-                            <h4>Additional Notes</h4>
-                            <div class="additional-notes-section">
-                                <textarea id="additional-notes-${projectId}" class="additional-notes-input" placeholder="Add project notes..." rows="3">${project.additionalNotes || ''}</textarea>
-                            </div>
-                        </div>
+    tabPane.className = 'project-pane';
+    
+    // Create dashboard structure
+    const dashboardHTML = `
+        <h2 class="project-name-editable" contenteditable="true" data-project-id="${projectId}">${projectData.name}</h2>
+        <div class="project-dashboard">
+            <div class="dashboard-top">
+                <div class="completion-percentage">
+                    <div class="percentage-number">0%</div>
+                    <div class="percentage-label">Project Completion</div>
+                    <div class="time-display">
+                        <span class="current-time">--:--</span>
+                        <span class="timezone-offset">UTC+0</span>
+                        <button class="timezone-select" title="Select Timezone">🌐</button>
                     </div>
-                    <div class="info-content contacts-content-pane">
-                        <table class="project-contacts-table">
-                            <tbody>
-                                <tr class="address-row">
-                                    <td colspan="5" contenteditable="true">${project.quickInfoContacts?.address ?? 'Address: --'}</td>
+                </div>
+                <div class="quick-info-right">
+                    <div class="info-tabs-vertical">
+                        <button class="info-tab-vertical active" data-tab-class="info-content-pane">
+                            <i class="info-icon">ⓘ</i>
+                        </button>
+                        <button class="info-tab-vertical" data-tab-class="contacts-content-pane">
+                            <i class="contact-icon">👤</i>
+                        </button>
+                    </div>
+                    <div class="info-content-container">
+                        <div class="info-content active info-content-pane">
+                            <div class="info-tables-container">
+                                <div class="info-table-section">
+                                    <h3>Evidence</h3>
+                                    <div class="evidence-fields">
+                                        <div class="evidence-field">
+                                            <label>Solicitud de Inversion:</label>
+                                            <input type="text" class="evidence-input" data-field="solicitudInversion" value="${projectData.evidence?.solicitudInversion || ''}">
+                                        </div>
+                                        <div class="evidence-field">
+                                            <label>Orden de Compra:</label>
+                                            <input type="text" class="evidence-input" data-field="ordenCompra" value="${projectData.evidence?.ordenCompra || ''}">
+                                        </div>
+                                        <div class="evidence-field">
+                                            <label>Fecha de Implementacion:</label>
+                                            <input type="text" class="evidence-input" data-field="fechaImplementacion" value="${projectData.evidence?.fechaImplementacion || ''}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="info-table-section">
+                                    <div class="status-and-notes">
+                                        <div class="status-section">
+                                            <h3>Current Status</h3>
+                                            <table>
+                                                <tr>
+                                                    <th>Next Milestone</th>
+                                                    <td>--</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Current Activity</th>
+                                                    <td>--</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="notes-section">
+                                            <h3>Notes</h3>
+                                            <div class="additional-notes">
+                                                <textarea class="additional-notes-input" placeholder="Add notes here...">${projectData.additionalNotes || ''}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-content contacts-content-pane">
+                            <table class="project-contacts-table">
+                                <tr>
+                                    <td colspan="5" class="address-row" contenteditable="true">
+                                        ${projectData.quickInfoContacts?.address || 'Address: --'}
+                                    </td>
                                 </tr>
-                                <tr class="contacts-header-row">
+                                <tr>
                                     <th>Position</th>
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Phone</th>
-                                    <th></th>
+                                    <th class="action-column"></th>
                                 </tr>
-                                ${((project.quickInfoContacts?.contacts?.length > 0) ? project.quickInfoContacts.contacts : [{ position: '', name: '', email: '', phone: '' }]).map((contact, index, arr) => `
-                                    <tr data-contact-index="${index}">
+                                ${(projectData.quickInfoContacts?.contacts || []).map((contact, index, arr) => `
+                                    <tr data-contact-index="${index}" ${index === arr.length - 1 ? 'class="last-contact-row"' : ''}>
                                         <td contenteditable="true">${contact.position || ''}</td>
                                         <td contenteditable="true">${contact.name || ''}</td>
                                         <td contenteditable="true">${contact.email || ''}</td>
                                         <td contenteditable="true">${contact.phone || ''}</td>
-                                        <td class="contact-actions">
-                                            <button class="delete-contact-row-btn" data-contact-index="${index}">🗑️</button>
-                                            ${index === arr.length - 1 ? '<button class="add-contact-row-btn">+</button>' : ''}
+                                        <td class="action-column">
+                                            <button class="delete-contact-row-btn" data-contact-index="${index}" title="Delete row">🗑️</button>
+                                            ${index === arr.length - 1 ? '<button class="add-contact-row-btn" title="Add new row">➕</button>' : ''}
                                         </td>
                                     </tr>
                                 `).join('')}
-                            </tbody>
-                        </table>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="analytics-header">
-            <h3>Project Analytics</h3>
-            <span class="toggle-icon-analytics">▼</span>
-        </div>
-        <div class="analytics-content" style="display: none;">
-            <div class="analytics-tabs">
-                <button class="analytics-tab active" data-analytics-view="timeline">Timeline</button>
-                <button class="analytics-tab" data-analytics-view="gantt">Gantt</button>
-            </div>
-            <div class="analytics-view-container">
-                <div class="analytics-view active" id="timeline-view-${projectId}">
-                    <!-- Timeline content will be lazy-loaded -->
-                    <div class="milestones-container"></div>
+            <div class="analytics-section">
+                <div class="analytics-header">
+                    <span>Project Analytics</span>
+                    <span class="toggle-icon-analytics">▼</span>
                 </div>
-                <div class="analytics-view" id="gantt-view-${projectId}">
-                    <!-- Gantt content will be lazy-loaded -->
+                <div class="analytics-content" style="display: none;">
+                    <div class="analytics-tabs">
+                        <button class="analytics-tab active" data-analytics-view="milestones">Timeline</button>
+                        <button class="analytics-tab" data-analytics-view="gantt">Gantt Chart</button>
+                    </div>
+                    <div class="analytics-view-container">
+                        <div class="analytics-view active" id="milestones-view-${projectId}">
+                            <div class="milestones-container">
+                                <!-- Timeline will be rendered here -->
+                            </div>
+                        </div>
+                        <div class="analytics-view" id="gantt-view-${projectId}">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -337,14 +348,31 @@ export function createProjectTab(project, projectId) {
                 </div>
             </div>
         </div>
-        <table class="project-table"></table>
+        <table class="project-table">
+            <thead>
+                <tr>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
     `;
-
-    // Setup timezone handlers for this project
-    setTimeout(() => {
-        setupTimezoneHandlers(projectId);
-    }, 100);
-
+    
+    tabPane.innerHTML = dashboardHTML;
+    
+    // Initialize the project table
+    const projectTable = tabPane.querySelector('.project-table');
+    renderTable(projectTable, projectData.headers, projectData.content, false);
+    
+    // Initialize timezone functionality
+    updateTime(projectId);
+    
+    // Initialize current status
+    updateCurrentStatus(projectId);
+    
+    // Initialize project completion
+    updateProjectCompletion(projectId);
+    
     return { tabButton, tabPane };
 }
 
@@ -558,18 +586,35 @@ function createEvidenciaCell(isMain = false, rowData = null, colIndex = -1) {
 }
 
 function applyColumnWidths(tableElement, headers, isMainTemplate) {
-    const tableId = isMainTemplate ? 'main-template' : tableElement.closest('.tab-pane').id;
-    const savedWidths = state.columnWidths[tableId];
-    if (!savedWidths) return;
+    if (isMainTemplate) {
+        const tableId = 'main-template';
+        const savedWidths = state.columnWidths[tableId];
+        if (!savedWidths) return;
 
-    const headerCells = tableElement.querySelectorAll('thead th');
-    headerCells.forEach((th, index) => {
-        const columnIndex = isMainTemplate ? index - 1 : index;
-        if (columnIndex >= 0 && savedWidths[columnIndex]) {
-            th.style.width = savedWidths[columnIndex] + 'px';
-            th.style.minWidth = savedWidths[columnIndex] + 'px';
-        }
-    });
+        const headerCells = tableElement.querySelectorAll('thead th');
+        headerCells.forEach((th, index) => {
+            const columnIndex = index - 1;
+            if (columnIndex >= 0 && savedWidths[columnIndex]) {
+                th.style.width = savedWidths[columnIndex] + 'px';
+                th.style.minWidth = savedWidths[columnIndex] + 'px';
+            }
+        });
+    } else {
+        const projectPane = tableElement.closest('.project-pane');
+        if (!projectPane) return;
+        
+        const tableId = projectPane.id;
+        const savedWidths = state.columnWidths[tableId];
+        if (!savedWidths) return;
+
+        const headerCells = tableElement.querySelectorAll('thead th');
+        headerCells.forEach((th, index) => {
+            if (savedWidths[index]) {
+                th.style.width = savedWidths[index] + 'px';
+                th.style.minWidth = savedWidths[index] + 'px';
+            }
+        });
+    }
 }
 
 export function renderContacts() {
@@ -704,85 +749,80 @@ export function updateAllProjectTables() {
 }
 
 export function updateProjectCompletion(projectId) {
-    if (!projectId) return;
-
     const project = state.projectsData[projectId];
-    if (!project || !project.headers || !project.content) return;
-
-    const statusIndex = project.headers.indexOf('Status');
-    if (statusIndex === -1) return;
-
-    const totalTasks = project.content.length;
-    if (totalTasks === 0) return;
-
-    const completedTasks = project.content.filter(row => {
-        const status = row[statusIndex]?.toLowerCase();
-        return status === 'completo' || status === 'n/a';
-    }).length;
-
-    const percentage = Math.round((completedTasks / totalTasks) * 100);
-
     const tabPane = document.getElementById(projectId);
-    if (tabPane) {
-        const percentageElement = tabPane.querySelector('.completion-percentage');
-        if (percentageElement) {
-            percentageElement.textContent = `${percentage}%`;
+    if (!project || !tabPane) return;
+
+    const percentageNumber = tabPane.querySelector('.percentage-number');
+    if (percentageNumber) {
+        // Calculate completion based on project table data
+        let completion = 0;
+        if (project.content && project.content.length > 0) {
+            const statusColumnIndex = project.headers.findIndex(header => 
+                header.toLowerCase().includes('status') || header.toLowerCase().includes('estado')
+            );
+            
+            if (statusColumnIndex >= 0) {
+                const completedTasks = project.content.filter(row => 
+                    row[statusColumnIndex] && row[statusColumnIndex].toLowerCase() === 'completo'
+                ).length;
+                completion = Math.round((completedTasks / project.content.length) * 100);
+            }
         }
+        
+        // Store calculated completion in project data
+        project.completion = completion;
+        percentageNumber.textContent = `${completion}%`;
     }
 }
 
 export function updateCurrentStatus(projectId) {
-    if (!projectId) return;
-
     const project = state.projectsData[projectId];
-    if (!project || !project.headers || !project.content) return;
-
-    const milestoneCol = project.headers.indexOf('Milestone');
-    const statusCol = project.headers.indexOf('Status');
-    const activityCol = project.headers.indexOf('Actividad');
-
-    if (milestoneCol === -1 || statusCol === -1 || activityCol === -1) return;
-
-    // Create a map of milestones with their tasks
-    const milestones = {};
-    project.content.forEach(row => {
-        const milestoneName = row[milestoneCol];
-        if (!milestoneName) return;
-        if (!milestones[milestoneName]) {
-            milestones[milestoneName] = [];
-        }
-        milestones[milestoneName].push({
-            activity: row[activityCol],
-            status: row[statusCol]
-        });
-    });
-
-    let nextMilestone = 'Project Complete';
-    let currentActivity = 'All tasks finished';
-
-    // Get the unique order of milestones from the project content
-    const milestoneOrder = [...new Set(project.content.map(row => row[milestoneCol]).filter(Boolean))];
-
-    for (const milestoneName of milestoneOrder) {
-        const tasks = milestones[milestoneName];
-        const allComplete = tasks.every(task => task.status && task.status.toLowerCase() === 'completo');
-
-        if (!allComplete) {
-            nextMilestone = milestoneName;
-            const incompleteTask = tasks.find(task => !task.status || task.status.toLowerCase() !== 'completo');
-            currentActivity = incompleteTask ? incompleteTask.activity : 'No pending tasks in this milestone';
-            break; 
-        }
-    }
-
     const tabPane = document.getElementById(projectId);
-    if (tabPane) {
-        const quickInfoRight = tabPane.querySelector('.quick-info-right');
-        const nextMilestoneEl = quickInfoRight.querySelector('.info-column:last-child ul li:first-child span:last-child');
-        const currentActivityEl = quickInfoRight.querySelector('.info-column:last-child ul li:last-child span:last-child');
+    if (!project || !tabPane) return;
+
+    const nextMilestoneCell = tabPane.querySelector('.info-table-section table tr:first-child td');
+    const currentActivityCell = tabPane.querySelector('.info-table-section table tr:nth-child(2) td');
+
+    if (nextMilestoneCell && currentActivityCell && project.content && project.content.length > 0) {
+        // Find status and activity columns
+        const statusColumnIndex = project.headers.findIndex(header => 
+            header.toLowerCase().includes('status') || header.toLowerCase().includes('estado')
+        );
+        const activityColumnIndex = project.headers.findIndex(header => 
+            header.toLowerCase().includes('actividad') || header.toLowerCase().includes('activity')
+        );
+        const milestoneColumnIndex = project.headers.findIndex(header => 
+            header.toLowerCase().includes('milestone') || header.toLowerCase().includes('hito')
+        );
+
+        // Find next milestone (first incomplete task)
+        let nextMilestone = '--';
+        let currentActivity = '--';
         
-        if (nextMilestoneEl) nextMilestoneEl.textContent = nextMilestone;
-        if (currentActivityEl) currentActivityEl.textContent = currentActivity;
+        if (statusColumnIndex >= 0 && activityColumnIndex >= 0) {
+            const nextTask = project.content.find(row => 
+                row[statusColumnIndex] && row[statusColumnIndex].toLowerCase() !== 'completo'
+            );
+            
+            if (nextTask) {
+                currentActivity = nextTask[activityColumnIndex] || '--';
+                if (milestoneColumnIndex >= 0) {
+                    nextMilestone = nextTask[milestoneColumnIndex] || '--';
+                }
+            } else {
+                // All tasks completed
+                currentActivity = 'Proyecto Completado';
+                nextMilestone = 'Finalizado';
+            }
+        }
+
+        nextMilestoneCell.textContent = nextMilestone;
+        currentActivityCell.textContent = currentActivity;
+        
+        // Store in project data
+        project.nextMilestone = nextMilestone;
+        project.currentActivity = currentActivity;
     }
 }
 
@@ -933,4 +973,65 @@ function updateProjectCellsVisibility() {
             updateEvidenciaContent(cell, evidenceState.isText);
         });
     });
+}
+
+function updateTime(projectId) {
+    const tabPane = document.getElementById(projectId);
+    if (!tabPane) return;
+
+    const timeDisplay = tabPane.querySelector('.current-time');
+    if (!timeDisplay) return;
+
+    const now = new Date();
+    const timezoneOffset = getTimezoneOffset();
+    
+    // Use the same calculation logic as the timezone module
+    now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + (timezoneOffset * 60));
+    
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const timeString = `${hours}:${minutes}`;
+    
+    timeDisplay.textContent = timeString;
+}
+
+function initializeProjectContacts(projectContent) {
+    const contactsSection = projectContent.querySelector('.project-contacts');
+    if (!contactsSection) return;
+
+    // Add "Add Contact" button if it doesn't exist
+    if (!contactsSection.querySelector('.add-contact')) {
+        const addContactBtn = document.createElement('button');
+        addContactBtn.className = 'add-contact';
+        addContactBtn.innerHTML = '<i class="fas fa-plus"></i> Agregar Contacto';
+        contactsSection.insertBefore(addContactBtn, contactsSection.firstChild);
+
+        addContactBtn.addEventListener('click', () => {
+            const contactBox = createContactBox();
+            contactsSection.appendChild(contactBox);
+        });
+    }
+}
+
+function createContactBox() {
+    const contactBox = document.createElement('div');
+    contactBox.className = 'contact-box';
+    contactBox.innerHTML = `
+        <div class="contact-box-header">
+            <div class="contact-fields">
+                <input type="text" placeholder="Position" class="contact-position">
+                <input type="text" placeholder="Name" class="contact-name">
+                <input type="text" placeholder="Email" class="contact-email">
+                <input type="text" placeholder="Phone" class="contact-phone">
+            </div>
+            <button class="delete-contact" title="Delete contact">&times;</button>
+        </div>
+    `;
+
+    const deleteBtn = contactBox.querySelector('.delete-contact');
+    deleteBtn.addEventListener('click', () => {
+        contactBox.remove();
+    });
+
+    return contactBox;
 }

@@ -222,9 +222,42 @@ function renderKanbanBoard() {
         }
     });
 
-    board.innerHTML = Object.entries(columns).map(([status, columnData]) => 
+    // Create the filter section if it doesn't exist
+    let filterSection = document.querySelector('.kanban-filters');
+    if (!filterSection) {
+        filterSection = document.createElement('div');
+        filterSection.className = 'kanban-filters';
+        filterSection.innerHTML = `
+            <div class="filter-group">
+                <label for="kanban-project-filter">Project:</label>
+                <select id="kanban-project-filter">
+                    <option value="all">All Projects</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="kanban-due-date-filter">Due Date:</label>
+                <input type="text" id="kanban-due-date-filter" placeholder="Select date">
+            </div>
+            <button id="kanban-clear-date-filter" class="clear-filter-btn">Clear Filters</button>
+        `;
+        board.appendChild(filterSection);
+    }
+
+    // Create or update the columns container
+    let columnsContainer = document.querySelector('.kanban-columns');
+    if (!columnsContainer) {
+        columnsContainer = document.createElement('div');
+        columnsContainer.className = 'kanban-columns';
+        board.appendChild(columnsContainer);
+    }
+
+    // Render the columns
+    columnsContainer.innerHTML = Object.entries(columns).map(([status, columnData]) => 
         createKanbanColumn(status, columnData.title, columnData.tasks)
     ).join('');
+
+    // Reinitialize event listeners
+    addKanbanEventListeners();
 }
 
 function getAllTasks() {
