@@ -58,6 +58,9 @@ export function initializeTemplates() {
     // Set up context menu
     setupContextMenu();
     
+    // Initialize dynamic status CSS
+    updateStatusCSS();
+    
     console.log('Templates initialized successfully');
 }
 
@@ -105,6 +108,11 @@ function setupTemplateControls() {
     
     if (resetStateBtn) {
         resetStateBtn.addEventListener('click', resetAllData);
+    }
+    
+    const manageStatusBtn = document.getElementById('manage-status-btn');
+    if (manageStatusBtn) {
+        manageStatusBtn.addEventListener('click', openStatusManagementModal);
     }
 }
 
@@ -265,8 +273,8 @@ function renderMainTemplateTable() {
                     td.textContent = cellValue;
                 }
                 
-                // Make cells editable in edit mode (except for comment columns)
-                if (state.isEditMode && !isCommentColumn(header)) {
+                // Make cells editable in edit mode (except for comment and status columns)
+                if (state.isEditMode && !isCommentColumn(header) && !isStatusColumn(header)) {
                     td.classList.add('editable');
                     td.addEventListener('click', () => editCell(td, rowIdx, colIndex));
                 }
@@ -536,6 +544,253 @@ function editCell(cell, rowIndex, colIndex) {
         renderMainTemplateTable();
         showNotification('Cell updated.', 'success');
     }
+}
+
+// =====================================
+// STATUS MANAGEMENT FUNCTIONALITY
+// =====================================
+
+let currentEditingStatusIndex = -1;
+
+// Open status management modal
+function openStatusManagementModal() {
+    const modal = document.getElementById('status-management-modal');
+    if (!modal) return;
+    
+    renderStatusList();
+    modal.classList.add('active');
+    
+    // Setup modal event listeners
+    setupStatusModalEventListeners();
+}
+
+// Setup event listeners for the status modal
+function setupStatusModalEventListeners() {
+    const modal = document.getElementById('status-management-modal');
+    const closeBtn = modal.querySelector('.close-modal');
+    const addStatusBtn = document.getElementById('add-status-btn');
+    const cancelStatusBtn = document.getElementById('cancel-status-btn');
+    const statusForm = document.getElementById('status-form');
+    const colorInput = document.getElementById('status-color');
+    const colorTextInput = document.getElementById('status-color-text');
+    const statusNameInput = document.getElementById('status-name');
+    const previewTag = document.getElementById('status-preview-tag');
+    
+    // Close modal
+    closeBtn.addEventListener('click', closeStatusManagementModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeStatusManagementModal();
+    });
+    
+    // Add new status
+    addStatusBtn.addEventListener('click', () => showStatusForm());
+    
+    // Cancel editing
+    cancelStatusBtn.addEventListener('click', hideStatusForm);
+    
+    // Color input synchronization
+    colorInput.addEventListener('input', (e) => {
+        colorTextInput.value = e.target.value;
+        updateStatusPreview();
+    });
+    
+    colorTextInput.addEventListener('input', (e) => {
+        if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+            colorInput.value = e.target.value;
+        }
+        updateStatusPreview();
+    });
+    
+    // Name input
+    statusNameInput.addEventListener('input', updateStatusPreview);
+    
+    // Form submission
+    statusForm.addEventListener('submit', handleStatusFormSubmit);
+}
+
+// Render the list of current status tags
+function renderStatusList() {
+    const statusList = document.getElementById('status-list');
+    if (!statusList) return;
+    
+    statusList.innerHTML = '';
+    
+    state.statusTags.forEach((status, index) => {
+        const statusItem = document.createElement('div');
+        statusItem.className = 'status-item';
+        statusItem.innerHTML = `
+            <div class="status-item-info">
+                <div class="status-item-preview" style="background-color: ${status.color}">
+                    ${status.name || 'Empty'}
+                </div>
+                <div class="status-item-name">${status.name || '(Empty Status)'}</div>
+            </div>
+            <div class="status-item-actions">
+                <button class="edit-status-btn" data-index="${index}">Edit</button>
+                <button class="delete-status-btn" data-index="${index}">Delete</button>
+            </div>
+        `;
+        statusList.appendChild(statusItem);
+    });
+    
+    // Add event listeners for edit and delete buttons
+    statusList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('edit-status-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            editStatus(index);
+        } else if (e.target.classList.contains('delete-status-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            deleteStatus(index);
+        }
+    });
+}
+
+// Show the status form for adding/editing
+function showStatusForm(status = null, index = -1) {
+    const formContainer = document.getElementById('status-form-container');
+    const formTitle = document.getElementById('status-form-title');
+    const statusNameInput = document.getElementById('status-name');
+    const colorInput = document.getElementById('status-color');
+    const colorTextInput = document.getElementById('status-color-text');
+    
+    currentEditingStatusIndex = index;
+    
+    if (status) {
+        formTitle.textContent = 'Edit Status';
+        statusNameInput.value = status.name;
+        colorInput.value = status.color;
+        colorTextInput.value = status.color;
+    } else {
+        formTitle.textContent = 'Add New Status';
+        statusNameInput.value = '';
+        colorInput.value = '#007bff';
+        colorTextInput.value = '#007bff';
+    }
+    
+    updateStatusPreview();
+    formContainer.style.display = 'block';
+    statusNameInput.focus();
+}
+
+// Hide the status form
+function hideStatusForm() {
+    const formContainer = document.getElementById('status-form-container');
+    formContainer.style.display = 'none';
+    currentEditingStatusIndex = -1;
+}
+
+// Update the status preview
+function updateStatusPreview() {
+    const statusNameInput = document.getElementById('status-name');
+    const colorTextInput = document.getElementById('status-color-text');
+    const previewTag = document.getElementById('status-preview-tag');
+    
+    const name = statusNameInput.value.trim();
+    const color = colorTextInput.value;
+    
+    previewTag.textContent = name || 'Sample Status';
+    previewTag.style.backgroundColor = color;
+}
+
+// Handle status form submission
+function handleStatusFormSubmit(e) {
+    e.preventDefault();
+    
+    const statusNameInput = document.getElementById('status-name');
+    const colorTextInput = document.getElementById('status-color-text');
+    
+    const name = statusNameInput.value.trim();
+    const color = colorTextInput.value;
+    
+    // Validate color
+    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+        alert('Please enter a valid hex color code (e.g., #FF0000)');
+        return;
+    }
+    
+    const statusData = { name, color };
+    
+    if (currentEditingStatusIndex >= 0) {
+        // Edit existing status
+        state.statusTags[currentEditingStatusIndex] = statusData;
+        showNotification('Status updated successfully!', 'success');
+    } else {
+        // Add new status
+        state.statusTags.push(statusData);
+        showNotification('Status added successfully!', 'success');
+    }
+    
+    saveState();
+    renderStatusList();
+    hideStatusForm();
+    
+    // Update dynamic CSS for the new status
+    updateStatusCSS();
+}
+
+// Edit an existing status
+function editStatus(index) {
+    const status = state.statusTags[index];
+    showStatusForm(status, index);
+}
+
+// Delete a status
+function deleteStatus(index) {
+    const status = state.statusTags[index];
+    const statusName = status.name || '(Empty Status)';
+    
+    if (confirm(`Are you sure you want to delete the status "${statusName}"?`)) {
+        state.statusTags.splice(index, 1);
+        saveState();
+        renderStatusList();
+        updateStatusCSS();
+        showNotification('Status deleted successfully!', 'warning');
+    }
+}
+
+// Close status management modal
+function closeStatusManagementModal() {
+    const modal = document.getElementById('status-management-modal');
+    modal.classList.remove('active');
+    hideStatusForm();
+}
+
+// Update CSS for status tags dynamically
+function updateStatusCSS() {
+    let existingStyle = document.getElementById('dynamic-status-styles');
+    if (existingStyle) {
+        existingStyle.remove();
+    }
+    
+    const style = document.createElement('style');
+    style.id = 'dynamic-status-styles';
+    
+    let css = '';
+    state.statusTags.forEach((status) => {
+        const className = `status-${status.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
+        css += `
+            .${className} {
+                background-color: ${status.color} !important;
+                color: ${getContrastColor(status.color)} !important;
+            }
+        `;
+    });
+    
+    style.textContent = css;
+    document.head.appendChild(style);
+}
+
+// Get contrasting text color for background
+function getContrastColor(hexColor) {
+    // Convert hex to RGB
+    const r = parseInt(hexColor.substring(1, 3), 16);
+    const g = parseInt(hexColor.substring(3, 5), 16);
+    const b = parseInt(hexColor.substring(5, 7), 16);
+    
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
 // Export template functions for use in other modules

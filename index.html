@@ -81,6 +81,7 @@
                             <h2>Main Template</h2>
                             <div class="template-actions">
                                 <button id="toggle-edit-mode">Enable Edit Mode</button>
+                                <button id="manage-status-btn" class="manage-status-button">Manage Status Tags</button>
                                 <button id="refresh-projects-button" class="refresh-button">Refresh All Projects</button>
                                 <button id="reset-state-button" class="reset-button">Reset All Data</button>
                             </div>
@@ -357,11 +358,8 @@
             <div class="status-selector-header">
                 <button class="status-selector-close">&times;</button>
             </div>
-            <div class="status-options">
-                <button class="status-option" data-status="completo">Completo</button>
-                <button class="status-option" data-status="en proceso">En Proceso</button>
-                <button class="status-option" data-status="pendiente">Pendiente</button>
-                <button class="status-option" data-status="n/a">N/A</button>
+            <div class="status-options" id="status-options">
+                <!-- Status options will be dynamically populated -->
             </div>
         </div>
     </div>
@@ -415,6 +413,53 @@
             </div>
         </div>
         <div class="comment-panel-overlay"></div>
+    </div>
+
+    <!-- Status Management Modal -->
+    <div id="status-management-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Status Tags</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="status-list-container">
+                    <div class="status-list-header">
+                        <h4>Current Status Tags</h4>
+                        <button id="add-status-btn" class="btn btn-primary">+ Add Status</button>
+                    </div>
+                    <div id="status-list" class="status-list">
+                        <!-- Status items will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Status Form -->
+                <div id="status-form-container" class="status-form-container" style="display: none;">
+                    <h4 id="status-form-title">Add New Status</h4>
+                    <form id="status-form">
+                        <div class="form-group">
+                            <label for="status-name">Status Name</label>
+                            <input type="text" id="status-name" name="name" placeholder="e.g. In Progress, Complete">
+                        </div>
+                        <div class="form-group">
+                            <label for="status-color">Color</label>
+                            <div class="color-input-group">
+                                <input type="color" id="status-color" name="color" value="#007bff">
+                                <input type="text" id="status-color-text" name="colorText" value="#007bff" placeholder="#RRGGBB">
+                            </div>
+                        </div>
+                        <div class="status-preview">
+                            <label>Preview:</label>
+                            <span id="status-preview-tag" class="status-tag">Sample Status</span>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" id="save-status-btn" class="btn btn-success">Save</button>
+                            <button type="button" id="cancel-status-btn" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Global context menu for templates -->

@@ -123,13 +123,29 @@ export function subtractDays(date, days) {
 export function getStatusClass(status) {
     if (!status) return 'status-na';
     const s = status.toLowerCase().trim();
+    
+    // Generate class name from status
+    const className = `status-${s.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
+    
+    // Legacy fallback for hardcoded statuses
     if (s === 'completo') return 'status-completo';
     if (s === 'en proceso') return 'status-en-proceso';
     if (s === 'pendiente') return 'status-pendiente';
-    return 'status-na';
+    if (s === 'n/a') return 'status-na';
+    
+    return className;
 }
 
 export function getNextStatus(currentStatus) {
+    // Import state to get dynamic status tags
+    import('./state.js').then(({ state }) => {
+        const statuses = state.statusTags.map(tag => tag.name);
+        const currentIndex = statuses.indexOf(currentStatus.toLowerCase());
+        const nextIndex = (currentIndex + 1) % statuses.length;
+        return statuses[nextIndex];
+    });
+    
+    // Legacy fallback
     const statuses = ['pendiente', 'en proceso', 'completo', 'n/a'];
     const currentIndex = statuses.indexOf(currentStatus.toLowerCase());
     const nextIndex = (currentIndex + 1) % statuses.length;

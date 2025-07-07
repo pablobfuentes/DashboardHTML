@@ -576,7 +576,43 @@ function handleCalendarIconClick(target) {
 function handleStatusCellClick(cell) {
     const statusSelector = document.getElementById('status-selector-modal');
     state.currentStatusCell = cell;
+    
+    // Populate status options dynamically
+    populateStatusOptions();
+    
     statusSelector.style.display = 'flex';
+}
+
+// Populate status options from state.statusTags
+function populateStatusOptions() {
+    const statusOptionsContainer = document.getElementById('status-options');
+    if (!statusOptionsContainer) return;
+    
+    statusOptionsContainer.innerHTML = '';
+    
+    state.statusTags.forEach(statusTag => {
+        const button = document.createElement('button');
+        button.className = 'status-option';
+        button.dataset.status = statusTag.name;
+        button.textContent = statusTag.name || 'Empty';
+        button.style.backgroundColor = statusTag.color;
+        button.style.color = getContrastTextColor(statusTag.color);
+        
+        statusOptionsContainer.appendChild(button);
+    });
+}
+
+// Get contrasting text color for background (utility function)
+function getContrastTextColor(hexColor) {
+    // Convert hex to RGB
+    const r = parseInt(hexColor.substring(1, 3), 16);
+    const g = parseInt(hexColor.substring(3, 5), 16);
+    const b = parseInt(hexColor.substring(5, 7), 16);
+    
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
 function handleCommentCellClick(cell) {

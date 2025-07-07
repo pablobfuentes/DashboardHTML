@@ -29,6 +29,13 @@ export const state = {
     currentTemplateRows: [],
     nonEditableColumns: ['ID', 'Fase', 'Milestone', 'Actividad'],
     currentCommentCell: null,
+    statusTags: [
+        { name: 'pendiente', color: '#ffc107' },
+        { name: 'en proceso', color: '#17a2b8' },
+        { name: 'completo', color: '#28a745' },
+        { name: 'n/a', color: '#6c757d' },
+        { name: '', color: '#e9ecef' } // Empty status
+    ],
 };
 
 // Initialize headers and rows from csvData
@@ -68,6 +75,7 @@ export function saveState() {
         columnWidths: state.columnWidths,
         contacts: state.contacts,
         timezoneOffset: state.timezoneOffset,
+        statusTags: state.statusTags,
     };
     localStorage.setItem('dashboardState', JSON.stringify(dataToSave));
     console.log("Dashboard state saved.");
@@ -88,6 +96,13 @@ export function loadState() {
     state.columnWidths = loadedData.columnWidths || {};
     state.contacts = loadedData.contacts || [];
     state.timezoneOffset = loadedData.timezoneOffset || 0;
+    state.statusTags = loadedData.statusTags || [
+        { name: 'pendiente', color: '#ffc107' },
+        { name: 'en proceso', color: '#17a2b8' },
+        { name: 'completo', color: '#28a745' },
+        { name: 'n/a', color: '#6c757d' },
+        { name: '', color: '#e9ecef' }
+    ];
 }
 
 export function loadAndRenderState(projectsData, currentTemplateHeaders, currentTemplateRows, projectCount, columnWidths, csvData) {
