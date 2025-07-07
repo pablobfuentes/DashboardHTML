@@ -1,5 +1,5 @@
 import { state, saveState } from './state.js';
-import { createProjectTab, renderTable, renderContacts, renderStatusCell, renderCommentCell, renderNewCommentCell, updateProjectNameInUI, renderEmailTemplates, showEmailTemplateModal, renderMainTemplate, updateAllProjectTables, updateCurrentStatus, updateProjectCompletion } from './ui.js';
+import { createProjectTab, renderTable, renderContacts, renderStatusCell, renderCommentCell, renderNewCommentCell, updateProjectNameInUI, renderEmailTemplates, showEmailTemplateModal, renderMainTemplate, updateAllProjectTables, updateCurrentStatus, updateProjectCompletion, updateProjectCellsVisibility } from './ui.js';
 import { initializeKanban } from './kanban.js';
 import { syncContactsWithProjects } from './contacts.js';
 import * as utils from './utils.js';
@@ -823,6 +823,14 @@ function handleTabSwitch(targetTab, tabSelector, paneSelector) {
 
     targetTab.classList.add('active');
     if (targetPane) targetPane.classList.add('active');
+    
+    // Update evidence cells visibility if switching to a project tab
+    if (paneSelector === '.project-pane' && targetPane) {
+        // Use setTimeout to ensure the pane is fully active before updating
+        setTimeout(() => {
+            updateProjectCellsVisibility();
+        }, 0);
+    }
 }
 
 function handleMainNavigation(navItem) {
@@ -904,6 +912,11 @@ function handleAddProject() {
     renderTable(projectTable, state.projectsData[projectId].headers, state.projectsData[projectId].content, false);
 
     handleTabSwitch(tabButton, '.project-tab', '.project-pane');
+
+    // Update evidence cells visibility for the new project
+    setTimeout(() => {
+        updateProjectCellsVisibility();
+    }, 0);
 
     saveState();
 }

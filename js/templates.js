@@ -1,6 +1,6 @@
 // Templates functionality module
 import { state, saveState } from './state.js';
-import { showNotification } from './ui.js';
+import { showNotification, createEvidenciaCell, updateProjectCellsVisibility } from './ui.js';
 
 // Template state variables (use state object instead of local variables)
 let selectedRowIndex = -1;
@@ -124,11 +124,7 @@ function updateToggleButtonState() {
 
 // Toggle edit mode
 function toggleEditMode() {
-    console.log('toggleEditMode called, current edit mode:', state.isEditMode);
-    
     state.isEditMode = !state.isEditMode;
-    
-    console.log('Edit mode toggled to:', state.isEditMode);
     
     // Update button state
     updateToggleButtonState();
@@ -151,7 +147,6 @@ function toggleEditMode() {
     }
     
     // Re-render table with new edit mode
-    console.log('About to call renderMainTemplateTable');
     renderMainTemplateTable();
 }
 
@@ -175,8 +170,6 @@ function resetAllData() {
 
 // Render the main template table
 function renderMainTemplateTable() {
-    console.log('renderMainTemplateTable called, edit mode:', state.isEditMode);
-    
     const table = document.getElementById('main-template-table');
     if (!table) return;
     
@@ -215,10 +208,7 @@ function renderMainTemplateTable() {
         if (state.isEditMode) {
             th.classList.add('editable');
             th.addEventListener('click', () => selectColumn(colIdx));
-            th.addEventListener('contextmenu', (e) => {
-                console.log('Context menu event fired for column:', colIdx);
-                showTemplateContextMenu(e, 'column', colIdx);
-            });
+            th.addEventListener('contextmenu', (e) => showTemplateContextMenu(e, 'column', colIdx));
         }
         
         headerRow.appendChild(th);
@@ -239,52 +229,52 @@ function renderMainTemplateTable() {
         if (state.isEditMode) {
             rowHeaderTh.classList.add('editable');
             rowHeaderTh.addEventListener('click', () => selectRow(rowIdx));
-            rowHeaderTh.addEventListener('contextmenu', (e) => {
-                console.log('Context menu event fired for row:', rowIdx);
-                showTemplateContextMenu(e, 'row', rowIdx);
-            });
+            rowHeaderTh.addEventListener('contextmenu', (e) => showTemplateContextMenu(e, 'row', rowIdx));
         }
         
         tr.appendChild(rowHeaderTh);
         
         // Add data cells
         state.currentTemplateHeaders.forEach((header, colIndex) => {
-            const td = document.createElement('td');
-            const cellValue = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+            let cellElement;
             
             // Handle different cell types
-            if (isDateColumn(header)) {
-                td.classList.add('date-cell');
-                td.innerHTML = `<div class="cell-content">${cellValue}</div>`;
-            } else if (isStatusColumn(header)) {
-                td.classList.add('status-cell');
-                td.innerHTML = `<div class="status-badge status-${cellValue}">${cellValue}</div>`;
-            } else if (isCommentColumn(header)) {
-                td.classList.add('comment-cell');
-                td.textContent = cellValue;
-            } else if (isNewCommentColumn(header)) {
-                td.classList.add('new-comment-cell');
-                td.innerHTML = `<div class="comment-input-wrapper">
-                    <input type="text" placeholder="Add comment..." value="${cellValue}">
-                    <button class="comment-submit-btn">💾</button>
-                </div>`;
-            } else if (isEvidenciaColumn(header)) {
-                td.classList.add('evidencia-cell');
-                td.innerHTML = `<div class="evidencia-content">
-                    <button class="evidencia-btn">📎</button>
-                    <span class="evidencia-text">${cellValue}</span>
-                </div>`;
+            if (isEvidenciaColumn(header)) {
+                // Use the proper evidence cell from ui.js
+                cellElement = createEvidenciaCell(true, rowData, colIndex);
             } else {
-                td.textContent = cellValue;
+                const td = document.createElement('td');
+                const cellValue = rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                
+                if (isDateColumn(header)) {
+                    td.classList.add('date-cell');
+                    td.innerHTML = `<div class="cell-content">${cellValue}</div>`;
+                } else if (isStatusColumn(header)) {
+                    td.classList.add('status-cell');
+                    td.innerHTML = `<div class="status-badge status-${cellValue}">${cellValue}</div>`;
+                } else if (isCommentColumn(header)) {
+                    td.classList.add('comment-cell');
+                    td.textContent = cellValue;
+                } else if (isNewCommentColumn(header)) {
+                    td.classList.add('new-comment-cell');
+                    td.innerHTML = `<div class="comment-input-wrapper">
+                        <input type="text" placeholder="Add comment..." value="${cellValue}">
+                        <button class="comment-submit-btn">💾</button>
+                    </div>`;
+                } else {
+                    td.textContent = cellValue;
+                }
+                
+                // Make cells editable in edit mode (except for comment columns)
+                if (state.isEditMode && !isCommentColumn(header)) {
+                    td.classList.add('editable');
+                    td.addEventListener('click', () => editCell(td, rowIdx, colIndex));
+                }
+                
+                cellElement = td;
             }
             
-            // Make cells editable in edit mode
-            if (state.isEditMode && !isCommentColumn(header)) {
-                td.classList.add('editable');
-                td.addEventListener('click', () => editCell(td, rowIdx, colIndex));
-            }
-            
-            tr.appendChild(td);
+            tr.appendChild(cellElement);
         });
         
         tbody.appendChild(tr);
@@ -292,6 +282,9 @@ function renderMainTemplateTable() {
     
     // Apply selection styles
     applySelectionStyles();
+    
+    // Update project cells visibility after rendering main template
+    updateProjectCellsVisibility();
 }
 
 // Select a row
@@ -384,16 +377,13 @@ function showTemplateContextMenu(event, type, index) {
     contextMenuTargetIndex = index;
     
     let contextMenu = document.getElementById('context-menu');
-    console.log('Context menu element found:', contextMenu);
     
     if (!contextMenu) {
-        console.warn('Context menu element not found, creating it dynamically');
         contextMenu = document.createElement('div');
         contextMenu.id = 'context-menu';
         contextMenu.className = 'context-menu';
         contextMenu.style.display = 'none';
         document.body.appendChild(contextMenu);
-        console.log('Context menu created dynamically:', contextMenu);
     }
     
     let menuItems = [];
@@ -413,16 +403,10 @@ function showTemplateContextMenu(event, type, index) {
         ];
     }
     
-    console.log('Menu items to show:', menuItems);
-    
     // Build menu HTML
-    const menuHTML = menuItems.map(item => 
+    contextMenu.innerHTML = menuItems.map(item => 
         `<div class="context-menu-item" data-action="${item.text}">${item.text}</div>`
     ).join('');
-    
-    console.log('Menu HTML:', menuHTML);
-    
-    contextMenu.innerHTML = menuHTML;
     
     // Add event listeners
     contextMenu.querySelectorAll('.context-menu-item').forEach((item, idx) => {
@@ -433,41 +417,9 @@ function showTemplateContextMenu(event, type, index) {
     });
     
     // Position and show menu
-    const x = event.pageX;
-    const y = event.pageY;
-    
-    console.log('Positioning menu at:', { x, y });
-    
-    contextMenu.style.left = x + 'px';
-    contextMenu.style.top = y + 'px';
+    contextMenu.style.left = event.pageX + 'px';
+    contextMenu.style.top = event.pageY + 'px';
     contextMenu.style.display = 'block';
-    contextMenu.style.zIndex = '9999';
-    contextMenu.style.position = 'absolute';
-    contextMenu.style.background = 'white';
-    contextMenu.style.border = '1px solid #ddd';
-    contextMenu.style.borderRadius = '4px';
-    contextMenu.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-    contextMenu.style.minWidth = '150px';
-    
-    console.log('Menu styled. Current styles:', {
-        display: contextMenu.style.display,
-        left: contextMenu.style.left,
-        top: contextMenu.style.top,
-        zIndex: contextMenu.style.zIndex,
-        position: contextMenu.style.position
-    });
-    
-    // Force a reflow to ensure the menu is rendered
-    contextMenu.offsetHeight;
-    
-    console.log('Menu should be visible now!');
-    console.log('Menu computed styles:', window.getComputedStyle(contextMenu));
-    
-    // Test: add a temporary border to make it more visible
-    contextMenu.style.border = '3px solid red';
-    setTimeout(() => {
-        contextMenu.style.border = '1px solid #ddd';
-    }, 2000);
 }
 
 // Hide context menu

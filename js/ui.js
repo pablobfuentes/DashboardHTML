@@ -376,7 +376,7 @@ export function createProjectTab(projectData, projectId) {
     return { tabButton, tabPane };
 }
 
-function createEvidenciaCell(isMain = false, rowData = null, colIndex = -1) {
+export function createEvidenciaCell(isMain = false, rowData = null, colIndex = -1) {
     const cell = document.createElement('td');
     cell.classList.add('evidencia-cell');
     
@@ -485,6 +485,7 @@ function createEvidenciaCell(isMain = false, rowData = null, colIndex = -1) {
         textInput.type = 'text';
         textInput.classList.add('evidence-text');
         textInput.placeholder = 'Enter text evidence...';
+        textInput.style.display = 'none'; // Initially hidden
         
         content.appendChild(fileInput);
         content.appendChild(attachButton);
@@ -580,6 +581,9 @@ function createEvidenciaCell(isMain = false, rowData = null, colIndex = -1) {
                 }
             }
         });
+        
+        // Set initial visibility based on cell mode (default to file mode)
+        updateEvidenciaContent(cell, cell.classList.contains('text-mode'));
     }
     
     return cell;
@@ -827,7 +831,7 @@ export function updateCurrentStatus(projectId) {
 }
 
 // Supporting functions for Evidencia column
-function handleFileUpload(file, content, cell) {
+export function handleFileUpload(file, content, cell) {
     // For now, we'll create a simple file display without actual upload
     // In a full implementation, this would upload to a server
     
@@ -872,7 +876,7 @@ function createFileLink(fileName, filePath) {
     return fileLink;
 }
 
-function updateEvidenciaContent(cell, isTextMode) {
+export function updateEvidenciaContent(cell, isTextMode) {
     const content = cell.querySelector('.evidencia-content');
     if (!content) return;
     
@@ -937,9 +941,11 @@ function getCorrespondingProjectCells(mainCell) {
         .filter(cell => cell);
 }
 
-function updateProjectCellsVisibility() {
+export function updateProjectCellsVisibility() {
+    console.log('updateProjectCellsVisibility called');
     // Get all evidencia cells from the main template
     const mainCells = Array.from(document.querySelectorAll('#main-template-table .evidencia-cell'));
+    console.log('Found main template evidence cells:', mainCells.length);
     
     mainCells.forEach(mainCell => {
         const rowIndex = parseInt(mainCell.closest('tr').querySelector('.row-header').dataset.rowIndex);
@@ -958,8 +964,12 @@ function updateProjectCellsVisibility() {
             evidenceState.required = state.currentTemplateRows[rowIndex][colIndex] === 'true';
         }
         
+        console.log(`Evidence state for row ${rowIndex}, col ${colIndex}:`, evidenceState);
+        
         // Update all corresponding project cells
         const projectCells = getCorrespondingProjectCells(mainCell);
+        console.log(`Found ${projectCells.length} project cells to update`);
+        
         projectCells.forEach(cell => {
             if (!cell) return;
             
@@ -972,7 +982,19 @@ function updateProjectCellsVisibility() {
             // Update content visibility
             updateEvidenciaContent(cell, evidenceState.isText);
         });
+        
+        // Also update the project data to keep it synchronized
+        Object.keys(state.projectsData).forEach(projectId => {
+            const project = state.projectsData[projectId];
+            if (project.content && project.content[rowIndex] && project.content[rowIndex][colIndex] !== undefined) {
+                // Update the project data with the evidence state
+                project.content[rowIndex][colIndex] = JSON.stringify(evidenceState);
+            }
+        });
     });
+    
+    // Save the updated state
+    saveState();
 }
 
 function updateTime(projectId) {
