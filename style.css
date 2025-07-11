@@ -1198,6 +1198,22 @@ body {
     border-left: 2px solid #0056b3;
 }
 
+.project-table .main-template-actions-header {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    border-left: 2px solid #495057;
+    position: relative;
+}
+
+.project-table .main-template-actions-header::after {
+    content: '⚙️';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.8;
+    font-size: 12px;
+}
+
 .project-table tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }

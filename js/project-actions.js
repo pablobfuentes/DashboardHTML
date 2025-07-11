@@ -1,6 +1,6 @@
 import { state, saveState } from './state.js';
 import { showNotification } from './ui.js';
-import { resolveDynamicRecipients, previewTemplate } from './email-templates.js';
+import { resolveTemplateRecipients, previewTemplate } from './email-templates.js';
 
 // ==================== EMAIL ACTION SYSTEM ==================== //
 
@@ -63,24 +63,34 @@ export function createActionsCell(projectId, rowIndex, isMainTemplate = false) {
     const td = document.createElement('td');
     td.classList.add('actions-cell');
     
-    if (isMainTemplate) {
-        // No actions for main template
-        return td;
-    }
-    
     // Create actions dropdown button
     const actionsBtn = document.createElement('button');
     actionsBtn.classList.add('actions-btn');
-    actionsBtn.innerHTML = '⚡';
-    actionsBtn.title = 'Actions';
     actionsBtn.setAttribute('data-project-id', projectId);
     actionsBtn.setAttribute('data-row-index', rowIndex);
     
-    // Add click event for actions dropdown
-    actionsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showActionsDropdown(projectId, rowIndex, e.target);
-    });
+    if (isMainTemplate) {
+        // Different styling and functionality for main template
+        actionsBtn.classList.add('main-template-actions-btn');
+        actionsBtn.innerHTML = '⚙️';
+        actionsBtn.title = 'Configure Actions (Main Template)';
+        
+        // Add click event for main template configuration
+        actionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showMainTemplateActionsConfig(rowIndex, e.target);
+        });
+    } else {
+        // Regular project actions
+        actionsBtn.innerHTML = '⚡';
+        actionsBtn.title = 'Actions';
+        
+        // Add click event for actions dropdown
+        actionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showActionsDropdown(projectId, rowIndex, e.target);
+        });
+    }
     
     td.appendChild(actionsBtn);
     return td;
@@ -97,10 +107,11 @@ function showActionsDropdown(projectId, rowIndex, buttonElement) {
     const dropdown = document.createElement('div');
     dropdown.classList.add('actions-dropdown');
     
-    // Position dropdown relative to button
-    const rect = buttonElement.getBoundingClientRect();
-    dropdown.style.top = `${rect.bottom + 5}px`;
-    dropdown.style.left = `${rect.left}px`;
+    // Temporarily position dropdown off-screen to measure its dimensions
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = '-9999px';
+    dropdown.style.left = '-9999px';
+    dropdown.style.visibility = 'hidden';
     
     // Create dropdown content
     dropdown.innerHTML = `
@@ -130,18 +141,267 @@ function showActionsDropdown(projectId, rowIndex, buttonElement) {
         });
     });
     
-    // Add to document
+    // Add to document (temporarily hidden)
     document.body.appendChild(dropdown);
+    
+    // Use the same intelligent positioning as main template config
+    positionDropdownIntelligently(dropdown, buttonElement);
     
     // Remove dropdown when clicking outside
     setTimeout(() => {
         document.addEventListener('click', function closeDropdown(e) {
             if (!dropdown.contains(e.target)) {
-                dropdown.remove();
+                dropdown.style.opacity = '0';
+                dropdown.style.transform = 'scale(0.95)';
+                setTimeout(() => dropdown.remove(), 150);
                 document.removeEventListener('click', closeDropdown);
             }
         });
     }, 0);
+}
+
+// ==================== MAIN TEMPLATE ACTIONS CONFIGURATION ==================== //
+
+// Show main template actions configuration
+function showMainTemplateActionsConfig(rowIndex, buttonElement) {
+    // Remove any existing dropdown
+    const existingDropdown = document.querySelector('.actions-dropdown');
+    if (existingDropdown) {
+        existingDropdown.remove();
+    }
+    
+    const dropdown = document.createElement('div');
+    dropdown.classList.add('actions-dropdown', 'main-template-config');
+    
+    // Temporarily position dropdown off-screen to measure its dimensions
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = '-9999px';
+    dropdown.style.left = '-9999px';
+    dropdown.style.visibility = 'hidden';
+    
+    // Create dropdown content for main template configuration
+    dropdown.innerHTML = `
+        <div class="actions-dropdown-header">
+            <span class="actions-title">⚙️ Configure Actions (Row ${rowIndex + 1})</span>
+        </div>
+        <div class="actions-dropdown-content">
+            <div class="config-section">
+                <h4>📧 Email Actions Setup</h4>
+                <div class="config-item" data-config-type="enable-email">
+                    <span class="config-icon">✉️</span>
+                    <div class="config-content">
+                        <div class="config-label">Enable Email Actions</div>
+                        <div class="config-description">Allow email actions for this row type</div>
+                    </div>
+                    <div class="config-toggle">
+                        <input type="checkbox" checked>
+                    </div>
+                </div>
+                <div class="config-item" data-config-type="default-template">
+                    <span class="config-icon">📝</span>
+                    <div class="config-content">
+                        <div class="config-label">Set Default Template</div>
+                        <div class="config-description">Choose default email template for this task type</div>
+                    </div>
+                </div>
+                <div class="config-item" data-config-type="action-rules">
+                    <span class="config-icon">🔄</span>
+                    <div class="config-content">
+                        <div class="config-label">Configure Action Rules</div>
+                        <div class="config-description">Set up automated action triggers</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <h4>🎯 Action Availability</h4>
+                ${Object.entries(EMAIL_ACTIONS).map(([actionType, action]) => `
+                    <div class="config-item action-toggle-item" data-action-type="${actionType}">
+                        <span class="config-icon">${action.icon}</span>
+                        <div class="config-content">
+                            <div class="config-label">${action.label}</div>
+                            <div class="config-description">${action.description}</div>
+                        </div>
+                        <div class="config-toggle">
+                            <input type="checkbox" checked>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="config-section">
+                <h4>🔧 Advanced Settings</h4>
+                <div class="config-item" data-config-type="inherit-settings">
+                    <span class="config-icon">📋</span>
+                    <div class="config-content">
+                        <div class="config-label">Propagate to Projects</div>
+                        <div class="config-description">Apply these settings to all existing projects</div>
+                    </div>
+                </div>
+                <div class="config-item" data-config-type="reset-defaults">
+                    <span class="config-icon">🔄</span>
+                    <div class="config-content">
+                        <div class="config-label">Reset to Defaults</div>
+                        <div class="config-description">Restore default action configuration</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners for configuration items
+    dropdown.querySelectorAll('.config-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const configType = item.getAttribute('data-config-type');
+            const actionType = item.getAttribute('data-action-type');
+            handleMainTemplateConfig(rowIndex, configType, actionType, item);
+        });
+    });
+    
+    // Add to document (temporarily hidden)
+    document.body.appendChild(dropdown);
+    
+    // Use the same intelligent positioning as regular dropdowns
+    positionDropdownIntelligently(dropdown, buttonElement);
+    
+    // Remove dropdown when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', function closeDropdown(e) {
+            if (!dropdown.contains(e.target)) {
+                dropdown.style.opacity = '0';
+                dropdown.style.transform = 'scale(0.95)';
+                setTimeout(() => dropdown.remove(), 150);
+                document.removeEventListener('click', closeDropdown);
+            }
+        });
+    }, 0);
+}
+
+// Handle main template configuration actions
+function handleMainTemplateConfig(rowIndex, configType, actionType, itemElement) {
+    console.log('Main Template Config:', { rowIndex, configType, actionType });
+    
+    switch (configType) {
+        case 'enable-email':
+            const checkbox = itemElement.querySelector('input[type="checkbox"]');
+            const isEnabled = checkbox.checked;
+            showNotification(`Email actions ${isEnabled ? 'enabled' : 'disabled'} for row ${rowIndex + 1}`, 'info');
+            break;
+            
+        case 'default-template':
+            showDefaultTemplateSelector(rowIndex);
+            break;
+            
+        case 'action-rules':
+            showActionRulesConfig(rowIndex);
+            break;
+            
+        case 'inherit-settings':
+            showInheritSettingsModal(rowIndex);
+            break;
+            
+        case 'reset-defaults':
+            showNotification(`Row ${rowIndex + 1} settings reset to defaults`, 'success');
+            // Close dropdown
+            document.querySelector('.actions-dropdown').remove();
+            break;
+            
+        default:
+            if (actionType) {
+                // Handle action type toggle
+                const checkbox = itemElement.querySelector('input[type="checkbox"]');
+                const action = EMAIL_ACTIONS[actionType];
+                const isEnabled = checkbox.checked;
+                showNotification(`${action.label} ${isEnabled ? 'enabled' : 'disabled'} for row ${rowIndex + 1}`, 'info');
+            }
+            break;
+    }
+}
+
+// Show default template selector
+function showDefaultTemplateSelector(rowIndex) {
+    showNotification('Default template selector would open here', 'info');
+    // TODO: Implement template selection modal
+}
+
+// Show action rules configuration
+function showActionRulesConfig(rowIndex) {
+    showNotification('Action rules configuration would open here', 'info');
+    // TODO: Implement action rules modal
+}
+
+// Show inherit settings modal
+function showInheritSettingsModal(rowIndex) {
+    showNotification('Settings would be applied to all projects', 'info');
+    // TODO: Implement inheritance logic
+}
+
+// Extract positioning logic into reusable function
+function positionDropdownIntelligently(dropdown, buttonElement) {
+    // Calculate intelligent positioning
+    const rect = buttonElement.getBoundingClientRect();
+    const dropdownRect = dropdown.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+    
+    // Calculate optimal position
+    let top = rect.bottom + 5;
+    let left = rect.left;
+    
+    // Check if dropdown would extend beyond right edge
+    if (left + dropdownRect.width > viewportWidth - 20) {
+        // Position to the left of the button
+        left = rect.right - dropdownRect.width;
+        
+        // If still extending beyond left edge, center it
+        if (left < 20) {
+            left = Math.max(20, (viewportWidth - dropdownRect.width) / 2);
+        }
+    }
+    
+    // Check if dropdown would extend beyond bottom edge
+    if (top + dropdownRect.height > viewportHeight - 20) {
+        // Position above the button
+        top = rect.top - dropdownRect.height - 5;
+        
+        // If still extending beyond top edge, center it vertically
+        if (top < 20) {
+            top = Math.max(20, (viewportHeight - dropdownRect.height) / 2);
+        }
+    }
+    
+    // Apply final positioning and make visible
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.style.visibility = 'visible';
+    
+    // Set transform origin based on position relative to button
+    const isPositionedAbove = top < rect.top;
+    const isPositionedToLeft = left < rect.left;
+    
+    if (isPositionedAbove && isPositionedToLeft) {
+        dropdown.style.transformOrigin = 'bottom right';
+    } else if (isPositionedAbove) {
+        dropdown.style.transformOrigin = 'bottom left';
+    } else if (isPositionedToLeft) {
+        dropdown.style.transformOrigin = 'top right';
+    } else {
+        dropdown.style.transformOrigin = 'top left';
+    }
+    
+    // Add smooth entrance animation
+    dropdown.style.opacity = '0';
+    dropdown.style.transform = 'scale(0.95)';
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        dropdown.style.transition = 'opacity 0.15s ease-out, transform 0.15s ease-out';
+        dropdown.style.opacity = '1';
+        dropdown.style.transform = 'scale(1)';
+    });
 }
 
 // ==================== EMAIL ACTION HANDLING ==================== //
@@ -522,6 +782,23 @@ function addProjectActionsCSS() {
         .actions-btn:hover {
             background: #0056b3;
             transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+        }
+        
+        .actions-btn:active {
+            transform: scale(1.05);
+        }
+        
+        .main-template-actions-btn {
+            background: #6c757d;
+            border: 2px solid #5a6268;
+        }
+        
+        .main-template-actions-btn:hover {
+            background: #5a6268;
+            border-color: #495057;
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(108,117,125,0.3);
         }
         
         /* Actions Dropdown */
@@ -530,10 +807,12 @@ function addProjectActionsCSS() {
             background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
             z-index: 1000;
             min-width: 280px;
             max-width: 320px;
+            transform-origin: top left;
+            transition: opacity 0.15s ease-out, transform 0.15s ease-out;
         }
         
         .actions-dropdown-header {
@@ -780,6 +1059,117 @@ function addProjectActionsCSS() {
             max-height: 150px;
             overflow-y: auto;
         }
+        
+        /* Main Template Configuration Styles */
+        .main-template-config {
+            min-width: 350px;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .main-template-config .actions-dropdown-content {
+            max-height: none;
+        }
+        
+        .config-section {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .config-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .config-section h4 {
+            margin: 0 0 12px 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .config-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 6px;
+            margin-bottom: 4px;
+        }
+        
+        .config-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .config-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .config-icon {
+            font-size: 16px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .config-content {
+            flex: 1;
+            margin-right: 12px;
+        }
+        
+        .config-label {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 2px;
+            font-size: 14px;
+        }
+        
+        .config-description {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.3;
+        }
+        
+        .config-toggle {
+            flex-shrink: 0;
+        }
+        
+        .config-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .action-toggle-item {
+            border-left: 3px solid transparent;
+        }
+        
+        .action-toggle-item:hover {
+            border-left-color: #007bff;
+            background-color: #f0f8ff;
+        }
+        
+        .main-template-actions-header {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            border-left: 3px solid #495057;
+            position: relative;
+        }
+        
+        .main-template-actions-header::after {
+            content: '⚙️';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.7;
+        }
     `;
     
     document.head.appendChild(style);
@@ -821,5 +1211,99 @@ window.testProjectActions = function() {
         actionsAvailable: Object.keys(EMAIL_ACTIONS),
         templatesCount: state.emailTemplates?.length || 0,
         projectsCount: Object.keys(state.projectsData).length
+    };
+};
+
+// Test function for dropdown positioning
+window.testDropdownPositioning = function() {
+    console.log('=== Testing Dropdown Positioning ===');
+    
+    const actionsButtons = document.querySelectorAll('.actions-btn');
+    console.log(`Found ${actionsButtons.length} action buttons`);
+    
+    if (actionsButtons.length > 0) {
+        // Test with the last button (likely to be near bottom/edge)
+        const lastButton = actionsButtons[actionsButtons.length - 1];
+        console.log('Testing positioning with last action button...');
+        
+        // Simulate click to test positioning
+        lastButton.click();
+        
+        setTimeout(() => {
+            const dropdown = document.querySelector('.actions-dropdown');
+            if (dropdown) {
+                const rect = dropdown.getBoundingClientRect();
+                console.log('Dropdown positioned at:', {
+                    top: rect.top,
+                    left: rect.left,
+                    bottom: rect.bottom,
+                    right: rect.right,
+                    fullyVisible: {
+                        top: rect.top >= 0,
+                        left: rect.left >= 0,
+                        bottom: rect.bottom <= window.innerHeight,
+                        right: rect.right <= window.innerWidth
+                    }
+                });
+                
+                // Close dropdown
+                dropdown.click();
+            } else {
+                console.log('No dropdown found');
+            }
+        }, 100);
+    } else {
+        console.log('No action buttons found. Make sure you\'re on a project tab.');
+    }
+};
+
+// Test function for main template actions
+window.testMainTemplateActions = function() {
+    console.log('=== Testing Main Template Actions ===');
+    
+    // Check if we're on the main template tab
+    const mainTemplateTab = document.querySelector('[data-tab="main-template"]');
+    const isMainTemplateActive = mainTemplateTab?.classList.contains('active');
+    
+    console.log('Main template tab active:', isMainTemplateActive);
+    
+    if (!isMainTemplateActive) {
+        console.log('Switch to the Main Template tab to see the configuration actions.');
+        return { onMainTemplate: false };
+    }
+    
+    // Look for main template action buttons
+    const mainTemplateButtons = document.querySelectorAll('.main-template-actions-btn');
+    console.log(`Found ${mainTemplateButtons.length} main template action buttons`);
+    
+    if (mainTemplateButtons.length > 0) {
+        // Test with the first button
+        const firstButton = mainTemplateButtons[0];
+        console.log('Testing configuration with first action button...');
+        
+        // Simulate click to test configuration
+        firstButton.click();
+        
+        setTimeout(() => {
+            const configDropdown = document.querySelector('.main-template-config');
+            if (configDropdown) {
+                console.log('Configuration dropdown opened successfully');
+                console.log('Available config sections:', 
+                    Array.from(configDropdown.querySelectorAll('.config-section h4'))
+                         .map(h => h.textContent)
+                );
+                
+                // Close dropdown
+                configDropdown.click();
+            } else {
+                console.log('No configuration dropdown found');
+            }
+        }, 100);
+    }
+    
+    return {
+        onMainTemplate: isMainTemplateActive,
+        configButtonsFound: mainTemplateButtons.length,
+        regularButtonsFound: document.querySelectorAll('.actions-btn:not(.main-template-actions-btn)').length
     };
 }; 

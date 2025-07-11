@@ -84,15 +84,18 @@ export function renderTable(tableElement, headers, rows, isMainTemplate = false)
             th.setAttribute('contenteditable', state.isEditMode);
         }
         headerRow.appendChild(th);
+        
+        // Add Actions column after "Actividad" for both main template and project tables
+        if (headerText.toLowerCase().includes('actividad')) {
+            const actionsTh = document.createElement('th');
+            actionsTh.textContent = 'Actions';
+            actionsTh.classList.add('actions-header');
+            if (isMainTemplate) {
+                actionsTh.classList.add('main-template-actions-header');
+            }
+            headerRow.appendChild(actionsTh);
+        }
     });
-    
-    // Add Actions column for project tables
-    if (!isMainTemplate) {
-        const actionsTh = document.createElement('th');
-        actionsTh.textContent = 'Actions';
-        actionsTh.classList.add('actions-header');
-        headerRow.appendChild(actionsTh);
-    }
     
     thead.appendChild(headerRow);
 
@@ -163,14 +166,14 @@ export function renderTable(tableElement, headers, rows, isMainTemplate = false)
             }
             
             tr.appendChild(td);
+            
+            // Add Actions cell after "Actividad" for both main template and project tables
+            if (header.toLowerCase().includes('actividad')) {
+                const projectId = isMainTemplate ? 'main-template' : tableElement.closest('.project-pane')?.id;
+                const actionsCell = createActionsCell(projectId, rowIdx, isMainTemplate);
+                tr.appendChild(actionsCell);
+            }
         });
-        
-        // Add Actions cell for project tables
-        if (!isMainTemplate) {
-            const projectId = tableElement.closest('.project-pane')?.id;
-            const actionsCell = createActionsCell(projectId, rowIdx, isMainTemplate);
-            tr.appendChild(actionsCell);
-        }
         
         tbody.appendChild(tr);
     });
