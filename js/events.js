@@ -1,5 +1,5 @@
 import { state, saveState } from './state.js';
-import { createProjectTab, renderTable, renderContacts, renderStatusCell, renderCommentCell, renderNewCommentCell, updateProjectNameInUI, renderEmailTemplates, showEmailTemplateModal, renderMainTemplate, updateAllProjectTables, updateCurrentStatus, updateProjectCompletion, updateProjectCellsVisibility } from './ui.js';
+import { createProjectTab, renderTable, renderContacts, renderStatusCell, renderCommentCell, renderNewCommentCell, updateProjectNameInUI, renderMainTemplate, updateAllProjectTables, updateCurrentStatus, updateProjectCompletion, updateProjectCellsVisibility } from './ui.js';
 import { initializeKanban } from './kanban.js';
 import { syncContactsWithProjects } from './contacts.js';
 import * as utils from './utils.js';
@@ -136,19 +136,7 @@ function initDelegatedEventListeners() {
             }
         }
 
-        // --- Email Template Actions ---
-        if (closest('.add-email-template-btn')) {
-            showEmailTemplateModal();
-        }
-        const editBtn = closest('.edit-template-btn');
-        if (editBtn) {
-            const templateIndex = parseInt(editBtn.dataset.index);
-            showEmailTemplateModal(state.emailTemplates[templateIndex], templateIndex);
-        }
-        const deleteBtn = closest('.delete-template-btn');
-        if (deleteBtn) {
-            handleDeleteEmailTemplate(parseInt(deleteBtn.dataset.index));
-        }
+        // Email template actions are handled by email-templates.js module
     });
 
     // Listeners that are truly specific to the main content area
@@ -922,7 +910,10 @@ function handleMainNavigation(navItem) {
         initializeKanban(); // Still useful to run to prep filters if user switches
     } else if (targetSectionId === 'templates') {
         renderMainTemplate();
-        renderEmailTemplates();
+        // Initialize email templates when switching to templates section
+        import('./email-templates.js').then(module => {
+            module.initializeEmailTemplates();
+        });
     }
 }
 
@@ -1040,13 +1031,7 @@ function handleContextMenuAction(action) {
     saveState();
 }
 
-function handleDeleteEmailTemplate(index) {
-    if (confirm(`Are you sure you want to delete the template: "${state.emailTemplates[index].name}"?`)) {
-        state.emailTemplates.splice(index, 1);
-        saveState();
-        renderEmailTemplates();
-    }
-}
+// Email template deletion handled by email-templates.js module
 
 function handleAddContactRow(button) {
     const projectId = button.closest('.project-pane').id;

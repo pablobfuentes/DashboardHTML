@@ -2,6 +2,7 @@ import { state, saveState } from './state.js';
 import * as utils from './utils.js';
 import { setupTimezoneHandlers, getTimezoneOffset } from './timezone.js';
 import { createMilestonesTimeline } from './milestones.js';
+import { createActionsCell } from './project-actions.js';
 
 export function initializeUI() {
     // Clear any existing project tabs and panes before loading
@@ -84,6 +85,15 @@ export function renderTable(tableElement, headers, rows, isMainTemplate = false)
         }
         headerRow.appendChild(th);
     });
+    
+    // Add Actions column for project tables
+    if (!isMainTemplate) {
+        const actionsTh = document.createElement('th');
+        actionsTh.textContent = 'Actions';
+        actionsTh.classList.add('actions-header');
+        headerRow.appendChild(actionsTh);
+    }
+    
     thead.appendChild(headerRow);
 
     // Create rows
@@ -154,6 +164,14 @@ export function renderTable(tableElement, headers, rows, isMainTemplate = false)
             
             tr.appendChild(td);
         });
+        
+        // Add Actions cell for project tables
+        if (!isMainTemplate) {
+            const projectId = tableElement.closest('.project-pane')?.id;
+            const actionsCell = createActionsCell(projectId, rowIdx, isMainTemplate);
+            tr.appendChild(actionsCell);
+        }
+        
         tbody.appendChild(tr);
     });
     applyColumnWidths(tableElement, headers, isMainTemplate);
@@ -662,63 +680,7 @@ export function updateProjectNameInUI(projectId, newName) {
     }
 }
 
-export function renderEmailTemplates() {
-    const container = document.getElementById('email-templates-list');
-    if (!container) return;
-
-    if (state.emailTemplates.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state-container">
-                <div class="empty-state-icon">📧</div>
-                <h3>No Email Templates Yet</h3>
-                <p>Create your first email template to get started</p>
-                <button class="add-email-template-btn btn btn-success">+ Create First Template</button>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = '';
-    state.emailTemplates.forEach((template, index) => {
-        const div = document.createElement('div');
-        div.className = 'email-template-item';
-        div.innerHTML = `
-            <div class="template-header">
-                <strong class="template-name">${template.name}</strong>
-                <div class="template-actions">
-                    <button class="edit-template-btn" data-index="${index}">Edit</button>
-                    <button class="delete-template-btn" data-index="${index}">Delete</button>
-                </div>
-            </div>
-            <div class="template-body">
-                <p><strong>Subject:</strong> ${template.subject}</p>
-                <pre>${template.body}</pre>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-export function showEmailTemplateModal(template = null, index = null) {
-    const modal = document.getElementById('email-template-modal');
-    const form = document.getElementById('email-template-form');
-    const modalTitle = document.getElementById('template-modal-title');
-
-    form.reset();
-    delete form.dataset.index;
-
-    if (template && index !== null) {
-        modalTitle.textContent = 'Edit Email Template';
-        form.elements['template-name'].value = template.name;
-        form.elements['template-subject'].value = template.subject;
-        form.elements['template-body'].value = template.body;
-        form.dataset.index = index;
-    } else {
-        modalTitle.textContent = 'Add New Email Template';
-    }
-
-    modal.style.display = 'block';
-}
+// Email templates functions moved to email-templates.js module
 
 export function updateAllProjectTables() {
     const templateHeaders = state.currentTemplateHeaders;
