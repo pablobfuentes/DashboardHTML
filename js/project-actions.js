@@ -4,6 +4,13 @@ import { resolveTemplateRecipients, previewTemplate } from './email-templates.js
 
 // ==================== EMAIL ACTION SYSTEM ==================== //
 
+// INHERITANCE SYSTEM OVERVIEW:
+// 1. Main Template serves as the configuration hub for all actions
+// 2. Each row in Main Template can have different action configurations
+// 3. When "Accept" is clicked, settings are propagated to all projects
+// 4. Project dropdowns only show actions enabled for that specific row type
+// 5. If no actions are enabled, a helpful message is shown instead
+
 // Predefined email actions with smart template suggestions
 export const EMAIL_ACTIONS = {
     'schedule-meeting': {
@@ -52,8 +59,16 @@ export const EMAIL_ACTIONS = {
 
 // Initialize project actions system
 export function initializeProjectActions() {
+    console.log('Initializing Project Actions System');
+    
+    // Clean up any stuck modals from previous sessions
+    cleanupStuckModals();
+    
+    // Add the required CSS
     addProjectActionsCSS();
-    console.log('Project Actions system initialized');
+    
+    // Initialize the EMAIL_ACTIONS configuration
+    console.log('Email Actions configured:', Object.keys(EMAIL_ACTIONS));
 }
 
 // ==================== ACTIONS COLUMN RENDERING ==================== //
@@ -113,13 +128,85 @@ function showActionsDropdown(projectId, rowIndex, buttonElement) {
     dropdown.style.left = '-9999px';
     dropdown.style.visibility = 'hidden';
     
-    // Create dropdown content
+    // Get project-specific configuration for this row
+    const rowConfig = getProjectRowActionConfig(projectId, rowIndex);
+    
+    // Check if email actions are enabled for this row
+    if (!rowConfig.emailEnabled) {
+        dropdown.innerHTML = `
+            <div class="actions-dropdown-header">
+                <span class="actions-title">📧 Send Email</span>
+            </div>
+            <div class="actions-dropdown-content">
+                <div class="no-actions-message">
+                    <p>Email actions are disabled for this row type.</p>
+                    <p>Configure actions in the Main Template to enable them.</p>
+                </div>
+            </div>
+        `;
+        
+        // Add to document (temporarily hidden)
+        document.body.appendChild(dropdown);
+        
+        // Position dropdown
+        positionDropdownIntelligently(dropdown, buttonElement);
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            if (dropdown.parentNode) {
+                dropdown.style.opacity = '0';
+                dropdown.style.transform = 'scale(0.95)';
+                setTimeout(() => dropdown.remove(), 150);
+            }
+        }, 3000);
+        
+        return;
+    }
+    
+    // Filter actions based on configuration
+    const enabledActions = Object.entries(EMAIL_ACTIONS).filter(([actionType, action]) => {
+        return rowConfig[`action_${actionType}`] !== false;
+    });
+    
+    // Check if any actions are enabled
+    if (enabledActions.length === 0) {
+        dropdown.innerHTML = `
+            <div class="actions-dropdown-header">
+                <span class="actions-title">📧 Send Email</span>
+            </div>
+            <div class="actions-dropdown-content">
+                <div class="no-actions-message">
+                    <p>No email actions are enabled for this row type.</p>
+                    <p>Configure actions in the Main Template to enable them.</p>
+                </div>
+            </div>
+        `;
+        
+        // Add to document (temporarily hidden)
+        document.body.appendChild(dropdown);
+        
+        // Position dropdown
+        positionDropdownIntelligently(dropdown, buttonElement);
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            if (dropdown.parentNode) {
+                dropdown.style.opacity = '0';
+                dropdown.style.transform = 'scale(0.95)';
+                setTimeout(() => dropdown.remove(), 150);
+            }
+        }, 3000);
+        
+        return;
+    }
+    
+    // Create dropdown content with only enabled actions
     dropdown.innerHTML = `
         <div class="actions-dropdown-header">
             <span class="actions-title">📧 Send Email</span>
         </div>
         <div class="actions-dropdown-content">
-            ${Object.entries(EMAIL_ACTIONS).map(([actionType, action]) => `
+            ${enabledActions.map(([actionType, action]) => `
                 <div class="action-item" data-action-type="${actionType}">
                     <span class="action-icon">${action.icon}</span>
                     <div class="action-content">
@@ -179,6 +266,9 @@ function showMainTemplateActionsConfig(rowIndex, buttonElement) {
     dropdown.style.left = '-9999px';
     dropdown.style.visibility = 'hidden';
     
+    // Get current configuration for this row
+    const currentConfig = getRowActionConfig(rowIndex);
+    
     // Create dropdown content for main template configuration
     dropdown.innerHTML = `
         <div class="actions-dropdown-header">
@@ -194,7 +284,7 @@ function showMainTemplateActionsConfig(rowIndex, buttonElement) {
                         <div class="config-description">Allow email actions for this row type</div>
                     </div>
                     <div class="config-toggle">
-                        <input type="checkbox" checked>
+                        <input type="checkbox" ${currentConfig.emailEnabled ? 'checked' : ''}>
                     </div>
                 </div>
                 <div class="config-item" data-config-type="default-template">
@@ -223,29 +313,16 @@ function showMainTemplateActionsConfig(rowIndex, buttonElement) {
                             <div class="config-description">${action.description}</div>
                         </div>
                         <div class="config-toggle">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" ${currentConfig[`action_${actionType}`] !== false ? 'checked' : ''}>
                         </div>
                     </div>
                 `).join('')}
             </div>
-            
-            <div class="config-section">
-                <h4>🔧 Advanced Settings</h4>
-                <div class="config-item" data-config-type="inherit-settings">
-                    <span class="config-icon">📋</span>
-                    <div class="config-content">
-                        <div class="config-label">Propagate to Projects</div>
-                        <div class="config-description">Apply these settings to all existing projects</div>
-                    </div>
-                </div>
-                <div class="config-item" data-config-type="reset-defaults">
-                    <span class="config-icon">🔄</span>
-                    <div class="config-content">
-                        <div class="config-label">Reset to Defaults</div>
-                        <div class="config-description">Restore default action configuration</div>
-                    </div>
-                </div>
-            </div>
+        </div>
+        
+        <div class="config-modal-footer">
+            <button type="button" class="btn-secondary config-cancel">Cancel</button>
+            <button type="button" class="btn-primary config-accept">Accept</button>
         </div>
     `;
     
@@ -253,10 +330,46 @@ function showMainTemplateActionsConfig(rowIndex, buttonElement) {
     dropdown.querySelectorAll('.config-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.stopPropagation();
-            const configType = item.getAttribute('data-config-type');
-            const actionType = item.getAttribute('data-action-type');
-            handleMainTemplateConfig(rowIndex, configType, actionType, item);
+            
+            // Handle checkbox clicks specially
+            if (e.target.type === 'checkbox') {
+                // Let the checkbox handle its own state change
+                setTimeout(() => {
+                    const configType = item.getAttribute('data-config-type');
+                    const actionType = item.getAttribute('data-action-type');
+                    handleMainTemplateConfig(rowIndex, configType, actionType, item);
+                }, 0);
+            } else {
+                // For non-checkbox clicks, toggle the checkbox if it exists
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+                
+                const configType = item.getAttribute('data-config-type');
+                const actionType = item.getAttribute('data-action-type');
+                handleMainTemplateConfig(rowIndex, configType, actionType, item);
+            }
         });
+    });
+    
+    // Add event listeners for Accept and Cancel buttons
+    dropdown.querySelector('.config-cancel').addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.style.opacity = '0';
+        dropdown.style.transform = 'scale(0.95)';
+        setTimeout(() => dropdown.remove(), 150);
+    });
+    
+    dropdown.querySelector('.config-accept').addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Propagate settings to all projects
+        propagateRowSettingsFromConfig(rowIndex);
+        
+        // Close dropdown
+        dropdown.style.opacity = '0';
+        dropdown.style.transform = 'scale(0.95)';
+        setTimeout(() => dropdown.remove(), 150);
     });
     
     // Add to document (temporarily hidden)
@@ -286,7 +399,8 @@ function handleMainTemplateConfig(rowIndex, configType, actionType, itemElement)
         case 'enable-email':
             const checkbox = itemElement.querySelector('input[type="checkbox"]');
             const isEnabled = checkbox.checked;
-            showNotification(`Email actions ${isEnabled ? 'enabled' : 'disabled'} for row ${rowIndex + 1}`, 'info');
+            saveRowActionConfig(rowIndex, 'emailEnabled', isEnabled);
+            showNotification(`Email actions ${isEnabled ? 'enabled' : 'disabled'} for row ${rowIndex + 1}`, 'success');
             break;
             
         case 'default-template':
@@ -297,44 +411,444 @@ function handleMainTemplateConfig(rowIndex, configType, actionType, itemElement)
             showActionRulesConfig(rowIndex);
             break;
             
-        case 'inherit-settings':
-            showInheritSettingsModal(rowIndex);
-            break;
-            
-        case 'reset-defaults':
-            showNotification(`Row ${rowIndex + 1} settings reset to defaults`, 'success');
-            // Close dropdown
-            document.querySelector('.actions-dropdown').remove();
-            break;
-            
         default:
             if (actionType) {
                 // Handle action type toggle
                 const checkbox = itemElement.querySelector('input[type="checkbox"]');
                 const action = EMAIL_ACTIONS[actionType];
                 const isEnabled = checkbox.checked;
-                showNotification(`${action.label} ${isEnabled ? 'enabled' : 'disabled'} for row ${rowIndex + 1}`, 'info');
+                saveRowActionConfig(rowIndex, `action_${actionType}`, isEnabled);
+                showNotification(`${action.label} ${isEnabled ? 'enabled' : 'disabled'} for row ${rowIndex + 1}`, 'success');
             }
             break;
     }
 }
 
+// ==================== CONFIGURATION PERSISTENCE ==================== //
+
+// Save row action configuration
+function saveRowActionConfig(rowIndex, configKey, value) {
+    if (!state.mainTemplateActions[rowIndex]) {
+        state.mainTemplateActions[rowIndex] = getDefaultRowConfig();
+    }
+    
+    state.mainTemplateActions[rowIndex][configKey] = value;
+    saveState();
+    console.log(`Saved config for row ${rowIndex}:`, state.mainTemplateActions[rowIndex]);
+}
+
+// Get row action configuration
+function getRowActionConfig(rowIndex) {
+    return state.mainTemplateActions[rowIndex] || getDefaultRowConfig();
+}
+
+// Get project-specific row action configuration (inherited from main template)
+function getProjectRowActionConfig(projectId, rowIndex) {
+    const project = state.projectsData[projectId];
+    if (!project) return getDefaultRowConfig();
+    
+    // Check if project has inherited configuration for this row
+    if (project.actionConfigs && project.actionConfigs[rowIndex]) {
+        return project.actionConfigs[rowIndex];
+    }
+    
+    // Fall back to main template configuration
+    return getRowActionConfig(rowIndex);
+}
+
+// Get default configuration for a row
+function getDefaultRowConfig() {
+    const defaultConfig = {
+        emailEnabled: true,
+        defaultTemplate: null,
+        actionRules: {},
+    };
+    
+    // Enable all actions by default
+    Object.keys(EMAIL_ACTIONS).forEach(actionType => {
+        defaultConfig[`action_${actionType}`] = true;
+    });
+    
+    return defaultConfig;
+}
+
+// Reset row configuration to defaults
+function resetRowActionConfig(rowIndex) {
+    state.mainTemplateActions[rowIndex] = getDefaultRowConfig();
+    saveState();
+    console.log(`Reset config for row ${rowIndex} to defaults`);
+}
+
+// ==================== TEMPLATE SELECTION ==================== //
+
 // Show default template selector
 function showDefaultTemplateSelector(rowIndex) {
-    showNotification('Default template selector would open here', 'info');
-    // TODO: Implement template selection modal
+    const currentConfig = getRowActionConfig(rowIndex);
+    const currentTemplate = currentConfig.defaultTemplate;
+    
+    // Remove any existing modal
+    const existingModal = document.getElementById('template-selector-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'template-selector-modal';
+    modal.className = 'template-modal';
+    
+    modal.innerHTML = `
+        <div class="template-modal-content">
+            <div class="template-modal-header">
+                <h3>📝 Select Default Template for Row ${rowIndex + 1}</h3>
+                <button class="template-modal-close" onclick="document.getElementById('template-selector-modal').remove()">&times;</button>
+            </div>
+            
+            <div class="template-selector-body">
+                <div class="current-template-info">
+                    <h4>Current Default Template</h4>
+                    <div class="current-template-display">
+                        ${currentTemplate ? `
+                            <div class="template-preview-card selected-template">
+                                <div class="template-name">${currentTemplate.name}</div>
+                                <div class="template-subject">${currentTemplate.subject}</div>
+                                <button class="remove-default-btn" onclick="removeDefaultTemplate(${rowIndex})">Remove Default</button>
+                            </div>
+                        ` : `
+                            <div class="no-template-selected">
+                                <p>No default template selected</p>
+                                <p>Actions will show all available templates</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+                
+                <div class="template-selection-list">
+                    <h4>Available Templates</h4>
+                    <div class="templates-list">
+                        ${state.emailTemplates.map(template => `
+                            <div class="template-preview-card ${currentTemplate?.id === template.id ? 'current-default' : ''}" 
+                                 data-template-id="${template.id}">
+                                <div class="template-name">${template.name}</div>
+                                <div class="template-subject">${template.subject}</div>
+                                <div class="template-tags">
+                                    ${template.tags ? template.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+                                </div>
+                                <button class="select-template-btn" onclick="selectDefaultTemplate(${rowIndex}, '${template.id}')">
+                                    ${currentTemplate?.id === template.id ? 'Current Default' : 'Set as Default'}
+                                </button>
+                            </div>
+                        `).join('')}
+                        
+                        ${state.emailTemplates.length === 0 ? `
+                            <div class="no-templates">
+                                <p>No email templates available</p>
+                                <p>Create templates in the Email Templates section first</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="template-modal-footer">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('template-selector-modal').remove()">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
+
+// Select default template for row
+window.selectDefaultTemplate = function(rowIndex, templateId) {
+    const template = state.emailTemplates.find(t => t.id === templateId);
+    if (!template) {
+        showNotification('Template not found', 'error');
+        return;
+    }
+    
+    saveRowActionConfig(rowIndex, 'defaultTemplate', template);
+    showNotification(`"${template.name}" set as default template for row ${rowIndex + 1}`, 'success');
+    
+    // Refresh the modal
+    document.getElementById('template-selector-modal').remove();
+    showDefaultTemplateSelector(rowIndex);
+};
+
+// Remove default template for row
+window.removeDefaultTemplate = function(rowIndex) {
+    saveRowActionConfig(rowIndex, 'defaultTemplate', null);
+    showNotification(`Default template removed for row ${rowIndex + 1}`, 'success');
+    
+    // Refresh the modal
+    document.getElementById('template-selector-modal').remove();
+    showDefaultTemplateSelector(rowIndex);
+};
+
+// ==================== ACTION RULES CONFIGURATION ==================== //
 
 // Show action rules configuration
 function showActionRulesConfig(rowIndex) {
-    showNotification('Action rules configuration would open here', 'info');
-    // TODO: Implement action rules modal
+    const currentConfig = getRowActionConfig(rowIndex);
+    
+    // Remove any existing modal
+    const existingModal = document.getElementById('action-rules-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'action-rules-modal';
+    modal.className = 'template-modal';
+    
+    modal.innerHTML = `
+        <div class="template-modal-content">
+            <div class="template-modal-header">
+                <h3>🔄 Configure Action Rules for Row ${rowIndex + 1}</h3>
+                <button class="template-modal-close" onclick="document.getElementById('action-rules-modal').remove()">&times;</button>
+            </div>
+            
+            <div class="action-rules-body">
+                <div class="rules-explanation">
+                    <h4>Automated Action Triggers</h4>
+                    <p>Set up rules to automatically suggest or trigger email actions based on task status changes.</p>
+                </div>
+                
+                <div class="rule-categories">
+                    <div class="rule-category">
+                        <h5>📊 Status Change Triggers</h5>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onStatusComplete ? 'checked' : ''}>
+                                <span>Suggest "Thank Team" when status changes to "completo"</span>
+                            </label>
+                        </div>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onStatusBlocked ? 'checked' : ''}>
+                                <span>Suggest "Issue Alert" when task becomes blocked</span>
+                            </label>
+                        </div>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onStatusProgress ? 'checked' : ''}>
+                                <span>Suggest "Status Update" when status changes to "en proceso"</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="rule-category">
+                        <h5>📅 Time-Based Triggers</h5>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onDeadlineApproach ? 'checked' : ''}>
+                                <span>Suggest "Follow Up" 2 days before deadline</span>
+                            </label>
+                        </div>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onDeadlineOverdue ? 'checked' : ''}>
+                                <span>Suggest "Issue Alert" when deadline is overdue</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="rule-category">
+                        <h5>🎯 Milestone Triggers</h5>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onMilestoneComplete ? 'checked' : ''}>
+                                <span>Suggest "Milestone Reached" when milestone is completed</span>
+                            </label>
+                        </div>
+                        <div class="rule-item">
+                            <label>
+                                <input type="checkbox" ${currentConfig.actionRules?.onProjectStart ? 'checked' : ''}>
+                                <span>Suggest "Schedule Meeting" at project start</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="template-modal-footer">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('action-rules-modal').remove()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="saveActionRules(${rowIndex})">Save Rules</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
+
+// Save action rules
+window.saveActionRules = function(rowIndex) {
+    const modal = document.getElementById('action-rules-modal');
+    const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+    
+    const rules = {};
+    checkboxes.forEach((checkbox, index) => {
+        const ruleNames = [
+            'onStatusComplete', 'onStatusBlocked', 'onStatusProgress',
+            'onDeadlineApproach', 'onDeadlineOverdue',
+            'onMilestoneComplete', 'onProjectStart'
+        ];
+        
+        if (ruleNames[index]) {
+            rules[ruleNames[index]] = checkbox.checked;
+        }
+    });
+    
+    saveRowActionConfig(rowIndex, 'actionRules', rules);
+    showNotification(`Action rules saved for row ${rowIndex + 1}`, 'success');
+    modal.remove();
+};
+
+// ==================== INHERITANCE AND PROPAGATION ==================== //
 
 // Show inherit settings modal
 function showInheritSettingsModal(rowIndex) {
-    showNotification('Settings would be applied to all projects', 'info');
-    // TODO: Implement inheritance logic
+    const modal = document.createElement('div');
+    modal.id = 'inherit-settings-modal';
+    modal.className = 'template-modal';
+    
+    const projectCount = Object.keys(state.projectsData).length;
+    const currentConfig = getRowActionConfig(rowIndex);
+    
+    modal.innerHTML = `
+        <div class="template-modal-content">
+            <div class="template-modal-header">
+                <h3>📋 Propagate Settings to Projects</h3>
+                <button class="template-modal-close" onclick="document.getElementById('inherit-settings-modal').remove()">&times;</button>
+            </div>
+            
+            <div class="inherit-settings-body">
+                <div class="inherit-explanation">
+                    <h4>Apply Row ${rowIndex + 1} Settings to All Projects</h4>
+                    <p>This will apply the current configuration for row ${rowIndex + 1} to the corresponding row in all ${projectCount} existing projects.</p>
+                </div>
+                
+                <div class="settings-preview">
+                    <h5>Settings to Apply:</h5>
+                    <ul>
+                        <li>Email Actions: ${currentConfig.emailEnabled ? '✅ Enabled' : '❌ Disabled'}</li>
+                        <li>Default Template: ${currentConfig.defaultTemplate ? currentConfig.defaultTemplate.name : 'None'}</li>
+                        <li>Action Rules: ${Object.keys(currentConfig.actionRules || {}).length} rules configured</li>
+                        <li>Available Actions: ${Object.keys(EMAIL_ACTIONS).filter(action => 
+                            currentConfig[`action_${action}`] !== false
+                        ).length} of ${Object.keys(EMAIL_ACTIONS).length} enabled</li>
+                    </ul>
+                </div>
+                
+                <div class="inheritance-options">
+                    <h5>Propagation Options:</h5>
+                    <label>
+                        <input type="checkbox" id="propagate-existing" checked>
+                        <span>Apply to existing projects (${projectCount} projects)</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="propagate-future" checked>
+                        <span>Apply to future projects automatically</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="overwrite-existing">
+                        <span>Overwrite existing project-specific configurations</span>
+                    </label>
+                </div>
+                
+                ${projectCount === 0 ? `
+                    <div class="no-projects-warning">
+                        <p>⚠️ No projects found. Settings will be applied to future projects.</p>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="template-modal-footer">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('inherit-settings-modal').remove()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="propagateRowSettings(${rowIndex})">Apply Settings</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Propagate row settings to projects
+window.propagateRowSettings = function(rowIndex) {
+    const modal = document.getElementById('inherit-settings-modal');
+    const propagateExisting = modal.querySelector('#propagate-existing').checked;
+    const propagateFuture = modal.querySelector('#propagate-future').checked;
+    const overwriteExisting = modal.querySelector('#overwrite-existing').checked;
+    
+    const sourceConfig = getRowActionConfig(rowIndex);
+    let appliedCount = 0;
+    
+    if (propagateExisting) {
+        Object.keys(state.projectsData).forEach(projectId => {
+            // Apply settings to each project
+            if (!state.projectsData[projectId].actionConfigs) {
+                state.projectsData[projectId].actionConfigs = {};
+            }
+            
+            if (overwriteExisting || !state.projectsData[projectId].actionConfigs[rowIndex]) {
+                state.projectsData[projectId].actionConfigs[rowIndex] = { ...sourceConfig };
+                appliedCount++;
+            }
+        });
+    }
+    
+    if (propagateFuture) {
+        // Set as default for future projects
+        saveRowActionConfig(rowIndex, '_isDefaultForNewProjects', true);
+    }
+    
+    saveState();
+    showNotification(`Settings applied to ${appliedCount} projects${propagateFuture ? ' and set as default for future projects' : ''}`, 'success');
+    modal.remove();
+};
+
+// Propagate row settings from config dropdown (simplified version)
+function propagateRowSettingsFromConfig(rowIndex) {
+    const sourceConfig = getRowActionConfig(rowIndex);
+    let appliedCount = 0;
+    
+    // Apply to all existing projects
+    Object.keys(state.projectsData).forEach(projectId => {
+        // Apply settings to each project
+        if (!state.projectsData[projectId].actionConfigs) {
+            state.projectsData[projectId].actionConfigs = {};
+        }
+        
+        // Always apply/overwrite the configuration
+        state.projectsData[projectId].actionConfigs[rowIndex] = { ...sourceConfig };
+        appliedCount++;
+    });
+    
+    // Set as default for future projects
+    saveRowActionConfig(rowIndex, '_isDefaultForNewProjects', true);
+    
+    saveState();
+    showNotification(`Settings applied to ${appliedCount} projects and set as default for future projects`, 'success');
 }
 
 // Extract positioning logic into reusable function
@@ -427,8 +941,18 @@ function handleEmailAction(projectId, rowIndex, actionType) {
         return;
     }
     
-    // Show context-aware email modal
-    showContextAwareEmailModal(projectId, rowIndex, actionType, action);
+    // Check if there's a predefined template for this action
+    const mainConfig = getRowActionConfig(rowIndex);
+    const projectConfig = getProjectRowActionConfig(projectId, rowIndex);
+    const predefinedTemplate = projectConfig.defaultTemplate || mainConfig.defaultTemplate;
+    
+    if (predefinedTemplate) {
+        // Use predefined template directly
+        showEmailPreviewModal(projectId, rowIndex, actionType, action, predefinedTemplate);
+    } else {
+        // Show context-aware email modal for template selection
+        showContextAwareEmailModal(projectId, rowIndex, actionType, action);
+    }
 }
 
 // Show context-aware email modal
@@ -443,6 +967,7 @@ function showContextAwareEmailModal(projectId, rowIndex, actionType, action) {
     const modal = document.createElement('div');
     modal.id = 'context-email-modal';
     modal.className = 'template-modal';
+    modal.setAttribute('data-action-type', actionType);
     
     // Get template suggestions
     const suggestedTemplates = getTemplateSuggestions(actionType, projectId);
@@ -477,7 +1002,9 @@ function showContextAwareEmailModal(projectId, rowIndex, actionType, action) {
                 </div>
                 
                 <div class="template-selection">
-                    <h4>📝 Template Selection</h4>
+                    <h4>📝 Select Template</h4>
+                    <p>Choose a template to use for this email action:</p>
+                    
                     <div class="template-selection-methods">
                         <div class="selection-method ${defaultTemplate ? 'active' : ''}">
                             <div class="method-header">
@@ -491,6 +1018,9 @@ function showContextAwareEmailModal(projectId, rowIndex, actionType, action) {
                                             <div class="template-option ${index === 0 ? 'selected' : ''}" data-template-id="${template.id}">
                                                 <div class="template-name">${template.name}</div>
                                                 <div class="template-subject">${template.subject}</div>
+                                                <div class="template-tags">
+                                                    ${template.tags ? template.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+                                                </div>
                                             </div>
                                         `).join('')}
                                     </div>
@@ -498,6 +1028,9 @@ function showContextAwareEmailModal(projectId, rowIndex, actionType, action) {
                                     <div class="no-suggestions">
                                         <p>No templates found for this action type.</p>
                                         <p>Try browsing all templates or create a new one.</p>
+                                        <button class="create-action-template-btn" onclick="createActionSpecificTemplate('${actionType}')">
+                                            ✨ Create ${action.label} Template
+                                        </button>
                                     </div>
                                 `}
                             </div>
@@ -514,6 +1047,9 @@ function showContextAwareEmailModal(projectId, rowIndex, actionType, action) {
                                         <div class="template-option" data-template-id="${template.id}">
                                             <div class="template-name">${template.name}</div>
                                             <div class="template-subject">${template.subject}</div>
+                                            <div class="template-tags">
+                                                ${template.tags ? template.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+                                            </div>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -521,29 +1057,10 @@ function showContextAwareEmailModal(projectId, rowIndex, actionType, action) {
                         </div>
                     </div>
                 </div>
-                
-                <div class="template-preview">
-                    <h4>👀 Preview</h4>
-                    <div class="preview-content">
-                        <div class="preview-field">
-                            <strong>To:</strong>
-                            <div class="preview-to" id="context-preview-to">(Select a template to preview)</div>
-                        </div>
-                        <div class="preview-field">
-                            <strong>Subject:</strong>
-                            <div class="preview-subject" id="context-preview-subject">(Select a template to preview)</div>
-                        </div>
-                        <div class="preview-field">
-                            <strong>Body:</strong>
-                            <div class="preview-body" id="context-preview-body">(Select a template to preview)</div>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <div class="template-modal-footer">
                 <button type="button" class="btn-secondary" onclick="document.getElementById('context-email-modal').remove()">Cancel</button>
-                <button type="button" class="btn-primary" id="send-context-email-btn" disabled>Send Email</button>
             </div>
         </div>
     `;
@@ -577,12 +1094,6 @@ function initializeContextEmailModal(projectId, rowIndex, actionType) {
             modal.querySelectorAll('.template-option').forEach(option => {
                 option.classList.remove('selected');
             });
-            
-            // Disable send button
-            modal.querySelector('#send-context-email-btn').disabled = true;
-            
-            // Clear preview
-            clearContextPreview();
         });
     });
     
@@ -597,15 +1108,10 @@ function initializeContextEmailModal(projectId, rowIndex, actionType) {
             // Select current template
             option.classList.add('selected');
             
-            // Update preview
+            // Get template and show preview modal
             const templateId = option.getAttribute('data-template-id');
             selectContextTemplate(templateId, projectId, rowIndex);
         });
-    });
-    
-    // Send button
-    modal.querySelector('#send-context-email-btn').addEventListener('click', () => {
-        handleContextEmailSend(projectId, rowIndex, actionType);
     });
     
     // Close modal when clicking outside
@@ -621,38 +1127,37 @@ function initializeContextEmailModal(projectId, rowIndex, actionType) {
 // Get template suggestions for action type
 function getTemplateSuggestions(actionType, projectId) {
     const action = EMAIL_ACTIONS[actionType];
-    if (!action || !action.suggestedTags) return [];
+    if (!action) return [];
     
-    // Filter templates by suggested tags
-    const suggestions = state.emailTemplates.filter(template => {
-        if (!template.tags) return false;
-        
-        // Check if template has any of the suggested tags
-        return action.suggestedTags.some(tag => 
-            template.tags.includes(tag) || 
-            template.name.toLowerCase().includes(tag.toLowerCase()) ||
-            template.subject.toLowerCase().includes(tag.toLowerCase())
-        );
-    });
+    // Import the quality scoring function from email-templates.js
+    const getTemplateQualityScore = window.getTemplateQualityScore || function(template, actionType) {
+        // Fallback scoring if not available
+        let score = 0;
+        if (template.tags && action.suggestedTags) {
+            const matchingTags = action.suggestedTags.filter(tag => 
+                template.tags.includes(tag) || 
+                template.name.toLowerCase().includes(tag.toLowerCase()) ||
+                template.subject.toLowerCase().includes(tag.toLowerCase())
+            );
+            score = matchingTags.length * 10;
+        }
+        return score;
+    };
     
-    // Sort by relevance (templates with more matching tags first)
-    suggestions.sort((a, b) => {
-        const aMatches = action.suggestedTags.filter(tag => 
-            a.tags?.includes(tag) || 
-            a.name.toLowerCase().includes(tag.toLowerCase()) ||
-            a.subject.toLowerCase().includes(tag.toLowerCase())
-        ).length;
-        
-        const bMatches = action.suggestedTags.filter(tag => 
-            b.tags?.includes(tag) || 
-            b.name.toLowerCase().includes(tag.toLowerCase()) ||
-            b.subject.toLowerCase().includes(tag.toLowerCase())
-        ).length;
-        
-        return bMatches - aMatches;
-    });
+    // Score all templates for this action
+    const scoredTemplates = state.emailTemplates.map(template => ({
+        ...template,
+        score: getTemplateQualityScore(template, actionType)
+    }));
     
-    return suggestions;
+    // Filter templates with score > 0 (some relevance)
+    const relevantTemplates = scoredTemplates.filter(template => template.score > 0);
+    
+    // Sort by score (highest first)
+    relevantTemplates.sort((a, b) => b.score - a.score);
+    
+    // Return top 5 suggestions
+    return relevantTemplates.slice(0, 5);
 }
 
 // Select template and update preview
@@ -660,70 +1165,204 @@ function selectContextTemplate(templateId, projectId, rowIndex) {
     const template = state.emailTemplates.find(t => t.id === templateId);
     if (!template) return;
     
-    // Preview template with project context
-    const previewedTemplate = previewTemplate(template, projectId, rowIndex);
-    
-    // Update preview
-    document.getElementById('context-preview-to').textContent = previewedTemplate.to;
-    document.getElementById('context-preview-subject').textContent = previewedTemplate.subject;
-    document.getElementById('context-preview-body').innerHTML = previewedTemplate.body.replace(/\n/g, '<br>');
-    
-    // Enable send button
-    document.getElementById('send-context-email-btn').disabled = false;
-    
-    // Store selected template
+    // Get action type from modal
     const modal = document.getElementById('context-email-modal');
-    modal.setAttribute('data-selected-template', templateId);
+    const actionType = modal.getAttribute('data-action-type');
+    const action = EMAIL_ACTIONS[actionType];
+    
+    // Close the context modal
+    modal.remove();
+    
+    // Show the email preview modal
+    showEmailPreviewModal(projectId, rowIndex, actionType, action, template);
 }
 
-// Clear context preview
+// Clear context preview (legacy - no longer needed)
 function clearContextPreview() {
-    document.getElementById('context-preview-to').textContent = '(Select a template to preview)';
-    document.getElementById('context-preview-subject').textContent = '(Select a template to preview)';
-    document.getElementById('context-preview-body').textContent = '(Select a template to preview)';
+    // This function is deprecated as we use the preview modal
+    console.log('Clear context preview called - no longer needed');
 }
 
 // ==================== EMAIL SENDING ==================== //
 
-// Handle context email send
+// Handle context email send (legacy - now handled by preview modal)
 function handleContextEmailSend(projectId, rowIndex, actionType) {
-    const modal = document.getElementById('context-email-modal');
-    const selectedTemplateId = modal.getAttribute('data-selected-template');
-    
-    if (!selectedTemplateId) {
-        showNotification('Please select a template', 'warning');
-        return;
+    // This function is now deprecated as we use the preview modal
+    console.log('Context email send called - should use preview modal instead');
+}
+
+// Show email preview modal with template resolved
+function showEmailPreviewModal(projectId, rowIndex, actionType, action, template) {
+    // Remove any existing modal
+    const existingModal = document.getElementById('email-preview-modal');
+    if (existingModal) {
+        existingModal.remove();
     }
     
-    const template = state.emailTemplates.find(t => t.id === selectedTemplateId);
+    // Get project and task context
+    const project = state.projectsData[projectId];
+    const task = project.content[rowIndex];
+    const taskName = getTaskName(task, project.headers);
+    
+    // Resolve template with context
+    const resolvedTemplate = previewTemplate(template, projectId, rowIndex);
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'email-preview-modal';
+    modal.className = 'template-modal';
+    
+    modal.innerHTML = `
+        <div class="template-modal-content email-preview-modal-content">
+            <div class="template-modal-header">
+                <h3>📧 ${action.icon} ${action.label}</h3>
+                <button class="template-modal-close" onclick="document.getElementById('email-preview-modal').remove()">&times;</button>
+            </div>
+            
+            <div class="email-preview-body">
+                <div class="email-preview-header">
+                    <div class="email-preview-info">
+                        <div class="preview-item">
+                            <strong>Project:</strong> ${project.name}
+                        </div>
+                        <div class="preview-item">
+                            <strong>Task:</strong> ${taskName}
+                        </div>
+                        <div class="preview-item">
+                            <strong>Template:</strong> ${template.name}
+                        </div>
+                        <div class="preview-item">
+                            <strong>Action:</strong> ${action.description}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="email-preview-content">
+                    <div class="email-field">
+                        <label>To:</label>
+                        <div class="email-recipients">
+                            ${resolvedTemplate.to ? (() => {
+                                // Handle both string and array formats
+                                if (Array.isArray(resolvedTemplate.to)) {
+                                    return resolvedTemplate.to.map(recipient => 
+                                        `<div class="recipient-item">
+                                            <span class="recipient-name">${recipient.name || recipient.email}</span>
+                                            <span class="recipient-email">${recipient.email}</span>
+                                        </div>`
+                                    ).join('');
+                                } else {
+                                    // String format - split by comma and display each email
+                                    const emails = resolvedTemplate.to.split(',').map(email => email.trim()).filter(email => email);
+                                    if (emails.length > 0) {
+                                        return emails.map(email => 
+                                            `<div class="recipient-item">
+                                                <span class="recipient-email">${email}</span>
+                                            </div>`
+                                        ).join('');
+                                    } else {
+                                        return '<span class="no-recipients">No recipients specified</span>';
+                                    }
+                                }
+                            })() : '<span class="no-recipients">No recipients specified</span>'}
+                        </div>
+                    </div>
+                    
+                    <div class="email-field">
+                        <label>Subject:</label>
+                        <div class="email-subject">${resolvedTemplate.subject || 'No subject'}</div>
+                    </div>
+                    
+                    <div class="email-field">
+                        <label>Body:</label>
+                        <div class="email-body">${resolvedTemplate.body || 'No content'}</div>
+                    </div>
+                </div>
+                
+                <div class="email-preview-footer">
+                    <div class="email-service-info">
+                        <p><strong>📧 Email Service:</strong> This email would be sent via your default email client (Outlook/Gmail)</p>
+                        <p><strong>🔗 Integration:</strong> Click "Send Email" to open your email client with this content pre-filled</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="template-modal-footer">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('email-preview-modal').remove()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="sendEmailViaClient('${projectId}', ${rowIndex}, '${actionType}')">
+                    📧 Send Email
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Send email via client (simulates opening email client)
+window.sendEmailViaClient = function(projectId, rowIndex, actionType) {
+    const action = EMAIL_ACTIONS[actionType];
+    const project = state.projectsData[projectId];
+    const task = project.content[rowIndex];
+    const taskName = getTaskName(task, project.headers);
+    
+    // Get the template
+    const mainConfig = getRowActionConfig(rowIndex);
+    const projectConfig = getProjectRowActionConfig(projectId, rowIndex);
+    const template = projectConfig.defaultTemplate || mainConfig.defaultTemplate;
+    
     if (!template) {
-        showNotification('Template not found', 'error');
+        showNotification('No template found', 'error');
         return;
     }
     
-    // Preview template with context
-    const previewedTemplate = previewTemplate(template, projectId, rowIndex);
+    // Resolve template with context
+    const resolvedTemplate = previewTemplate(template, projectId, rowIndex);
     
-    // Log the email action (in real app, this would send the email)
-    console.log('Email Action:', {
+    // Create mailto link
+    let recipients = '';
+    if (resolvedTemplate.to) {
+        if (Array.isArray(resolvedTemplate.to)) {
+            recipients = resolvedTemplate.to.map(r => r.email).join(',');
+        } else {
+            // String format - use as is
+            recipients = resolvedTemplate.to;
+        }
+    }
+    const subject = encodeURIComponent(resolvedTemplate.subject || '');
+    const body = encodeURIComponent(resolvedTemplate.body || '');
+    
+    const mailtoLink = `mailto:${recipients}?subject=${subject}&body=${body}`;
+    
+    // Open email client
+    window.open(mailtoLink, '_blank');
+    
+    // Show success notification
+    showNotification(`${action.icon} Email client opened with ${action.label} content!`, 'success');
+    
+    // Close modal
+    const modal = document.getElementById('email-preview-modal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    // Log the action
+    console.log('📧 Email Action Executed:', {
         projectId,
         rowIndex,
         actionType,
         template: template.name,
-        resolvedTemplate: previewedTemplate
+        recipients: resolvedTemplate.to,
+        subject: resolvedTemplate.subject,
+        mailtoLink: mailtoLink
     });
-    
-    // Show success notification
-    const action = EMAIL_ACTIONS[actionType];
-    showNotification(`${action.icon} ${action.label} email sent successfully!`, 'success');
-    
-    // Close modal
-    modal.remove();
-    
-    // TODO: In real implementation, integrate with actual email service
-    // For now, we'll just show a detailed log
-    showEmailSendDetails(previewedTemplate, actionType);
-}
+};
 
 // Show email send details (for demonstration)
 function showEmailSendDetails(emailData, actionType) {
@@ -866,6 +1505,325 @@ function addProjectActionsCSS() {
             font-size: 12px;
             color: #666;
             line-height: 1.3;
+        }
+        
+        /* Template Modal */
+        .template-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .template-modal-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+        
+        .template-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+        
+        .template-modal-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .template-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        .template-modal-close:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+        
+        .template-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+        
+        .template-selector-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .current-template-info {
+            margin-bottom: 25px;
+        }
+        
+        .current-template-info h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .current-template-display {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .template-preview-card {
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: white;
+            transition: all 0.2s;
+        }
+        
+        .template-preview-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+        }
+        
+        .template-preview-card.selected-template {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+        
+        .template-preview-card.current-default {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        
+        .template-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .template-subject {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .template-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        
+        .template-tags .tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .select-template-btn,
+        .remove-default-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .select-template-btn:hover,
+        .remove-default-btn:hover {
+            background: #0056b3;
+        }
+        
+        .remove-default-btn {
+            background: #dc3545;
+        }
+        
+        .remove-default-btn:hover {
+            background: #c82333;
+        }
+        
+        .template-selection-list h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .templates-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .no-template-selected {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .no-templates {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        /* Email Preview Modal */
+        .email-preview-modal-content {
+            max-width: 700px;
+            max-height: 90vh;
+            width: 90vw;
+        }
+        
+        .email-preview-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .email-preview-header {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .email-preview-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .preview-item {
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .email-preview-content {
+            margin-bottom: 25px;
+        }
+        
+        .email-field {
+            margin-bottom: 20px;
+        }
+        
+        .email-field label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .email-recipients {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            min-height: 20px;
+        }
+        
+        .recipient-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .recipient-item:last-child {
+            border-bottom: none;
+        }
+        
+        .recipient-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .recipient-email {
+            color: #007bff;
+            font-size: 13px;
+        }
+        
+        .no-recipients {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .email-subject {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .email-body {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        .email-preview-footer {
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .email-service-info p {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #1976d2;
+        }
+        
+        .email-service-info p:last-child {
+            margin-bottom: 0;
         }
         
         /* Context Email Modal */
@@ -1170,6 +2128,343 @@ function addProjectActionsCSS() {
             transform: translateY(-50%);
             opacity: 0.7;
         }
+        
+        /* Template Selector Modal Styles */
+        .template-selector-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .current-template-info {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .current-template-info h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .template-preview-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        .template-preview-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+        }
+        
+        .template-preview-card.current-default {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+        
+        .template-preview-card.selected-template {
+            border-color: #28a745;
+            background: #e8f5e8;
+        }
+        
+        .template-preview-card .template-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .template-preview-card .template-subject {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .template-tags {
+            margin-bottom: 10px;
+        }
+        
+        .template-tags .tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-right: 5px;
+            display: inline-block;
+        }
+        
+        .select-template-btn,
+        .remove-default-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        
+        .select-template-btn:hover {
+            background: #0056b3;
+        }
+        
+        .remove-default-btn {
+            background: #dc3545;
+        }
+        
+        .remove-default-btn:hover {
+            background: #c82333;
+        }
+        
+        .no-template-selected,
+        .no-templates {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        
+        .no-template-selected p,
+        .no-templates p {
+            margin: 0 0 5px 0;
+        }
+        
+        /* Action Rules Modal Styles */
+        .action-rules-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .rules-explanation {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .rules-explanation h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        
+        .rules-explanation p {
+            margin: 0;
+            color: #1565c0;
+        }
+        
+        .rule-category {
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .rule-category h5 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .rule-item {
+            margin-bottom: 10px;
+        }
+        
+        .rule-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .rule-item label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .rule-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        
+        /* Inherit Settings Modal Styles */
+        .inherit-settings-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .inherit-explanation {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .inherit-explanation h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        
+        .inherit-explanation p {
+            margin: 0;
+            color: #856404;
+        }
+        
+        .settings-preview {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .settings-preview h5 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .settings-preview ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .settings-preview li {
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .inheritance-options {
+            margin-bottom: 20px;
+        }
+        
+        .inheritance-options h5 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        
+        .inheritance-options label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .inheritance-options input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        
+        .no-projects-warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .no-projects-warning p {
+            margin: 0;
+            color: #721c24;
+        }
+        
+        /* Configuration Modal Footer */
+        .config-modal-footer {
+            border-top: 1px solid #e9ecef;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .config-modal-footer .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .config-modal-footer .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .config-modal-footer .btn-primary {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .config-modal-footer .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        /* No Actions Message */
+        .no-actions-message {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 8px;
+        }
+        
+        .no-actions-message p {
+            margin: 5px 0;
+        }
+        
+        .no-actions-message p:first-child {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .no-actions-message p:last-child {
+            font-size: 13px;
+            color: #868e96;
+        }
+        
+        /* Action-Specific Template Creation */
+        .create-action-template-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 15px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .create-action-template-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25);
+        }
     `;
     
     document.head.appendChild(style);
@@ -1306,4 +2601,621 @@ window.testMainTemplateActions = function() {
         configButtonsFound: mainTemplateButtons.length,
         regularButtonsFound: document.querySelectorAll('.actions-btn:not(.main-template-actions-btn)').length
     };
-}; 
+};
+
+// Test function for configuration persistence
+window.testConfigPersistence = function() {
+    console.log('=== Testing Configuration Persistence ===');
+    
+    // Test saving and loading row configuration
+    const testRowIndex = 0;
+    const testConfig = {
+        emailEnabled: false,
+        defaultTemplate: state.emailTemplates[0] || null,
+        actionRules: {
+            onStatusComplete: true,
+            onDeadlineApproach: true
+        },
+        action_schedule_meeting: false,
+        action_thank_team: true
+    };
+    
+    console.log('Saving test configuration for row', testRowIndex);
+    Object.entries(testConfig).forEach(([key, value]) => {
+        saveRowActionConfig(testRowIndex, key, value);
+    });
+    
+    // Verify saved configuration
+    const retrievedConfig = getRowActionConfig(testRowIndex);
+    console.log('Retrieved configuration:', retrievedConfig);
+    
+    // Test with default configuration
+    const defaultConfig = getRowActionConfig(999); // Non-existent row
+    console.log('Default configuration for new row:', defaultConfig);
+    
+    // Show current state
+    console.log('All main template actions:', state.mainTemplateActions);
+    
+    return {
+        testConfig,
+        retrievedConfig,
+        defaultConfig,
+        allConfigs: state.mainTemplateActions
+    };
+};
+
+// Test function for full configuration workflow
+window.testFullConfigWorkflow = function() {
+    console.log('=== Testing Full Configuration Workflow ===');
+    
+    if (!document.querySelector('[data-tab="main-template"]')?.classList.contains('active')) {
+        console.log('❌ Switch to Main Template tab first');
+        return { error: 'Not on main template tab' };
+    }
+    
+    const results = {};
+    
+    // Test 1: Check initial state
+    results.initialState = {
+        mainTemplateActions: Object.keys(state.mainTemplateActions).length,
+        emailTemplates: state.emailTemplates.length,
+        projects: Object.keys(state.projectsData).length
+    };
+    
+    // Test 2: Configuration for first row
+    const testRowIndex = 0;
+    const currentConfig = getRowActionConfig(testRowIndex);
+    results.row0Config = currentConfig;
+    
+    // Test 3: Save some test configurations
+    saveRowActionConfig(testRowIndex, 'emailEnabled', true);
+    saveRowActionConfig(testRowIndex, 'action_schedule_meeting', true);
+    saveRowActionConfig(testRowIndex, 'action_issue_alert', false);
+    
+    if (state.emailTemplates.length > 0) {
+        saveRowActionConfig(testRowIndex, 'defaultTemplate', state.emailTemplates[0]);
+    }
+    
+    const updatedConfig = getRowActionConfig(testRowIndex);
+    results.updatedConfig = updatedConfig;
+    
+    // Test 4: Check persistence
+    const savedData = localStorage.getItem('dashboardState');
+    const parsed = JSON.parse(savedData);
+    results.persistedData = parsed.mainTemplateActions;
+    
+    console.log('Workflow test results:', results);
+    
+    return results;
+};
+
+// Debug function to check for stuck modals and clean them up
+window.checkAndCleanStuckModals = function() {
+    console.log('=== Checking for Stuck Modals ===');
+    
+    const modalSelectors = [
+        '.template-modal',
+        '.actions-dropdown',
+        '#context-email-modal',
+        '#template-selector-modal',
+        '#inherit-settings-modal',
+        '.main-template-config'
+    ];
+    
+    let foundModals = [];
+    
+    modalSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            elements.forEach((element, index) => {
+                const rect = element.getBoundingClientRect();
+                const isVisible = window.getComputedStyle(element).display !== 'none' && 
+                                 window.getComputedStyle(element).visibility !== 'hidden';
+                
+                foundModals.push({
+                    selector: selector,
+                    index: index,
+                    id: element.id,
+                    className: element.className,
+                    isVisible: isVisible,
+                    position: {
+                        top: rect.top,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height
+                    },
+                    display: window.getComputedStyle(element).display,
+                    visibility: window.getComputedStyle(element).visibility,
+                    zIndex: window.getComputedStyle(element).zIndex
+                });
+            });
+        }
+    });
+    
+    console.log('Found modals:', foundModals);
+    
+    // Clean up any stuck modals
+    const stuckModals = foundModals.filter(modal => 
+        modal.isVisible && 
+        (modal.position.top < 0 || modal.position.left < 0 || 
+         modal.zIndex === 'auto' || modal.zIndex < 1000)
+    );
+    
+    if (stuckModals.length > 0) {
+        console.log('Found stuck modals:', stuckModals);
+        
+        stuckModals.forEach(modalInfo => {
+            const elements = document.querySelectorAll(modalInfo.selector);
+            if (elements[modalInfo.index]) {
+                console.log(`Cleaning up stuck modal: ${modalInfo.selector}`);
+                elements[modalInfo.index].remove();
+            }
+        });
+        
+        console.log('Stuck modals cleaned up');
+        return { cleaned: stuckModals.length, modals: stuckModals };
+    } else {
+        console.log('No stuck modals found');
+        return { cleaned: 0, allModals: foundModals };
+    }
+};
+
+// Manual cleanup function for users
+window.fixStuckModals = function() {
+    console.log('=== Manual Modal Cleanup ===');
+    cleanupStuckModals();
+    console.log('All modals cleaned up. The interface should now be clear.');
+    showNotification('Modal cleanup complete', 'success');
+};
+
+// Clean up any stuck modals (simpler version for initialization)
+function cleanupStuckModals() {
+    const modalSelectors = [
+        '.template-modal',
+        '.actions-dropdown',
+        '#context-email-modal',
+        '#template-selector-modal',
+        '#inherit-settings-modal',
+        '.main-template-config'
+    ];
+    
+    let cleanedCount = 0;
+    
+    modalSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            element.remove();
+            cleanedCount++;
+        });
+    });
+    
+    if (cleanedCount > 0) {
+        console.log(`Cleaned up ${cleanedCount} stuck modal elements`);
+    }
+}
+
+// Make cleanup function available globally
+window.cleanupStuckModals = cleanupStuckModals; 
+
+// Test function to verify email action functionality
+window.testEmailActions = function() {
+    console.log('=== Testing Email Action System ===');
+    
+    // Test 1: Check if we have projects
+    const projectCount = Object.keys(state.projectsData).length;
+    if (projectCount === 0) {
+        console.log('❌ No projects found to test with');
+        return;
+    }
+    
+    const firstProjectId = Object.keys(state.projectsData)[0];
+    const project = state.projectsData[firstProjectId];
+    console.log(`✅ Testing with project: ${project.name}`);
+    
+    // Test 2: Check if we have email templates
+    if (state.emailTemplates.length === 0) {
+        console.log('❌ No email templates found. Create some templates first.');
+        return;
+    }
+    
+    console.log(`✅ Found ${state.emailTemplates.length} email templates`);
+    
+    // Test 3: Test predefined template functionality
+    console.log('Testing predefined template system...');
+    const testRowIndex = 0;
+    const testActionType = 'schedule-meeting';
+    
+    // Set a default template for testing
+    const testTemplate = state.emailTemplates[0];
+    saveRowActionConfig(testRowIndex, 'defaultTemplate', testTemplate);
+    console.log(`✅ Set "${testTemplate.name}" as default template for row ${testRowIndex + 1}`);
+    
+    // Test 4: Test the email action
+    console.log('Testing email action execution...');
+    handleEmailAction(firstProjectId, testRowIndex, testActionType);
+    
+    console.log('✅ Email action test completed. Check for modal popup.');
+};
+
+// Test function to verify inheritance functionality
+window.testActionInheritance = function() {
+    console.log('=== Testing Action Inheritance System ===');
+    
+    const results = {
+        mainTemplateTest: false,
+        configurationTest: false,
+        propagationTest: false,
+        projectFilterTest: false,
+        errors: []
+    };
+    
+    // Test 1: Check if we can access main template
+    const mainTemplateTab = document.querySelector('[data-tab="main-template"]');
+    if (!mainTemplateTab) {
+        results.errors.push('Main template tab not found');
+        return results;
+    }
+    
+    console.log('✅ Main template tab found');
+    results.mainTemplateTest = true;
+    
+    // Test 2: Check if we have projects to test with
+    const projectCount = Object.keys(state.projectsData).length;
+    console.log(`Found ${projectCount} projects`);
+    
+    if (projectCount === 0) {
+        results.errors.push('No projects found to test inheritance');
+        return results;
+    }
+    
+    const firstProjectId = Object.keys(state.projectsData)[0];
+    console.log(`Testing with project: ${firstProjectId}`);
+    
+    // Test 3: Test configuration retrieval
+    const testRowIndex = 0;
+    const mainConfig = getRowActionConfig(testRowIndex);
+    const projectConfig = getProjectRowActionConfig(firstProjectId, testRowIndex);
+    
+    console.log('Main template config:', mainConfig);
+    console.log('Project config:', projectConfig);
+    
+    results.configurationTest = true;
+    
+    // Test 4: Test selective action disabling
+    console.log('Testing selective action disabling...');
+    
+    // Temporarily disable some actions in main template
+    const originalScheduleMeetingState = mainConfig.action_schedule_meeting;
+    const originalThankTeamState = mainConfig.action_thank_team;
+    
+    // Disable schedule-meeting and thank-team actions
+    saveRowActionConfig(testRowIndex, 'action_schedule-meeting', false);
+    saveRowActionConfig(testRowIndex, 'action_thank-team', false);
+    
+    // Test 5: Propagate settings
+    console.log('Propagating settings to projects...');
+    propagateRowSettingsFromConfig(testRowIndex);
+    
+    // Test 6: Check if project received the configuration
+    const updatedProjectConfig = getProjectRowActionConfig(firstProjectId, testRowIndex);
+    console.log('Updated project config:', updatedProjectConfig);
+    
+    const scheduleMeetingDisabled = updatedProjectConfig.action_schedule_meeting === false;
+    const thankTeamDisabled = updatedProjectConfig.action_thank_team === false;
+    
+    if (scheduleMeetingDisabled && thankTeamDisabled) {
+        console.log('✅ Settings successfully propagated to project');
+        results.propagationTest = true;
+    } else {
+        results.errors.push('Settings not properly propagated to project');
+    }
+    
+    // Test 7: Check filtered actions in project dropdown
+    console.log('Testing action filtering in project dropdown...');
+    
+    // Count enabled actions
+    const enabledActions = Object.entries(EMAIL_ACTIONS).filter(([actionType, action]) => {
+        return updatedProjectConfig[`action_${actionType}`] !== false;
+    });
+    
+    console.log(`Project should show ${enabledActions.length} enabled actions:`);
+    enabledActions.forEach(([actionType, action]) => {
+        console.log(`  - ${action.label} (${actionType})`);
+    });
+    
+    const disabledActions = Object.entries(EMAIL_ACTIONS).filter(([actionType, action]) => {
+        return updatedProjectConfig[`action_${actionType}`] === false;
+    });
+    
+    console.log(`Project should hide ${disabledActions.length} disabled actions:`);
+    disabledActions.forEach(([actionType, action]) => {
+        console.log(`  - ${action.label} (${actionType})`);
+    });
+    
+    if (enabledActions.length === Object.keys(EMAIL_ACTIONS).length - 2) {
+        console.log('✅ Action filtering working correctly');
+        results.projectFilterTest = true;
+    } else {
+        results.errors.push('Action filtering not working correctly');
+    }
+    
+    // Test 8: Restore original configuration
+    console.log('Restoring original configuration...');
+    saveRowActionConfig(testRowIndex, 'action_schedule-meeting', originalScheduleMeetingState);
+    saveRowActionConfig(testRowIndex, 'action_thank-team', originalThankTeamState);
+    propagateRowSettingsFromConfig(testRowIndex);
+    
+    // Summary
+    console.log('\n=== Test Results ===');
+    console.log(`Main Template Access: ${results.mainTemplateTest ? '✅' : '❌'}`);
+    console.log(`Configuration Retrieval: ${results.configurationTest ? '✅' : '❌'}`);
+    console.log(`Settings Propagation: ${results.propagationTest ? '✅' : '❌'}`);
+    console.log(`Action Filtering: ${results.projectFilterTest ? '✅' : '❌'}`);
+    
+    if (results.errors.length > 0) {
+        console.log('\n❌ Errors encountered:');
+        results.errors.forEach(error => console.log(`  - ${error}`));
+    } else {
+        console.log('\n🎉 All tests passed! Action inheritance is working correctly.');
+    }
+    
+    return results;
+};
+
+// ==================== ACTION-SPECIFIC TEMPLATE CREATION ==================== //
+
+// Create an action-specific template with pre-filled content
+window.createActionSpecificTemplate = function(actionType) {
+    const action = EMAIL_ACTIONS[actionType];
+    if (!action) return;
+    
+    // Generate action-specific template content
+    const templateContent = generateActionTemplateContent(actionType, action);
+    
+    // Get appropriate category for this action
+    const category = getActionCategory(actionType);
+    
+    // Create the template with pre-filled content
+    const template = {
+        id: `template-${actionType}-${Date.now()}`,
+        name: templateContent.name,
+        category: category,
+        to: templateContent.to,
+        subject: templateContent.subject,
+        body: templateContent.body,
+        tags: action.suggestedTags || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    
+    // Add to templates
+    state.emailTemplates.push(template);
+    saveState();
+    
+    // Show success message
+    showNotification(`${action.label} template created! You can edit it in the Email Templates section.`, 'success');
+    
+    // Close the context modal
+    const modal = document.getElementById('context-email-modal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    // Refresh the action modal with new template
+    setTimeout(() => {
+        const actionBtn = document.querySelector(`[data-action-type="${actionType}"]`);
+        if (actionBtn) {
+            actionBtn.click();
+        }
+    }, 500);
+};
+
+// Generate action-specific template content
+function generateActionTemplateContent(actionType, action) {
+    const templates = {
+        'schedule-meeting': {
+            name: 'Schedule Meeting - Project Discussion',
+            to: '{{Client Contact}}, {{Project Manager}}',
+            subject: 'Meeting Request - {{ProjectName}}',
+            body: `Dear Team,
+
+I hope this message finds you well. I would like to schedule a meeting to discuss the current status and next steps for {{ProjectName}}.
+
+📋 Meeting Purpose:
+- Review current progress ({{ProjectCompletion}} complete)
+- Discuss upcoming milestones
+- Address any questions or concerns
+
+📅 Current Project Status:
+- Phase: {{ProjectPhase}}
+- Current Activity: {{CurrentActivity}}
+- Next Milestone: {{NextMilestone}}
+
+Please let me know your availability for the coming week so we can coordinate a suitable time for everyone.
+
+Best regards,
+{{UserName}}`
+        },
+        'thank-team': {
+            name: 'Thank Team - Milestone Achievement',
+            to: '{{Project Manager}}, {{Client Contact}}',
+            subject: 'Thank You - {{ProjectName}} Milestone Completed',
+            body: `Dear Team,
+
+I wanted to take a moment to express my sincere gratitude for the excellent work completed on {{ProjectName}}.
+
+🎉 Achievement:
+- Successfully completed: {{CurrentActivity}}
+- Project is now {{ProjectCompletion}} complete
+- Current phase: {{ProjectPhase}}
+
+Your dedication and professionalism have been instrumental in reaching this milestone. The quality of work and attention to detail have exceeded expectations.
+
+Thank you for your continued commitment to excellence.
+
+Best regards,
+{{UserName}}`
+        },
+        'status-update': {
+            name: 'Status Update - Project Progress',
+            to: '{{Client Contact}}',
+            subject: '{{ProjectName}} - Status Update',
+            body: `Hello,
+
+Here's the current status update for {{ProjectName}}:
+
+📊 Progress Overview:
+- Overall Completion: {{ProjectCompletion}}
+- Current Phase: {{ProjectPhase}}
+- Active Task: {{CurrentActivity}}
+- Task Status: {{TaskStatus}}
+
+📅 Timeline:
+- Next Milestone: {{NextMilestone}}
+- Expected Completion: {{ExpectedDate}}
+
+💬 Recent Updates:
+{{LatestComment}}
+
+Please feel free to reach out if you have any questions or need additional information.
+
+Best regards,
+{{UserName}}`
+        },
+        'issue-alert': {
+            name: 'Issue Alert - Project Blocker',
+            to: '{{Project Manager}}, {{Client Contact}}',
+            subject: 'URGENT: Issue with {{ProjectName}} - {{TaskName}}',
+            body: `Dear Team,
+
+I need to bring to your attention an urgent issue that has arisen with {{ProjectName}}.
+
+⚠️ Issue Details:
+- Task: {{TaskName}}
+- Current Status: {{TaskStatus}}
+- Project Phase: {{ProjectPhase}}
+
+🔍 Issue Description:
+[Please describe the specific issue, its impact, and any immediate actions taken]
+
+📋 Immediate Actions Required:
+- [Action 1]
+- [Action 2]
+- [Action 3]
+
+This issue may impact our timeline for {{NextMilestone}}. I recommend we schedule a brief call to discuss resolution options.
+
+Please confirm receipt of this message and let me know your availability for a discussion.
+
+Best regards,
+{{UserName}}`
+        },
+        'milestone-notification': {
+            name: 'Milestone Notification - Achievement',
+            to: '{{Client Contact}}, {{Project Manager}}',
+            subject: '🎯 Milestone Achieved - {{ProjectName}}',
+            body: `Dear Team,
+
+I'm pleased to announce that we have successfully reached an important milestone for {{ProjectName}}.
+
+🎯 Milestone Achieved:
+- Milestone: {{NextMilestone}}
+- Completed Activity: {{CurrentActivity}}
+- Overall Progress: {{ProjectCompletion}}
+
+📈 Current Status:
+- Phase: {{ProjectPhase}}
+- Status: {{TaskStatus}}
+- Next Steps: [Briefly outline next steps]
+
+This achievement brings us closer to our project goals and demonstrates the team's dedication to excellence.
+
+Thank you for your continued support and collaboration.
+
+Best regards,
+{{UserName}}`
+        },
+        'follow-up': {
+            name: 'Follow Up - Pending Items',
+            to: '{{Project Manager}}, {{Client Contact}}',
+            subject: 'Follow Up - {{ProjectName}}',
+            body: `Dear Team,
+
+I wanted to follow up on some pending items related to {{ProjectName}}.
+
+📋 Current Status:
+- Project Phase: {{ProjectPhase}}
+- Completion: {{ProjectCompletion}}
+- Current Activity: {{CurrentActivity}}
+
+🔄 Items Requiring Follow-up:
+- [Item 1 - brief description]
+- [Item 2 - brief description]
+- [Item 3 - brief description]
+
+📅 Next Steps:
+- Expected action by: {{ExpectedDate}}
+- Responsible party: {{Responsible}}
+
+Please let me know if you need any additional information or if there are any concerns that need to be addressed.
+
+Looking forward to your response.
+
+Best regards,
+{{UserName}}`
+        },
+        'custom': {
+            name: 'Custom Email Template',
+            to: '{{Client Contact}}',
+            subject: '{{ProjectName}} - [Your Subject Here]',
+            body: `Hello,
+
+[Your message content here]
+
+Project: {{ProjectName}}
+Current Status: {{ProjectCompletion}} complete
+Phase: {{ProjectPhase}}
+
+Best regards,
+{{UserName}}`
+        }
+    };
+    
+    return templates[actionType] || templates['custom'];
+}
+
+// Get appropriate category for action type
+function getActionCategory(actionType) {
+    const actionCategoryMap = {
+        'schedule-meeting': 'meeting-request',
+        'thank-team': 'appreciation',
+        'status-update': 'progress-update',
+        'issue-alert': 'issue-alert',
+        'milestone-notification': 'milestone-complete',
+        'follow-up': 'follow-up',
+        'custom': 'communication'
+    };
+    
+    return actionCategoryMap[actionType] || 'communication';
+}
+
+// Test function to demonstrate the inheritance workflow
+window.testInheritanceWorkflow = function() {
+    console.log('=== Testing Inheritance Workflow ===');
+    console.log('This test demonstrates the complete workflow:');
+    console.log('1. Configure actions in Main Template');
+    console.log('2. Accept changes to propagate to projects');
+    console.log('3. See filtered actions in project dropdowns');
+    console.log('');
+    console.log('Instructions:');
+    console.log('1. Go to Main Template tab');
+    console.log('2. Click the ⚙️ button on any row');
+    console.log('3. Disable some actions (e.g., uncheck "Schedule Meeting")');
+    console.log('4. Click "Accept" to apply changes');
+    console.log('5. Go to a project tab');
+    console.log('6. Click the ⚡ button on corresponding row');
+    console.log('7. Verify disabled actions are not shown');
+    console.log('');
+    console.log('Run testActionInheritance() to verify programmatically.');
+};
+

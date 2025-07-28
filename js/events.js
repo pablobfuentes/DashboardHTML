@@ -858,6 +858,11 @@ function handleProjectDelete(deleteIcon) {
 }
 
 function handleTabSwitch(targetTab, tabSelector, paneSelector) {
+    // Clean up any stuck modals before switching tabs
+    if (window.cleanupStuckModals) {
+        window.cleanupStuckModals();
+    }
+    
     const tabId = targetTab.dataset.tab;
     const targetPane = document.getElementById(tabId);
     
@@ -881,6 +886,13 @@ function handleTabSwitch(targetTab, tabSelector, paneSelector) {
         setTimeout(() => {
             updateProjectCellsVisibility();
         }, 0);
+    }
+    
+    // Re-render main template if switching to it
+    if (tabId === 'main-template') {
+        import('./templates.js').then(module => {
+            module.renderMainTemplateTable();
+        });
     }
 }
 

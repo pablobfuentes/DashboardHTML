@@ -34,14 +34,18 @@ const TEMPLATE_PLACEHOLDERS = {
 
 // Template categories
 const TEMPLATE_CATEGORIES = [
-    { value: 'project-kickoff', label: 'Project Kickoff' },
-    { value: 'progress-update', label: 'Progress Update' },
-    { value: 'milestone-complete', label: 'Milestone Complete' },
-    { value: 'project-closure', label: 'Project Closure' },
-    { value: 'meeting-request', label: 'Meeting Request' },
-    { value: 'status-request', label: 'Status Request' },
-    { value: 'follow-up', label: 'Follow Up' },
-    { value: 'reminder', label: 'Reminder' }
+    { value: 'project-kickoff', label: 'Project Kickoff', actionTypes: ['custom'] },
+    { value: 'progress-update', label: 'Progress Update', actionTypes: ['status-update'] },
+    { value: 'milestone-complete', label: 'Milestone Complete', actionTypes: ['milestone-notification', 'thank-team'] },
+    { value: 'project-closure', label: 'Project Closure', actionTypes: ['thank-team', 'status-update'] },
+    { value: 'meeting-request', label: 'Meeting Request', actionTypes: ['schedule-meeting'] },
+    { value: 'status-request', label: 'Status Request', actionTypes: ['follow-up', 'status-update'] },
+    { value: 'follow-up', label: 'Follow Up', actionTypes: ['follow-up'] },
+    { value: 'reminder', label: 'Reminder', actionTypes: ['follow-up'] },
+    { value: 'issue-alert', label: 'Issue Alert', actionTypes: ['issue-alert'] },
+    { value: 'appreciation', label: 'Appreciation', actionTypes: ['thank-team'] },
+    { value: 'coordination', label: 'Coordination', actionTypes: ['schedule-meeting', 'follow-up'] },
+    { value: 'communication', label: 'Communication', actionTypes: ['custom'] }
 ];
 
 // Selected template state
@@ -1065,6 +1069,9 @@ function createTemplatePreviewModal() {
     
     // Add preview modal CSS
     addTemplatePreviewModalCSS();
+    
+    // Add base template modal CSS for proper positioning
+    addTemplateModalCSS();
     
     return modal;
 }
@@ -3838,4 +3845,211 @@ window.testTemplateFieldUpdate = function() {
         fieldFound: false,
         fieldValue: null
     };
-}; 
+};
+
+// Test function to verify template preview modal displays correctly
+window.testTemplatePreviewModal = function() {
+    console.log('=== Testing Template Preview Modal ===');
+    
+    // Check if there are any templates to preview
+    if (!state.emailTemplates || state.emailTemplates.length === 0) {
+        console.log('❌ No email templates found. Create some templates first.');
+        return { error: 'No templates available' };
+    }
+    
+    // Use the first template for testing
+    const testTemplate = state.emailTemplates[0];
+    console.log(`Testing with template: "${testTemplate.name}"`);
+    
+    // Show the preview modal
+    showTemplatePreview(testTemplate);
+    
+    // Check if modal was created and positioned correctly
+    setTimeout(() => {
+        const modal = document.getElementById('template-preview-modal');
+        if (!modal) {
+            console.log('❌ Preview modal was not created');
+            return { error: 'Modal not created' };
+        }
+        
+        const modalStyles = window.getComputedStyle(modal);
+        const isVisible = modalStyles.display === 'flex';
+        const isFixed = modalStyles.position === 'fixed';
+        const hasOverlay = modalStyles.backgroundColor.includes('rgba');
+        const isOnTop = parseInt(modalStyles.zIndex) >= 1000;
+        
+        console.log('Modal positioning check:');
+        console.log(`- Visible (display: flex): ${isVisible}`);
+        console.log(`- Fixed positioning: ${isFixed}`);
+        console.log(`- Has overlay background: ${hasOverlay}`);
+        console.log(`- High z-index: ${isOnTop} (${modalStyles.zIndex})`);
+        
+        const result = {
+            modalExists: true,
+            isVisible,
+            isFixed,
+            hasOverlay,
+            isOnTop,
+            styles: {
+                display: modalStyles.display,
+                position: modalStyles.position,
+                backgroundColor: modalStyles.backgroundColor,
+                zIndex: modalStyles.zIndex
+            }
+        };
+        
+        if (isVisible && isFixed && hasOverlay && isOnTop) {
+            console.log('✅ Preview modal is displaying correctly as a centered overlay!');
+            result.success = true;
+        } else {
+            console.log('❌ Preview modal has positioning issues');
+            result.success = false;
+        }
+        
+        // Auto-close the modal after testing
+        setTimeout(() => {
+            hideTemplatePreviewModal();
+            console.log('Test modal closed automatically');
+        }, 3000);
+        
+        return result;
+    }, 100);
+    
+    return { testing: 'Modal positioning check in progress...' };
+};
+
+// Test function to verify duplicate button only creates one copy
+window.testDuplicateButton = function() {
+    console.log('=== Testing Duplicate Button (Single Copy) ===');
+    
+    // Check if we're on email templates tab
+    const emailTemplatesTab = document.querySelector('[data-tab="email-templates"]');
+    if (!emailTemplatesTab?.classList.contains('active')) {
+        console.log('❌ Switch to Email Templates tab first');
+        return { error: 'Not on email templates tab' };
+    }
+    
+    // Count templates before duplication
+    const initialCount = state.emailTemplates.length;
+    console.log(`Initial template count: ${initialCount}`);
+    
+    if (initialCount === 0) {
+        console.log('❌ No templates to duplicate. Create a template first.');
+        return { error: 'No templates available' };
+    }
+    
+    // Select first template
+    const firstTemplate = state.emailTemplates[0];
+    const firstCard = document.querySelector(`[data-template-id="${firstTemplate.id}"]`);
+    
+    if (!firstCard) {
+        console.log('❌ Template card not found');
+        return { error: 'Template card not found' };
+    }
+    
+    // Simulate selecting the template
+    firstCard.click();
+    
+    // Wait a moment then click duplicate
+    setTimeout(() => {
+        const duplicateBtn = document.querySelector('.quick-action-btn[data-action="duplicate"]');
+        if (!duplicateBtn) {
+            console.log('❌ Duplicate button not found');
+            return;
+        }
+        
+        console.log('Clicking duplicate button...');
+        duplicateBtn.click();
+        
+        // Check count after duplication
+        setTimeout(() => {
+            const finalCount = state.emailTemplates.length;
+            const expectedCount = initialCount + 1;
+            
+            console.log(`Final template count: ${finalCount}`);
+            console.log(`Expected count: ${expectedCount}`);
+            
+            if (finalCount === expectedCount) {
+                console.log('✅ SUCCESS: Duplicate button creates exactly 1 copy');
+                
+                // Check if the duplicated template has correct name
+                const duplicatedTemplate = state.emailTemplates.find(t => 
+                    t.name === `${firstTemplate.name} (Copy)` && t.id !== firstTemplate.id
+                );
+                
+                if (duplicatedTemplate) {
+                    console.log(`✅ Duplicated template found: "${duplicatedTemplate.name}"`);
+                } else {
+                    console.log('⚠️ Duplicated template not found with expected name');
+                }
+                
+                return { 
+                    success: true, 
+                    initialCount, 
+                    finalCount,
+                    duplicatedTemplate: duplicatedTemplate?.name 
+                };
+            } else {
+                console.log(`❌ FAIL: Expected ${expectedCount} templates, got ${finalCount}`);
+                return { 
+                    error: 'Duplicate created wrong number of copies',
+                    initialCount,
+                    finalCount,
+                    expectedCount
+                };
+            }
+        }, 100);
+    }, 100);
+};
+
+// Enhanced template quality scoring system
+function getTemplateQualityScore(template, actionType) {
+    const action = EMAIL_ACTIONS[actionType];
+    if (!action) return 0;
+    
+    let score = 0;
+    
+    // 1. Category matching (highest priority)
+    const matchingCategories = TEMPLATE_CATEGORIES.filter(cat => 
+        cat.value === template.category && cat.actionTypes.includes(actionType)
+    );
+    if (matchingCategories.length > 0) {
+        score += 50;
+    }
+    
+    // 2. Tag matching (high priority)
+    if (template.tags && action.suggestedTags) {
+        const matchingTags = action.suggestedTags.filter(tag => 
+            template.tags.includes(tag)
+        );
+        score += matchingTags.length * 10;
+    }
+    
+    // 3. Name/subject keyword matching (medium priority)
+    if (action.suggestedTags) {
+        const nameMatches = action.suggestedTags.filter(tag => 
+            template.name.toLowerCase().includes(tag.toLowerCase())
+        );
+        const subjectMatches = action.suggestedTags.filter(tag => 
+            template.subject.toLowerCase().includes(tag.toLowerCase())
+        );
+        score += nameMatches.length * 5;
+        score += subjectMatches.length * 3;
+    }
+    
+    // 4. Dynamic recipient compatibility (bonus)
+    if (template.to && template.to.includes('{{')) {
+        score += 5;
+    }
+    
+    // 5. Recent usage bonus (if we track usage)
+    if (template.lastUsed) {
+        const daysSinceUsed = (Date.now() - new Date(template.lastUsed).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceUsed < 7) score += 3;
+    }
+    
+    return score;
+}
+
+// Make the quality scoring function available globally
+window.getTemplateQualityScore = getTemplateQualityScore;

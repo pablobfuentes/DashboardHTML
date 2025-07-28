@@ -3189,29 +3189,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function setupSidebarEventListeners() {
-        // Quick Action buttons
-        const quickActionButtons = document.querySelectorAll('.quick-action-btn');
-        quickActionButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const actionButton = e.currentTarget;
-                const actionText = actionButton.textContent.trim();
-                
-                if (!window.activeTemplateId) {
-                    console.log(`Action "${actionText}" clicked but no template selected.`);
-                    return;
-                }
-
-                console.log('Quick action clicked:', actionText, 'for template id:', window.activeTemplateId);
-                
-                if (actionText.includes('Preview')) {
-                    showPreviewModal(window.activeTemplateId);
-                } else if (actionText.includes('Duplicate')) {
-                    duplicateTemplate(window.activeTemplateId);
-                } else if (actionText.includes('Send Test')) {
-                    showSendTestModal(window.activeTemplateId);
-                }
-            });
-        });
+        // Quick Action buttons - REMOVED to prevent duplicate event handling
+        // The email-templates.js module now handles these events properly
         
         // Category items
         const categoryItems = document.querySelectorAll('.category-item');

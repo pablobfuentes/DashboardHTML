@@ -37,6 +37,7 @@ export const state = {
         { name: '', color: '#e9ecef' } // Empty status
     ],
     emailTemplates: [],
+    mainTemplateActions: {}, // Store main template action configurations per row
 };
 
 // Initialize headers and rows from csvData
@@ -78,6 +79,7 @@ export function saveState() {
         timezoneOffset: state.timezoneOffset,
         statusTags: state.statusTags,
         emailTemplates: state.emailTemplates,
+        mainTemplateActions: state.mainTemplateActions,
     };
     localStorage.setItem('dashboardState', JSON.stringify(dataToSave));
     console.log("Dashboard state saved.");
@@ -106,6 +108,7 @@ export function loadState() {
         { name: '', color: '#e9ecef' }
     ];
     state.emailTemplates = loadedData.emailTemplates || [];
+    state.mainTemplateActions = loadedData.mainTemplateActions || {};
 }
 
 export function loadAndRenderState(projectsData, currentTemplateHeaders, currentTemplateRows, projectCount, columnWidths, csvData) {

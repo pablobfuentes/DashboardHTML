@@ -1,6 +1,7 @@
 // Templates functionality module
 import { state, saveState } from './state.js';
 import { showNotification, createEvidenciaCell, updateProjectCellsVisibility, renderStatusCell } from './ui.js';
+import { createActionsCell } from './project-actions.js';
 
 // Template state variables (use state object instead of local variables)
 let selectedRowIndex = -1;
@@ -274,6 +275,14 @@ function renderMainTemplateTable() {
         }
         
         headerRow.appendChild(th);
+        
+        // Add Actions column header after "Actividad"
+        if (headerText.toLowerCase().includes('actividad')) {
+            const actionsTh = document.createElement('th');
+            actionsTh.textContent = 'Actions';
+            actionsTh.classList.add('actions-header', 'main-template-actions-header');
+            headerRow.appendChild(actionsTh);
+        }
     });
     
     thead.appendChild(headerRow);
@@ -381,6 +390,12 @@ function renderMainTemplateTable() {
             }
             
             tr.appendChild(cellElement);
+            
+            // Add Actions cell after "Actividad" column
+            if (header.toLowerCase().includes('actividad')) {
+                const actionsCell = createActionsCell('main-template', rowIdx, true);
+                tr.appendChild(actionsCell);
+            }
         });
         
         tbody.appendChild(tr);
@@ -919,3 +934,55 @@ export {
     isExpectedDateColumn,
     nonEditableColumns
 }; 
+
+// Function to test if Actions column is properly rendered
+window.testActionsColumn = function() {
+    console.log('=== Testing Actions Column in Main Template ===');
+    
+    const mainTemplateTable = document.getElementById('main-template-table');
+    if (!mainTemplateTable) {
+        console.log('❌ Main template table not found');
+        return { error: 'Main template table not found' };
+    }
+    
+    // Check if Actions header exists
+    const actionsHeader = mainTemplateTable.querySelector('th.actions-header');
+    const hasActionsHeader = !!actionsHeader;
+    console.log(`Actions header found: ${hasActionsHeader}`);
+    
+    // Check if Actions cells exist
+    const actionsCells = mainTemplateTable.querySelectorAll('td.actions-cell');
+    const actionsCount = actionsCells.length;
+    console.log(`Actions cells found: ${actionsCount}`);
+    
+    // Check if Actions buttons exist
+    const actionsButtons = mainTemplateTable.querySelectorAll('.actions-btn');
+    const buttonsCount = actionsButtons.length;
+    console.log(`Actions buttons found: ${buttonsCount}`);
+    
+    // Check if main template buttons exist
+    const mainTemplateButtons = mainTemplateTable.querySelectorAll('.main-template-actions-btn');
+    const mainTemplateButtonsCount = mainTemplateButtons.length;
+    console.log(`Main template config buttons found: ${mainTemplateButtonsCount}`);
+    
+    const result = {
+        hasActionsHeader,
+        actionsCount,
+        buttonsCount,
+        mainTemplateButtonsCount,
+        expectedRows: state.currentTemplateRows?.length || 0
+    };
+    
+    if (hasActionsHeader && actionsCount > 0 && buttonsCount > 0) {
+        console.log('✅ Actions column is properly rendered!');
+        result.success = true;
+    } else {
+        console.log('❌ Actions column is missing or incomplete');
+        result.success = false;
+    }
+    
+    return result;
+};
+
+// Make renderMainTemplateTable available for testing
+window.renderMainTemplateTable = renderMainTemplateTable; 
