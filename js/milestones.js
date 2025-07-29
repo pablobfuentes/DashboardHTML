@@ -142,11 +142,8 @@ function createProgressPin(containerEl, type, xPosition, lineTop, color, label) 
     pinContainer.className = `progress-pin ${type}-progress-pin`;
     pinContainer.style.position = 'absolute';
     pinContainer.style.left = xPosition + 'px';
-    pinContainer.style.top = (lineTop - 40) + 'px';
     pinContainer.style.zIndex = '10';
     pinContainer.style.textAlign = 'center';
-    pinContainer.style.transform = 'translateX(-50%)';
-    pinContainer.style.transform = 'translateX(-50%)';
     pinContainer.style.transform = 'translateX(-50%)';
 
     // Create pin marker
@@ -157,7 +154,7 @@ function createProgressPin(containerEl, type, xPosition, lineTop, color, label) 
     pinMarker.style.backgroundColor = color;
     pinMarker.style.border = '2px solid white';
     pinMarker.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-    pinMarker.style.margin = '0 auto 5px auto';
+    pinMarker.style.margin = '0 auto';
 
     // Create pin line
     const pinLine = document.createElement('div');
@@ -173,17 +170,34 @@ function createProgressPin(containerEl, type, xPosition, lineTop, color, label) 
     pinLabel.style.fontSize = '10px';
     pinLabel.style.color = '#666';
     pinLabel.style.fontWeight = '500';
-    pinLabel.style.marginTop = '5px';
     pinLabel.style.whiteSpace = 'nowrap';
     pinLabel.style.background = 'rgba(255, 255, 255, 0.9)';
     pinLabel.style.padding = '2px 4px';
     pinLabel.style.borderRadius = '3px';
     pinLabel.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
 
-    // Assemble pin
-    pinContainer.appendChild(pinLabel);
-    pinContainer.appendChild(pinMarker);
-    pinContainer.appendChild(pinLine);
+    // Position elements based on pin type
+    if (type === 'actual') {
+        // Actual Progress: Everything above timeline (label -> circle -> line -> timeline)
+        pinContainer.style.top = (lineTop - 80) + 'px';
+        pinLabel.style.marginBottom = '5px';
+        pinMarker.style.marginBottom = '5px';
+        
+        // Assemble pin: label -> circle -> line
+        pinContainer.appendChild(pinLabel);
+        pinContainer.appendChild(pinMarker);
+        pinContainer.appendChild(pinLine);
+    } else {
+        // Planned Progress: Everything below timeline (timeline -> line -> circle -> label)
+        pinContainer.style.top = (lineTop + 10) + 'px';
+        pinLine.style.marginBottom = '5px';
+        pinMarker.style.marginBottom = '5px';
+        
+        // Assemble pin: line -> circle -> label
+        pinContainer.appendChild(pinLine);
+        pinContainer.appendChild(pinMarker);
+        pinContainer.appendChild(pinLabel);
+    }
 
     // Add to container
     containerEl.appendChild(pinContainer);
