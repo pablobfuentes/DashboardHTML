@@ -378,11 +378,34 @@ function initGlobalListeners() {
                             updateProjectCompletion(projectId);
                             
                             // Update milestone timeline when status changes
-                            const milestonesContainer = document.querySelector(`#${projectId} .milestones-container`);
+                            console.log(`📊 Status change detected - Project: ${projectId}, New status: ${newStatus}`);
+                            
+                            // Check if timeline tab is active and container exists
+                            let milestonesContainer = document.querySelector(`#${projectId} .milestones-container`);
+                            
+                            if (!milestonesContainer) {
+                                // Try to find the milestones view (timeline tab content)
+                                const milestonesView = document.querySelector(`#milestones-view-${projectId}`);
+                                if (milestonesView) {
+                                    // Find or create the milestones container
+                                    milestonesContainer = milestonesView.querySelector('.milestones-container');
+                                    if (!milestonesContainer) {
+                                        // Create the container if milestones view exists but container doesn't
+                                        milestonesContainer = document.createElement('div');
+                                        milestonesContainer.className = 'milestones-container';
+                                        milestonesView.appendChild(milestonesContainer);
+                                        console.log('🏗️ Created missing milestones container');
+                                    }
+                                } else {
+                                    console.log('💡 Milestones view not found - timeline tab may not be initialized yet');
+                                }
+                            }
+                            
                             if (milestonesContainer) {
-                                import('./milestones.js').then(module => {
-                                    module.createMilestonesTimeline(milestonesContainer, projectId);
-                                });
+                                console.log('✅ Refreshing timeline after status change...');
+                                createMilestonesTimeline(milestonesContainer, projectId);
+                            } else {
+                                console.log('⚠️ Timeline container not found - you may need to visit the Timeline tab first');
                             }
                         }
                     }
@@ -564,8 +587,54 @@ function handleCellEdit(element) {
             
             // Check if this is a duration or expected date change that should trigger dependency updates
             const header = project.headers[colIndex];
+            const headerLower = header.toLowerCase();
+            
             if (utils.isDurationColumn(header) || utils.isExpectedDateColumn(header)) {
                 updateDatesBasedOnDependencies(rowIndex, projectId);
+            }
+            
+            // Update timeline if this affects dates, status, or milestones
+            const shouldUpdateTimeline = 
+                headerLower.includes('fecha esperada') || 
+                headerLower.includes('expected date') ||
+                headerLower.includes('status') || 
+                headerLower.includes('estado') ||
+                headerLower.includes('milestone') ||
+                utils.isDurationColumn(header) ||
+                utils.isExpectedDateColumn(header);
+                
+            console.log(`📝 Cell edit detected - Column: "${header}", Should update timeline: ${shouldUpdateTimeline}`);
+                
+            if (shouldUpdateTimeline) {
+                console.log(`🔄 Updating timeline for project: ${projectId}`);
+                
+                // Smart timeline container detection
+                let milestonesContainer = document.querySelector(`#${projectId} .milestones-container`);
+                
+                if (!milestonesContainer) {
+                    // Try to find the milestones view (timeline tab content)
+                    const milestonesView = document.querySelector(`#milestones-view-${projectId}`);
+                    if (milestonesView) {
+                        // Find or create the milestones container
+                        milestonesContainer = milestonesView.querySelector('.milestones-container');
+                        if (!milestonesContainer) {
+                            // Create the container if milestones view exists but container doesn't
+                            milestonesContainer = document.createElement('div');
+                            milestonesContainer.className = 'milestones-container';
+                            milestonesView.appendChild(milestonesContainer);
+                            console.log('🏗️ Created missing milestones container for cell edit');
+                        }
+                    } else {
+                        console.log('💡 Milestones view not found - timeline tab may not be initialized yet');
+                    }
+                }
+                
+                if (milestonesContainer) {
+                    console.log('✅ Timeline container found, refreshing...');
+                    createMilestonesTimeline(milestonesContainer, projectId);
+                } else {
+                    console.log('⚠️ Timeline container not found - you may need to visit the Timeline tab first');
+                }
             }
             
             // After saving, also update the status panel

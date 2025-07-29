@@ -3222,6 +3222,25 @@ td.status-cell {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* ===== PROGRESS PINS ===== */
+.progress-pin {
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.progress-pin:hover {
+    transform: scale(1.1);
+}
+
+.planned-progress-pin {
+    transform: translateX(-50%);
+}
+
+.actual-progress-pin {
+    transform: translateX(-50%);
+}
+
 /* ===== COMMENT PANEL ===== */
 .comment-panel {
     position: fixed;

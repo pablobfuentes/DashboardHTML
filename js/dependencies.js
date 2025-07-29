@@ -207,4 +207,12 @@ export function updateDatesBasedOnDependencies(updatedRowIndex, projectId) {
     saveState();
     const projectTable = document.getElementById(projectId).querySelector('.project-table');
     renderTable(projectTable, project.headers, project.content, false);
+    
+    // Update timeline since dates have changed
+    const milestonesContainer = document.querySelector(`#${projectId} .milestones-container`);
+    if (milestonesContainer) {
+        import('./milestones.js').then(module => {
+            module.createMilestonesTimeline(milestonesContainer, projectId);
+        });
+    }
 } 
