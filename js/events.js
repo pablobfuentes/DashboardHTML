@@ -983,6 +983,11 @@ function handleMainNavigation(navItem) {
         targetSection.classList.add('active');
     }
 
+    // Automatically activate the first tab in the section
+    setTimeout(() => {
+        activateFirstTabInSection(targetSectionId);
+    }, 0);
+
     // Run specific initializers for sections
     if (targetSectionId === 'consulta') {
         // Just render the existing contacts, don't sync automatically
@@ -998,6 +1003,28 @@ function handleMainNavigation(navItem) {
         import('./email-templates.js').then(module => {
             module.initializeEmailTemplates();
         });
+    }
+}
+
+function activateFirstTabInSection(sectionId) {
+    if (sectionId === 'consulta') {
+        // Activate the first consulta tab (Resumen)
+        const firstConsultaTab = document.querySelector('.consulta-tab');
+        if (firstConsultaTab) {
+            handleConsultaViewSwitch(firstConsultaTab);
+        }
+    } else if (sectionId === 'seguimiento') {
+        // Activate the first seguimiento tab (Projects)
+        const firstSeguimientoTab = document.querySelector('.seguimiento-tab');
+        if (firstSeguimientoTab) {
+            handleSeguimientoViewSwitch(firstSeguimientoTab);
+        }
+    } else if (sectionId === 'templates') {
+        // For templates, activate the first template tab (Main Template)
+        const firstTemplateTab = document.querySelector('.template-tab');
+        if (firstTemplateTab) {
+            handleTabSwitch(firstTemplateTab, '.template-tab', '.template-pane');
+        }
     }
 }
 
