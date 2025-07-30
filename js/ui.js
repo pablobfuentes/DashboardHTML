@@ -445,34 +445,52 @@ export function createEvidenciaCell(isMain = false, rowData = null, colIndex = -
         // Event listeners
         checkbox.addEventListener('change', function() {
             const rowIdx = parseInt(cell.closest('tr').querySelector('.row-header').dataset.rowIndex);
+            
             if (rowIdx >= 0 && rowIdx < state.currentTemplateRows.length) {
-                // Store both checkbox and toggle state
-                const toggleState = {
-                    required: this.checked,
-                    isText: toggleInput.checked
-                };
-                state.currentTemplateRows[rowIdx][colIndex] = JSON.stringify(toggleState);
+                // Get current state or initialize if not exists
+                let currentState = { required: false, isText: false };
+                try {
+                    if (state.currentTemplateRows[rowIdx][colIndex]) {
+                        currentState = JSON.parse(state.currentTemplateRows[rowIdx][colIndex]);
+                    }
+                } catch (e) {
+                    // Handle legacy format
+                    currentState = { required: false, isText: false };
+                }
+                
+                // Update with new checkbox state
+                currentState.required = this.checked;
+                state.currentTemplateRows[rowIdx][colIndex] = JSON.stringify(currentState);
                 saveState();
                 
                 // Update visibility of toggle
                 toggleContainer.classList.toggle('visible', this.checked);
-                
-                // Update project cells
-                updateProjectCellsVisibility();
+            } else {
+                console.error('Invalid row index:', rowIdx, 'or col index:', colIndex);
             }
         });
         
         toggleInput.addEventListener('change', function() {
             const rowIdx = parseInt(cell.closest('tr').querySelector('.row-header').dataset.rowIndex);
+            
             if (rowIdx >= 0 && rowIdx < state.currentTemplateRows.length) {
-                // Update the stored state with new toggle value
-                const currentState = JSON.parse(state.currentTemplateRows[rowIdx][colIndex] || '{"required":false,"isText":false}');
+                // Get current state or initialize if not exists
+                let currentState = { required: false, isText: false };
+                try {
+                    if (state.currentTemplateRows[rowIdx][colIndex]) {
+                        currentState = JSON.parse(state.currentTemplateRows[rowIdx][colIndex]);
+                    }
+                } catch (e) {
+                    // Handle legacy format
+                    currentState = { required: false, isText: false };
+                }
+                
+                // Update with new toggle state
                 currentState.isText = this.checked;
                 state.currentTemplateRows[rowIdx][colIndex] = JSON.stringify(currentState);
                 saveState();
-                
-                // Update project cells
-                updateProjectCellsVisibility();
+            } else {
+                console.error('Invalid row index:', rowIdx, 'or col index:', colIndex);
             }
         });
         
@@ -488,6 +506,11 @@ export function createEvidenciaCell(isMain = false, rowData = null, colIndex = -
                 checkbox.checked = rowData[colIndex] === 'true';
                 toggleContainer.classList.toggle('visible', checkbox.checked);
             }
+        } else {
+            // Initialize with default state if no data exists
+            checkbox.checked = false;
+            toggleInput.checked = false;
+            toggleContainer.classList.remove('visible');
         }
         
         cell.appendChild(checkbox);
@@ -622,6 +645,14 @@ export function createEvidenciaCell(isMain = false, rowData = null, colIndex = -
         
         // Set initial visibility based on cell mode (default to file mode)
         updateEvidenciaContent(cell, cell.classList.contains('text-mode'));
+        
+        // Initialize the cell based on main template evidence settings (for project cells only)
+        if (!isMain) {
+            // Use setTimeout to ensure the cell is fully attached to the DOM
+            setTimeout(() => {
+                initializeProjectEvidenceCell(cell, rowData, colIndex);
+            }, 0);
+        }
     }
     
     return cell;
@@ -731,7 +762,10 @@ export function updateAllProjectTables() {
     });
 
     saveState();
-    alert('All projects have been updated to match the main template.');
+    // Only show alert if this is called manually (not from evidence updates)
+    if (!arguments.length || arguments[0] !== 'silent') {
+        alert('All projects have been updated to match the main template.');
+    }
 }
 
 export function updateProjectCompletion(projectId) {
@@ -925,58 +959,114 @@ function getCorrespondingProjectCells(mainCell) {
 
 export function updateProjectCellsVisibility() {
     console.log('updateProjectCellsVisibility called');
-    // Get all evidencia cells from the main template
-    const mainCells = Array.from(document.querySelectorAll('#main-template-table .evidencia-cell'));
-    console.log('Found main template evidence cells:', mainCells.length);
     
-    mainCells.forEach(mainCell => {
-        const rowIndex = parseInt(mainCell.closest('tr').querySelector('.row-header').dataset.rowIndex);
-        const colIndex = Array.from(mainCell.closest('tr').children).indexOf(mainCell) - 1; // Account for row header
-        
-        if (rowIndex < 0 || colIndex < 0) return;
-        
-        // Get the state from the main template
-        let evidenceState = { required: false, isText: false };
-        try {
-            if (state.currentTemplateRows[rowIndex] && state.currentTemplateRows[rowIndex][colIndex]) {
-                evidenceState = JSON.parse(state.currentTemplateRows[rowIndex][colIndex]);
-            }
-        } catch (e) {
-            // Handle legacy format
-            evidenceState.required = state.currentTemplateRows[rowIndex][colIndex] === 'true';
+    // Get the evidence column index from main template
+    const evidenciaIndex = state.currentTemplateHeaders.findIndex(h => h.toLowerCase() === 'evidencia');
+    if (evidenciaIndex === -1) {
+        console.log('Evidence column not found in main template');
+        return;
+    }
+    
+    // Update all project data to match the main template evidence settings
+    Object.keys(state.projectsData).forEach(projectId => {
+        const project = state.projectsData[projectId];
+        if (project.content) {
+            // Update each row in the project to match the main template evidence settings
+            state.currentTemplateRows.forEach((mainRow, rowIndex) => {
+                if (project.content[rowIndex] && mainRow[evidenciaIndex]) {
+                    // Only update the evidence column, preserve all other project data
+                    project.content[rowIndex][evidenciaIndex] = mainRow[evidenciaIndex];
+                    console.log(`Updated project ${projectId}, row ${rowIndex}, evidence:`, mainRow[evidenciaIndex]);
+                }
+            });
         }
-        
-        console.log(`Evidence state for row ${rowIndex}, col ${colIndex}:`, evidenceState);
-        
-        // Update all corresponding project cells
-        const projectCells = getCorrespondingProjectCells(mainCell);
-        console.log(`Found ${projectCells.length} project cells to update`);
-        
-        projectCells.forEach(cell => {
-            if (!cell) return;
-            
-            // Update required state
-            cell.classList.toggle('evidencia-required', evidenceState.required);
-            
-            // Update input mode
-            cell.classList.toggle('text-mode', evidenceState.isText);
-            
-            // Update content visibility
-            updateEvidenciaContent(cell, evidenceState.isText);
-        });
-        
-        // Also update the project data to keep it synchronized
-        Object.keys(state.projectsData).forEach(projectId => {
-            const project = state.projectsData[projectId];
-            if (project.content && project.content[rowIndex] && project.content[rowIndex][colIndex] !== undefined) {
-                // Update the project data with the evidence state
-                project.content[rowIndex][colIndex] = JSON.stringify(evidenceState);
-            }
-        });
     });
     
     // Save the updated state
     saveState();
+    
+    // Update only the evidence cells in project tables, don't refresh entire tables
+    updateProjectEvidenceCellsOnly();
+}
+
+function initializeProjectEvidenceCell(cell, rowData, colIndex) {
+    // Get the evidence column index from main template
+    const evidenciaIndex = state.currentTemplateHeaders.findIndex(h => h.toLowerCase() === 'evidencia');
+    if (evidenciaIndex === -1) return;
+    
+    // Get the corresponding row index from the main template
+    const tbody = cell.closest('tbody');
+    if (!tbody) {
+        console.log('Cell not yet attached to tbody, skipping initialization');
+        return;
+    }
+    
+    const rowIndex = Array.from(tbody.children).indexOf(cell.closest('tr'));
+    if (rowIndex === -1 || rowIndex >= state.currentTemplateRows.length) {
+        console.log(`Invalid row index: ${rowIndex}, max: ${state.currentTemplateRows.length - 1}`);
+        return;
+    }
+    
+    // Get the evidence state from the main template
+    const mainRow = state.currentTemplateRows[rowIndex];
+    if (!mainRow || !mainRow[evidenciaIndex]) {
+        console.log(`No evidence data found for row ${rowIndex}, col ${evidenciaIndex}`);
+        return;
+    }
+    
+    try {
+        const evidenceState = JSON.parse(mainRow[evidenciaIndex]);
+        
+        // Apply the evidence settings to the project cell
+        cell.classList.toggle('evidencia-required', evidenceState.required);
+        cell.classList.toggle('text-mode', evidenceState.isText);
+        
+        // Update content visibility based on the mode
+        updateEvidenciaContent(cell, evidenceState.isText);
+        
+        console.log(`Initialized project evidence cell - required: ${evidenceState.required}, text: ${evidenceState.isText}`);
+    } catch (e) {
+        console.error('Error parsing evidence state for project cell:', e);
+    }
+}
+
+function updateProjectEvidenceCellsOnly() {
+    console.log('Updating only evidence cells in project tables...');
+    
+    // Get the evidence column index
+    const evidenciaIndex = state.currentTemplateHeaders.findIndex(h => h.toLowerCase() === 'evidencia');
+    if (evidenciaIndex === -1) return;
+    
+    // For each project, update only the evidence cells
+    Object.keys(state.projectsData).forEach(projectId => {
+        const project = state.projectsData[projectId];
+        const projectTable = document.querySelector(`#${projectId} .project-table`);
+        if (!projectTable || !project.content) return;
+        
+        // Get all evidence cells in this project table
+        const evidenceCells = projectTable.querySelectorAll('.evidencia-cell');
+        evidenceCells.forEach((cell, cellIndex) => {
+            const rowIndex = cellIndex; // Assuming cells are in order
+            if (project.content[rowIndex] && project.content[rowIndex][evidenciaIndex]) {
+                try {
+                    const evidenceState = JSON.parse(project.content[rowIndex][evidenciaIndex]);
+                    
+                    // Update the cell's required state
+                    cell.classList.toggle('evidencia-required', evidenceState.required);
+                    
+                    // Update the cell's text mode
+                    cell.classList.toggle('text-mode', evidenceState.isText);
+                    
+                    // Update content visibility
+                    updateEvidenciaContent(cell, evidenceState.isText);
+                    
+                    console.log(`Updated evidence cell in project ${projectId}, row ${rowIndex}`);
+                } catch (e) {
+                    console.error('Error parsing evidence state:', e);
+                }
+            }
+        });
+    });
 }
 
 function updateTime(projectId) {

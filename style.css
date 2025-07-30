@@ -4258,6 +4258,35 @@ td.status-cell {
     color: #dc3545;
 }
 
+/* Program Progress Card */
+.overview-card.program-progress {
+    position: relative;
+    padding-bottom: 25px;
+}
+
+.overview-card.program-progress .card-value {
+    color: #007bff;
+    font-size: 2.2rem;
+}
+
+.progress-bar {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    height: 6px;
+    background-color: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
 /* Project Matrix */
 .project-matrix-container {
     margin-top: 30px;
@@ -4396,21 +4425,44 @@ td.status-cell {
     font-style: italic;
 }
 
-/* Row Highlighting */
-#summary-matrix-table tr.row-behind {
+/* Status Icons */
+.status-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: help;
+}
+
+/* Cell Status Highlighting */
+#summary-matrix-table td.status-behind {
     background-color: rgba(220, 53, 69, 0.1) !important;
 }
 
-#summary-matrix-table tr.row-at-risk {
+#summary-matrix-table td.status-at-risk {
     background-color: rgba(255, 193, 7, 0.1) !important;
 }
 
-#summary-matrix-table tr.row-behind:hover {
+#summary-matrix-table td.status-behind:hover {
     background-color: rgba(220, 53, 69, 0.15) !important;
 }
 
-#summary-matrix-table tr.row-at-risk:hover {
+#summary-matrix-table td.status-at-risk:hover {
     background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+/* Center align all cells in the summary matrix */
+#summary-matrix-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+#summary-matrix-table th {
+    text-align: center;
+    vertical-align: middle;
 }
 
 /* Status Icons */

@@ -11,11 +11,11 @@ let contextMenuTargetIndex = -1;
 
 // Default template data based on the reference implementation
 const defaultTemplateData = [
-    {"ID": 1, "Fase": "Requisitos Previos", "Milestone": "Contacto Inicial", "Actividad": "Integracion de equipo de trabajo/asignacion de recurso humano", "Duracion": 5, "Fecha Esperada": "19-Oct-24", "Dependencia": "", "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": ""},
-    {"ID": 2, "Fase": "Requisitos Previos", "Milestone": "Contacto Inicial", "Actividad": "Crear canales de comunicacion (grupo WA)", "Duracion": 1, "Fecha Esperada": "24-Oct-24", "Dependencia": 1, "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": ""},
-    {"ID": 3, "Fase": "Requisitos Previos", "Milestone": "Perfiles de Telefonia", "Actividad": "PT-Preparacion de presentacion", "Duracion": 1, "Fecha Esperada": "25-Oct-24", "Dependencia": 2, "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": ""},
-    {"ID": 4, "Fase": "Requisitos Previos", "Milestone": "Perfiles de Telefonia", "Actividad": "PT-Requerimiento de sesion", "Duracion": 1, "Fecha Esperada": "25-Oct-24", "Dependencia": 2, "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": ""},
-    {"ID": 5, "Fase": "Requisitos Previos", "Milestone": "Perfiles de Telefonia", "Actividad": "PT-Acuerdo de fecha y hora", "Duracion": 2, "Fecha Esperada": "26-Oct-24", "Dependencia": 4, "Responsable": "ATI", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": ""}
+    {"ID": 1, "Fase": "Requisitos Previos", "Milestone": "Contacto Inicial", "Actividad": "Integracion de equipo de trabajo/asignacion de recurso humano", "Duracion": 5, "Fecha Esperada": "19-Oct-24", "Dependencia": "", "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": '{"required":false,"isText":false}'},
+    {"ID": 2, "Fase": "Requisitos Previos", "Milestone": "Contacto Inicial", "Actividad": "Crear canales de comunicacion (grupo WA)", "Duracion": 1, "Fecha Esperada": "24-Oct-24", "Dependencia": 1, "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": '{"required":false,"isText":false}'},
+    {"ID": 3, "Fase": "Requisitos Previos", "Milestone": "Perfiles de Telefonia", "Actividad": "PT-Preparacion de presentacion", "Duracion": 1, "Fecha Esperada": "25-Oct-24", "Dependencia": 2, "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": '{"required":false,"isText":false}'},
+    {"ID": 4, "Fase": "Requisitos Previos", "Milestone": "Perfiles de Telefonia", "Actividad": "PT-Requerimiento de sesion", "Duracion": 1, "Fecha Esperada": "25-Oct-24", "Dependencia": 2, "Responsable": "Pablo", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": '{"required":false,"isText":false}'},
+    {"ID": 5, "Fase": "Requisitos Previos", "Milestone": "Perfiles de Telefonia", "Actividad": "PT-Acuerdo de fecha y hora", "Duracion": 2, "Fecha Esperada": "26-Oct-24", "Dependencia": 4, "Responsable": "ATI", "Status": "completo", "Comentario": "", "Nuevo": "", "Evidencia": '{"required":false,"isText":false}'}
 ];
 
 // Column type detection functions
@@ -52,6 +52,9 @@ export function initializeTemplates() {
     
     // Set up template control buttons
     setupTemplateControls();
+    
+    // Restore corrupted data if needed
+    restoreCorruptedData();
     
     // Render the main template table
     renderMainTemplateTable();
@@ -156,15 +159,19 @@ function saveCurrentTableValues() {
                     value = ''; // Empty status
                 }
             } else if (cell.classList.contains('evidencia-cell')) {
-                // For evidencia cells, get the current state
-                const textInput = cell.querySelector('.evidence-text');
-                const fileLink = cell.querySelector('.file-path a');
-                if (textInput && textInput.style.display !== 'none' && textInput.value) {
-                    value = textInput.value;
-                } else if (fileLink) {
-                    value = fileLink.textContent;
+                // For evidencia cells in main template, preserve the state configuration
+                // Don't overwrite the state with content - evidence cells are configuration cells
+                const checkbox = cell.querySelector('.evidencia-checkbox');
+                const toggleInput = cell.querySelector('.evidence-type-toggle input');
+                if (checkbox && toggleInput) {
+                    const evidenceState = {
+                        required: checkbox.checked,
+                        isText: toggleInput.checked
+                    };
+                    value = JSON.stringify(evidenceState);
                 } else {
-                    value = '';
+                    // If no checkbox/toggle found, preserve existing value
+                    value = state.currentTemplateRows[rowIndex] ? state.currentTemplateRows[rowIndex][colIndex] : '';
                 }
             } else {
                 // For regular cells, get text content
@@ -184,8 +191,8 @@ function saveCurrentTableValues() {
 
 // Toggle edit mode
 function toggleEditMode() {
-    // Save current values from DOM before toggling
-    saveCurrentTableValues();
+    // Don't save current values during edit mode toggle to prevent data corruption
+    // saveCurrentTableValues();
     
     state.isEditMode = !state.isEditMode;
     
@@ -211,6 +218,11 @@ function toggleEditMode() {
     
     // Re-render table with new edit mode
     renderMainTemplateTable();
+    
+    // Update project cells visibility after edit mode change is complete
+    setTimeout(() => {
+        updateProjectCellsVisibility();
+    }, 100);
 }
 
 // Refresh all projects with current template
@@ -228,6 +240,27 @@ function resetAllData() {
         saveState();
         renderMainTemplateTable();
         showNotification('All data has been reset to default.', 'warning');
+    }
+}
+
+// Restore corrupted data
+function restoreCorruptedData() {
+    console.log('Restoring corrupted data...');
+    
+    // Check if data is corrupted (has gear icons or empty evidence cells)
+    const isCorrupted = state.currentTemplateRows.some(row => 
+        row.some(cell => cell === '⚙️' || cell === '⚡')
+    );
+    
+    if (isCorrupted) {
+        console.log('Data corruption detected, restoring...');
+        state.currentTemplateHeaders = Object.keys(defaultTemplateData[0]);
+        state.currentTemplateRows = defaultTemplateData.map(row => Object.values(row));
+        saveState();
+        renderMainTemplateTable();
+        showNotification('Data restored from corruption.', 'success');
+    } else {
+        console.log('No data corruption detected.');
     }
 }
 
@@ -312,6 +345,7 @@ function renderMainTemplateTable() {
             // Handle different cell types
             if (isEvidenciaColumn(header)) {
                 // Use the proper evidence cell from ui.js
+                // Ensure we pass the correct row data and column index
                 cellElement = createEvidenciaCell(true, rowData, colIndex);
             } else {
                 const td = document.createElement('td');
@@ -391,7 +425,7 @@ function renderMainTemplateTable() {
             
             tr.appendChild(cellElement);
             
-            // Add Actions cell after "Actividad" column
+            // Add Actions cell after "Actividad" column only for main template
             if (header.toLowerCase().includes('actividad')) {
                 const actionsCell = createActionsCell('main-template', rowIdx, true);
                 tr.appendChild(actionsCell);
@@ -404,8 +438,11 @@ function renderMainTemplateTable() {
     // Apply selection styles
     applySelectionStyles();
     
-    // Update project cells visibility after rendering main template
-    updateProjectCellsVisibility();
+    // Only update project cells visibility if we're not in edit mode toggle
+    // This prevents data corruption during edit mode changes
+    if (!state.isEditMode) {
+        updateProjectCellsVisibility();
+    }
 }
 
 // Select a row

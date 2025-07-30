@@ -142,14 +142,14 @@ function renderProjectMatrixTable() {
     let tbodyHTML = '';
     
     projects.forEach(([projectId, project]) => {
-        const rowClass = getRowHighlightClass(project, selectedColumns, allColumns);
-        tbodyHTML += `<tr class="${rowClass}">`;
+        tbodyHTML += `<tr>`;
         tbodyHTML += `<td>${project.name}</td>`;
 
         selectedColumns.forEach(colId => {
             const cellData = findCellData(project, colId, allColumns);
-            const cellContent = renderCellContent(cellData, colId, allColumns);
-            tbodyHTML += `<td>${cellContent}</td>`;
+            const cellContent = renderCellContent(cellData, colId, allColumns, project);
+            const cellStatusClass = getCellStatusClass(cellData);
+            tbodyHTML += `<td class="${cellStatusClass}">${cellContent}</td>`;
         });
 
         tbodyHTML += `</tr>`;
@@ -262,28 +262,19 @@ function parseCustomDate(dateStr) {
     return new Date(fullYear, monthIndex, parseInt(day));
 }
 
-function getRowHighlightClass(project, selectedColumns, allColumns) {
-    let hasBehind = false;
-    let hasAtRisk = false;
+function getCellStatusClass(cellData) {
+    if (!cellData || typeof cellData !== 'string') return '';
     
-    selectedColumns.forEach(colId => {
-        const cellData = findCellData(project, colId, allColumns);
-        if (cellData && typeof cellData === 'string') {
-            const status = cellData.toLowerCase();
-            if (status === 'pendiente' || status === 'atrasado') {
-                hasBehind = true;
-            } else if (status === 'en proceso' || status === 'en progreso') {
-                hasAtRisk = true;
-            }
-        }
-    });
-    
-    if (hasBehind) return 'row-behind';
-    if (hasAtRisk) return 'row-at-risk';
+    const status = cellData.toLowerCase();
+    if (status === 'pendiente' || status === 'atrasado') {
+        return 'status-behind';
+    } else if (status === 'en proceso' || status === 'en progreso') {
+        return 'status-at-risk';
+    }
     return '';
 }
 
-function renderCellContent(cellData, columnId, allColumns) {
+function renderCellContent(cellData, columnId, allColumns, project) {
     const column = allColumns.find(c => c.id === columnId);
     const displayMode = state.summaryViewConfig.displayMode;
     
@@ -291,6 +282,14 @@ function renderCellContent(cellData, columnId, allColumns) {
     
     if (displayMode === 'icon' && column && column.type === 'activity') {
         return renderStatusIcon(cellData);
+    } else if (displayMode === 'data' && column && column.type === 'activity') {
+        // In data view, check if there's evidence text for this activity
+        const evidenceText = getEvidenceTextForActivity(project, column.name);
+        if (evidenceText && evidenceText.trim() !== '') {
+            return escapeHtml(evidenceText);
+        } else {
+            return escapeHtml(String(cellData));
+        }
     } else {
         return escapeHtml(String(cellData));
     }
@@ -319,6 +318,42 @@ function renderStatusIcon(status) {
     }
     
     return `<span class="status-icon" style="color: ${color}; font-weight: bold;" title="${tooltip}">${icon}</span>`;
+}
+
+function getEvidenceTextForActivity(project, activityName) {
+    const actividadIndex = project.headers.findIndex(h => h.toLowerCase() === 'actividad');
+    const evidenciaIndex = project.headers.findIndex(h => h.toLowerCase() === 'evidencia');
+    
+    if (actividadIndex === -1 || evidenciaIndex === -1) return '';
+    
+    // Find the row that matches this activity
+    for (const row of project.content) {
+        if (row[actividadIndex] && row[actividadIndex].trim() === activityName) {
+            const evidenceData = row[evidenciaIndex];
+            
+            // Handle different evidence data formats
+            if (!evidenceData) return '';
+            
+            try {
+                // Try to parse as JSON (for evidence state)
+                const parsed = JSON.parse(evidenceData);
+                if (parsed && typeof parsed === 'object') {
+                    // This is evidence state, not actual text content
+                    return '';
+                }
+            } catch (e) {
+                // Not JSON, treat as text content
+                return evidenceData;
+            }
+            
+            // If it's a string but not JSON, return it as text
+            if (typeof evidenceData === 'string') {
+                return evidenceData;
+            }
+        }
+    }
+    
+    return '';
 }
 
 function escapeHtml(text) {
@@ -615,6 +650,13 @@ function createExecutiveOverview() {
             <h2>Command Center - Executive Overview</h2>
         </div>
         <div class="overview-grid">
+            <div class="overview-card program-progress">
+                <div class="card-value">${stats.programCompletion}%</div>
+                <div class="card-label">Program Completion</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${stats.programCompletion}%"></div>
+                </div>
+            </div>
             <div class="overview-card">
                 <div class="card-value">${stats.totalProjects}</div>
                 <div class="card-label">Active Projects</div>
@@ -631,14 +673,6 @@ function createExecutiveOverview() {
                 <div class="card-value status-behind">${stats.behind}</div>
                 <div class="card-label">Behind 🔴</div>
             </div>
-            <div class="overview-card critical">
-                <div class="card-value">${stats.blocked}</div>
-                <div class="card-label">Blocked / Overdue</div>
-            </div>
-            <div class="overview-card">
-                <div class="card-value">${stats.dueThisWeek}</div>
-                <div class="card-label">Due This Week</div>
-            </div>
         </div>
     `;
 
@@ -649,27 +683,29 @@ function calculateProjectStatistics(projects) {
     let onTrack = 0;
     let atRisk = 0;
     let behind = 0;
-    let blocked = 0;
-    let dueThisWeek = 0;
-    
-    const today = new Date();
-    const thisWeekEnd = new Date(today);
-    thisWeekEnd.setDate(today.getDate() + 7);
+    let totalActivities = 0;
+    let completedActivities = 0;
     
     projects.forEach(([projectId, project]) => {
         const statusIndex = project.headers.findIndex(h => h.toLowerCase() === 'status');
-        const fechaIndex = project.headers.findIndex(h => h.toLowerCase().includes('fecha esperada'));
         
         let projectStatus = 'unknown';
-        let hasOverdue = false;
-        let hasDueThisWeek = false;
+        let projectActivities = 0;
+        let projectCompleted = 0;
         
         if (statusIndex !== -1) {
             const statuses = project.content.map(row => row[statusIndex]).filter(s => s);
+            projectActivities = statuses.length;
+            totalActivities += projectActivities;
+            
             if (statuses.length > 0) {
                 const hasPendiente = statuses.some(s => s.toLowerCase() === 'pendiente');
                 const hasEnProceso = statuses.some(s => s.toLowerCase().includes('proceso'));
                 const allCompleto = statuses.every(s => s.toLowerCase() === 'completo');
+                
+                // Count completed activities for program completion
+                const completed = statuses.filter(s => s.toLowerCase() === 'completo').length;
+                completedActivities += completed;
                 
                 if (hasPendiente) {
                     projectStatus = 'behind';
@@ -683,33 +719,16 @@ function calculateProjectStatistics(projects) {
                 }
             }
         }
-        
-        if (fechaIndex !== -1) {
-            project.content.forEach(row => {
-                const dateStr = row[fechaIndex];
-                if (dateStr) {
-                    const date = parseCustomDate(dateStr);
-                    if (date) {
-                        if (date < today) {
-                            hasOverdue = true;
-                        } else if (date >= today && date <= thisWeekEnd) {
-                            hasDueThisWeek = true;
-                        }
-                    }
-                }
-            });
-        }
-        
-        if (hasOverdue) blocked++;
-        if (hasDueThisWeek) dueThisWeek++;
     });
+    
+    // Calculate program completion percentage
+    const programCompletion = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0;
     
     return {
         totalProjects: projects.length,
         onTrack,
         atRisk,
         behind,
-        blocked,
-        dueThisWeek
+        programCompletion
     };
 } 

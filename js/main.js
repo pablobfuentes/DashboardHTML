@@ -6,6 +6,7 @@ import { initializeTimezone } from './timezone.js';
 import { initializeEmailTemplates } from './email-templates.js';
 import { initializeProjectActions } from './project-actions.js';
 import { initializeSummary } from './summary.js';
+import { initializeTemplates } from './templates.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
@@ -22,4 +23,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEmailTemplates();
     initializeProjectActions();
     initializeSummary();
+    initializeTemplates();
 });
