@@ -186,9 +186,13 @@ function renderKanbanBoard() {
         return task.status.toLowerCase() !== 'completo' || sessionCompletedTasks.has(task.id);
     });
 
-    // Separate tasks. Filters only apply to 'pendiente' (To Do).
-    const todoTasks = activeTasks.filter(task => task.status === 'pendiente');
-    const otherTasks = activeTasks.filter(task => task.status !== 'pendiente');
+    // Separate tasks. To Do column shows only 'pendiente' and 'en proceso' tasks.
+    const todoTasks = activeTasks.filter(task => 
+        task.status === 'pendiente' || task.status === 'en proceso'
+    );
+    const otherTasks = activeTasks.filter(task => 
+        task.status !== 'pendiente' && task.status !== 'en proceso'
+    );
 
     const filteredTodoTasks = todoTasks.filter(task => {
         const projectMatch = projectFilter === 'all' || task.projectName === projectFilter;
@@ -215,11 +219,18 @@ function renderKanbanBoard() {
         'completo': { title: 'Completed', tasks: [] },
     };
 
+    // Assign tasks to columns explicitly
     finalTasks.forEach(task => {
         const status = task.status.toLowerCase();
-        if (columns[status]) {
-            columns[status].tasks.push(task);
+        
+        if (status === 'pendiente' || status === 'en proceso') {
+            // Both "pendiente" and "en proceso" tasks go to To Do column
+            columns['pendiente'].tasks.push(task);
+        } else if (status === 'completo') {
+            // Completed tasks go to Completed column
+            columns['completo'].tasks.push(task);
         }
+        // Note: "en proceso" tasks no longer go to the "In Progress" column
     });
 
     // Create the filter section if it doesn't exist
@@ -273,14 +284,18 @@ function getAllTasks() {
         if (statusIndex === -1 || activityIndex === -1) return;
 
         project.content.forEach((row, rowIndex) => {
-            tasks.push({
-                id: `${projectId}-${rowIndex}`,
-                projectName: project.name,
-                status: row[statusIndex] || 'pendiente',
-                activity: row[activityIndex],
-                dueDate: row[dateIndex] || '',
-                notes: row[notesIndex] || '',
-            });
+            const status = row[statusIndex];
+            // Only include tasks that have a valid status (not empty, null, or undefined)
+            if (status && status.trim() !== '') {
+                tasks.push({
+                    id: `${projectId}-${rowIndex}`,
+                    projectName: project.name,
+                    status: status,
+                    activity: row[activityIndex],
+                    dueDate: row[dateIndex] || '',
+                    notes: row[notesIndex] || '',
+                });
+            }
         });
     });
     return tasks;
