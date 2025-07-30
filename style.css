@@ -4465,6 +4465,40 @@ td.status-cell {
     vertical-align: middle;
 }
 
+#summary-matrix-table td.project-completed {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    font-weight: 600;
+}
+
+#summary-matrix-table td.project-completed:hover {
+    background-color: rgba(40, 167, 69, 0.15);
+}
+
+#summary-matrix-table .project-link {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    display: block;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+#summary-matrix-table .project-link:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    text-decoration: underline;
+}
+
+#summary-matrix-table td.project-completed .project-link {
+    color: #28a745;
+    font-weight: 600;
+}
+
+#summary-matrix-table td.project-completed .project-link:hover {
+    background-color: rgba(40, 167, 69, 0.2);
+}
+
 /* Status Icons */
 .status-icon {
     display: inline-block;

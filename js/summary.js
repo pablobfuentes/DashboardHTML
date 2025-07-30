@@ -111,6 +111,19 @@ function setupEventListeners() {
             renderProjectMatrixTable();
         });
     }
+
+    // Project link clicks (delegated event listener)
+    const matrixTable = document.getElementById('summary-matrix-table');
+    if (matrixTable) {
+        matrixTable.addEventListener('click', (e) => {
+            const projectLink = e.target.closest('.project-link');
+            if (projectLink) {
+                e.preventDefault();
+                const projectId = projectLink.dataset.projectId;
+                navigateToProjectTab(projectId);
+            }
+        });
+    }
 }
 
 function renderProjectMatrixTable() {
@@ -142,8 +155,11 @@ function renderProjectMatrixTable() {
     let tbodyHTML = '';
     
     projects.forEach(([projectId, project]) => {
+        const isProjectCompleted = isProject100PercentComplete(project);
+        const projectNameClass = isProjectCompleted ? 'project-completed' : '';
+        
         tbodyHTML += `<tr>`;
-        tbodyHTML += `<td>${project.name}</td>`;
+        tbodyHTML += `<td class="${projectNameClass}"><a href="#" class="project-link" data-project-id="${projectId}">${project.name}</a></td>`;
 
         selectedColumns.forEach(colId => {
             const cellData = findCellData(project, colId, allColumns);
@@ -213,6 +229,44 @@ function hasProjectOwner(project, ownerFilter) {
     
     const projectOwners = project.content.map(row => row[responsableIndex]).filter(o => o);
     return projectOwners.some(owner => owner.toLowerCase().includes(ownerFilter.toLowerCase()));
+}
+
+function navigateToProjectTab(projectId) {
+    // Switch to the Seguimiento section first
+    const seguimientoNav = document.querySelector('.nav-item[data-section="seguimiento"]');
+    if (seguimientoNav) {
+        seguimientoNav.click();
+    }
+    
+    // Wait a moment for the section to load, then switch to the Projects view and the specific project tab
+    setTimeout(() => {
+        // First, activate the Projects tab (not Kanban)
+        const projectsTab = document.querySelector('.seguimiento-tab[data-view="projects"]');
+        if (projectsTab) {
+            projectsTab.click();
+        }
+        
+        // Then wait a bit more and activate the specific project tab
+        setTimeout(() => {
+            const projectTab = document.querySelector(`.project-tab[data-tab="${projectId}"]`);
+            if (projectTab) {
+                projectTab.click();
+            } else {
+                console.warn(`Project tab not found for project ID: ${projectId}`);
+            }
+        }, 50);
+    }, 100);
+}
+
+function isProject100PercentComplete(project) {
+    const statusIndex = project.headers.findIndex(h => h.toLowerCase() === 'status');
+    if (statusIndex === -1) return false;
+    
+    const statuses = project.content.map(row => row[statusIndex]).filter(s => s);
+    if (statuses.length === 0) return false;
+    
+    // Check if all activities are 'completo'
+    return statuses.every(s => s.toLowerCase() === 'completo');
 }
 
 function hasProjectDueDate(project, dueDateFilter) {
@@ -697,29 +751,28 @@ function calculateProjectStatistics(projects) {
     let onTrack = 0;
     let atRisk = 0;
     let behind = 0;
-    let totalActivities = 0;
-    let completedActivities = 0;
+    let totalProjectCompletion = 0;
+    let validProjects = 0;
     
     projects.forEach(([projectId, project]) => {
         const statusIndex = project.headers.findIndex(h => h.toLowerCase() === 'status');
         
         let projectStatus = 'unknown';
-        let projectActivities = 0;
-        let projectCompleted = 0;
+        let projectCompletion = 0;
         
         if (statusIndex !== -1) {
             const statuses = project.content.map(row => row[statusIndex]).filter(s => s);
-            projectActivities = statuses.length;
-            totalActivities += projectActivities;
             
             if (statuses.length > 0) {
                 const hasPendiente = statuses.some(s => s.toLowerCase() === 'pendiente');
                 const hasEnProceso = statuses.some(s => s.toLowerCase().includes('proceso'));
                 const allCompleto = statuses.every(s => s.toLowerCase() === 'completo');
                 
-                // Count completed activities for program completion
+                // Calculate project completion percentage
                 const completed = statuses.filter(s => s.toLowerCase() === 'completo').length;
-                completedActivities += completed;
+                projectCompletion = Math.round((completed / statuses.length) * 100);
+                totalProjectCompletion += projectCompletion;
+                validProjects++;
                 
                 if (hasPendiente) {
                     projectStatus = 'behind';
@@ -735,8 +788,10 @@ function calculateProjectStatistics(projects) {
         }
     });
     
-    // Calculate program completion percentage
-    const programCompletion = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0;
+    // Calculate program completion as average of project completion percentages
+    const programCompletion = validProjects > 0 ? Math.round(totalProjectCompletion / validProjects) : 0;
+    
+    console.log(`Project completion calculation: ${validProjects} projects, total completion: ${totalProjectCompletion}, average: ${programCompletion}%`);
     
     return {
         totalProjects: projects.length,
