@@ -93,6 +93,7 @@ export function saveState() {
         emailTemplates: state.emailTemplates,
         mainTemplateActions: state.mainTemplateActions,
         projectTabOrder: state.projectTabOrder,
+        summaryViewConfig: state.summaryViewConfig,
     };
     localStorage.setItem('dashboardState', JSON.stringify(dataToSave));
     console.log("Dashboard state saved.");
@@ -123,6 +124,20 @@ export function loadState() {
     state.emailTemplates = loadedData.emailTemplates || [];
     state.mainTemplateActions = loadedData.mainTemplateActions || {};
     state.projectTabOrder = loadedData.projectTabOrder || [];
+    state.summaryViewConfig = loadedData.summaryViewConfig || {
+        columns: [],
+        displayMode: 'icon',
+        filters: {
+            status: 'all',
+            owner: 'all',
+            dueDate: 'all'
+        },
+        savedViews: {
+            'Default View': [],
+            'Logistics View': ['plaza', 'localidad', 'material-en-almacen', 'material-en-sitio'],
+            'Finance View': ['firma-sow', 'requisitos-previos', 'ventana', 'cierre']
+        }
+    };
 
     // **Verification Step**: Ensure main-template exists in projectsData after loading.
     // This handles cases where the saved state is from an older version.

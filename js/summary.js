@@ -4,14 +4,36 @@ import { state, saveState } from './state.js';
 if (!state.summaryViewConfig) {
     state.summaryViewConfig = {
         columns: [], // We'll populate this on first load
-        displayMode: 'icon' // 'icon' or 'data'
+        displayMode: 'icon', // 'icon' or 'data'
+        filters: {
+            status: 'all',
+            owner: 'all',
+            dueDate: 'all'
+        },
+        savedViews: {
+            'Default View': [],
+            'Logistics View': ['plaza', 'localidad', 'material-en-almacen', 'material-en-sitio'],
+            'Finance View': ['firma-sow', 'requisitos-previos', 'ventana', 'cierre']
+        }
     };
 }
 
 export function initializeSummary() {
     // On first load, populate the default columns
     if (state.summaryViewConfig.columns.length === 0) {
-        state.summaryViewConfig.columns = getAvailableColumns().map(c => c.id);
+        const availableColumns = getAvailableColumns();
+        // Set default columns to include key identifiers and a few milestone activities
+        const defaultColumns = availableColumns
+            .filter(col => ['plaza', 'localidad', 'responsable'].includes(col.id))
+            .map(col => col.id);
+        
+        // Add first 3 activity columns as examples
+        const activityColumns = availableColumns
+            .filter(col => col.type === 'activity')
+            .slice(0, 3)
+            .map(col => col.id);
+        
+        state.summaryViewConfig.columns = [...defaultColumns, ...activityColumns];
         saveState();
     }
 }
@@ -32,14 +54,63 @@ export function renderSummaryView() {
     const configureModal = createConfigureViewModal();
     summaryContainer.appendChild(configureModal);
 
-    // Add event listener for the button
-    const configureBtn = document.getElementById('configure-view-btn');
-    configureBtn.addEventListener('click', () => {
-        populateConfigureViewModal();
-        document.getElementById('configure-view-modal').style.display = 'block';
-    });
+    // Add event listeners
+    setupEventListeners();
 
     renderProjectMatrixTable();
+}
+
+function setupEventListeners() {
+    // Configure view button
+    const configureBtn = document.getElementById('configure-view-btn');
+    if (configureBtn) {
+        configureBtn.addEventListener('click', () => {
+            populateConfigureViewModal();
+            document.getElementById('configure-view-modal').style.display = 'block';
+        });
+    }
+
+    // Display mode toggle
+    const displayModeToggle = document.getElementById('display-mode-toggle');
+    if (displayModeToggle) {
+        displayModeToggle.checked = state.summaryViewConfig.displayMode === 'data';
+        displayModeToggle.addEventListener('change', (e) => {
+            state.summaryViewConfig.displayMode = e.target.checked ? 'data' : 'icon';
+            saveState();
+            renderProjectMatrixTable();
+        });
+    }
+
+    // Filter dropdowns
+    const statusFilter = document.getElementById('status-filter');
+    if (statusFilter) {
+        statusFilter.value = state.summaryViewConfig.filters.status;
+        statusFilter.addEventListener('change', (e) => {
+            state.summaryViewConfig.filters.status = e.target.value;
+            saveState();
+            renderProjectMatrixTable();
+        });
+    }
+
+    const ownerFilter = document.getElementById('owner-filter');
+    if (ownerFilter) {
+        ownerFilter.value = state.summaryViewConfig.filters.owner;
+        ownerFilter.addEventListener('change', (e) => {
+            state.summaryViewConfig.filters.owner = e.target.value;
+            saveState();
+            renderProjectMatrixTable();
+        });
+    }
+
+    const dueDateFilter = document.getElementById('due-date-filter');
+    if (dueDateFilter) {
+        dueDateFilter.value = state.summaryViewConfig.filters.dueDate;
+        dueDateFilter.addEventListener('change', (e) => {
+            state.summaryViewConfig.filters.dueDate = e.target.value;
+            saveState();
+            renderProjectMatrixTable();
+        });
+    }
 }
 
 function renderProjectMatrixTable() {
@@ -64,17 +135,21 @@ function renderProjectMatrixTable() {
         </tr>
     `;
 
+    // Get filtered projects
+    const projects = getFilteredProjects();
+
     // Render Body
     let tbodyHTML = '';
-    const projects = Object.entries(state.projectsData).filter(([id, proj]) => id !== 'main-template');
-
+    
     projects.forEach(([projectId, project]) => {
-        tbodyHTML += `<tr>`;
+        const rowClass = getRowHighlightClass(project, selectedColumns, allColumns);
+        tbodyHTML += `<tr class="${rowClass}">`;
         tbodyHTML += `<td>${project.name}</td>`;
 
         selectedColumns.forEach(colId => {
-            let cellData = findCellData(project, colId, allColumns);
-            tbodyHTML += `<td>${cellData}</td>`;
+            const cellData = findCellData(project, colId, allColumns);
+            const cellContent = renderCellContent(cellData, colId, allColumns);
+            tbodyHTML += `<td>${cellContent}</td>`;
         });
 
         tbodyHTML += `</tr>`;
@@ -82,9 +157,174 @@ function renderProjectMatrixTable() {
 
     tbody.innerHTML = projects.length > 0 ? tbodyHTML : `
         <tr>
-            <td colspan="${selectedColumns.length + 1}" class="placeholder-cell">No projects to display.</td>
+            <td colspan="${selectedColumns.length + 1}" class="placeholder-cell">No projects match the current filters.</td>
         </tr>
     `;
+}
+
+function getFilteredProjects() {
+    const projects = Object.entries(state.projectsData).filter(([id, proj]) => id !== 'main-template');
+    const filters = state.summaryViewConfig.filters;
+    
+    return projects.filter(([projectId, project]) => {
+        // Status filter
+        if (filters.status !== 'all') {
+            const hasMatchingStatus = hasProjectStatus(project, filters.status);
+            if (!hasMatchingStatus) return false;
+        }
+        
+        // Owner filter
+        if (filters.owner !== 'all') {
+            const hasMatchingOwner = hasProjectOwner(project, filters.owner);
+            if (!hasMatchingOwner) return false;
+        }
+        
+        // Due date filter
+        if (filters.dueDate !== 'all') {
+            const hasMatchingDueDate = hasProjectDueDate(project, filters.dueDate);
+            if (!hasMatchingDueDate) return false;
+        }
+        
+        return true;
+    });
+}
+
+function hasProjectStatus(project, statusFilter) {
+    const statusIndex = project.headers.findIndex(h => h.toLowerCase() === 'status');
+    if (statusIndex === -1) return true;
+    
+    const projectStatuses = project.content.map(row => row[statusIndex]).filter(s => s);
+    
+    switch (statusFilter) {
+        case 'behind':
+            return projectStatuses.some(s => s === 'pendiente' || s === 'atrasado');
+        case 'at-risk':
+            return projectStatuses.some(s => s === 'en proceso' || s === 'en progreso');
+        case 'on-track':
+            return projectStatuses.every(s => s === 'completo');
+        default:
+            return true;
+    }
+}
+
+function hasProjectOwner(project, ownerFilter) {
+    const responsableIndex = project.headers.findIndex(h => h.toLowerCase() === 'responsable');
+    if (responsableIndex === -1) return true;
+    
+    const projectOwners = project.content.map(row => row[responsableIndex]).filter(o => o);
+    return projectOwners.some(owner => owner.toLowerCase().includes(ownerFilter.toLowerCase()));
+}
+
+function hasProjectDueDate(project, dueDateFilter) {
+    const fechaIndex = project.headers.findIndex(h => h.toLowerCase().includes('fecha esperada'));
+    if (fechaIndex === -1) return true;
+    
+    const today = new Date();
+    const thisWeekEnd = new Date(today);
+    thisWeekEnd.setDate(today.getDate() + 7);
+    
+    const nextWeekEnd = new Date(today);
+    nextWeekEnd.setDate(today.getDate() + 14);
+    
+    const projectDates = project.content.map(row => {
+        const dateStr = row[fechaIndex];
+        if (!dateStr) return null;
+        return parseCustomDate(dateStr);
+    }).filter(d => d);
+    
+    switch (dueDateFilter) {
+        case 'this-week':
+            return projectDates.some(date => date >= today && date <= thisWeekEnd);
+        case 'next-week':
+            return projectDates.some(date => date > thisWeekEnd && date <= nextWeekEnd);
+        case 'overdue':
+            return projectDates.some(date => date < today);
+        default:
+            return true;
+    }
+}
+
+function parseCustomDate(dateStr) {
+    // Parse date in format "dd-Mon-yy" or "dd-Mmm-yy"
+    const match = dateStr.match(/(\d{1,2})-([A-Za-z]{3})-(\d{2})/);
+    if (!match) return null;
+    
+    const [, day, month, year] = match;
+    const monthMap = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    };
+    
+    const monthIndex = monthMap[month];
+    if (monthIndex === undefined) return null;
+    
+    const fullYear = 2000 + parseInt(year);
+    return new Date(fullYear, monthIndex, parseInt(day));
+}
+
+function getRowHighlightClass(project, selectedColumns, allColumns) {
+    let hasBehind = false;
+    let hasAtRisk = false;
+    
+    selectedColumns.forEach(colId => {
+        const cellData = findCellData(project, colId, allColumns);
+        if (cellData && typeof cellData === 'string') {
+            const status = cellData.toLowerCase();
+            if (status === 'pendiente' || status === 'atrasado') {
+                hasBehind = true;
+            } else if (status === 'en proceso' || status === 'en progreso') {
+                hasAtRisk = true;
+            }
+        }
+    });
+    
+    if (hasBehind) return 'row-behind';
+    if (hasAtRisk) return 'row-at-risk';
+    return '';
+}
+
+function renderCellContent(cellData, columnId, allColumns) {
+    const column = allColumns.find(c => c.id === columnId);
+    const displayMode = state.summaryViewConfig.displayMode;
+    
+    if (!cellData || cellData === '') return '';
+    
+    if (displayMode === 'icon' && column && column.type === 'activity') {
+        return renderStatusIcon(cellData);
+    } else {
+        return escapeHtml(String(cellData));
+    }
+}
+
+function renderStatusIcon(status) {
+    const statusLower = status.toLowerCase();
+    let icon, color, tooltip;
+    
+    if (statusLower === 'completo') {
+        icon = '✓';
+        color = '#28a745';
+        tooltip = `Completo | ${status}`;
+    } else if (statusLower === 'en proceso' || statusLower === 'en progreso') {
+        icon = '!';
+        color = '#ffc107';
+        tooltip = `En Proceso | ${status}`;
+    } else if (statusLower === 'pendiente' || statusLower === 'atrasado') {
+        icon = '✗';
+        color = '#dc3545';
+        tooltip = `Pendiente/Atrasado | ${status}`;
+    } else {
+        icon = '?';
+        color = '#6c757d';
+        tooltip = `Estado: ${status}`;
+    }
+    
+    return `<span class="status-icon" style="color: ${color}; font-weight: bold;" title="${tooltip}">${icon}</span>`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function findCellData(project, columnId, allColumns) {
@@ -92,10 +332,9 @@ function findCellData(project, columnId, allColumns) {
     if (!column) return '';
 
     if (column.type === 'standard') {
-        const headerIndex = project.headers.indexOf(column.name);
+        const headerIndex = project.headers.findIndex(h => h.toLowerCase() === column.name.toLowerCase());
         if (headerIndex !== -1 && project.content.length > 0) {
-            // For standard columns, we'll find the first non-empty value as a representative.
-            // This might need refinement depending on the desired behavior for multi-value columns.
+            // For standard columns, find the first non-empty value
             for (let i = 0; i < project.content.length; i++) {
                 const cellValue = project.content[i][headerIndex];
                 if (cellValue !== null && cellValue !== undefined && String(cellValue).trim() !== '') {
@@ -118,12 +357,13 @@ function findCellData(project, columnId, allColumns) {
         }
     }
 
-    return 'N/A'; // Return 'N/A' if no matching activity is found for this project
+    return '';
 }
 
 function populateConfigureViewModal() {
     const availableColumns = getAvailableColumns();
     const modalBody = document.querySelector('#configure-view-modal .modal-body');
+    const selectedColumns = state.summaryViewConfig.columns;
 
     const columnSelectionHTML = `
         <div class="column-selection-container">
@@ -131,15 +371,61 @@ function populateConfigureViewModal() {
             <div class="column-list">
                 ${availableColumns.map(col => `
                     <div class="column-item">
-                        <input type="checkbox" id="col-${col.id}" name="${col.id}" value="${col.name}" checked>
+                        <input type="checkbox" id="col-${col.id}" name="${col.id}" value="${col.name}" 
+                               ${selectedColumns.includes(col.id) ? 'checked' : ''}>
                         <label for="col-${col.id}">${col.name}</label>
                     </div>
                 `).join('')}
             </div>
         </div>
+        <div class="saved-views-container">
+            <h4>Saved Views</h4>
+            <div class="saved-views-list">
+                ${Object.keys(state.summaryViewConfig.savedViews).map(viewName => `
+                    <button class="saved-view-btn" data-view="${viewName}">${viewName}</button>
+                `).join('')}
+            </div>
+            <div class="save-view-section">
+                <input type="text" id="new-view-name" placeholder="Enter view name">
+                <button id="save-current-view">Save Current View</button>
+            </div>
+        </div>
     `;
 
     modalBody.innerHTML = columnSelectionHTML;
+    
+    // Add event listeners for saved views
+    document.querySelectorAll('.saved-view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const viewName = btn.dataset.view;
+            const viewColumns = state.summaryViewConfig.savedViews[viewName];
+            
+            // Update checkboxes
+            document.querySelectorAll('#configure-view-modal .column-list input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = viewColumns.includes(checkbox.name);
+            });
+        });
+    });
+    
+    // Add event listener for save view button
+    const saveViewBtn = document.getElementById('save-current-view');
+    if (saveViewBtn) {
+        saveViewBtn.addEventListener('click', () => {
+            const viewName = document.getElementById('new-view-name').value.trim();
+            if (viewName) {
+                const selectedColumns = [];
+                document.querySelectorAll('#configure-view-modal .column-list input[type="checkbox"]:checked').forEach(checkbox => {
+                    selectedColumns.push(checkbox.name);
+                });
+                
+                state.summaryViewConfig.savedViews[viewName] = selectedColumns;
+                saveState();
+                
+                // Refresh the modal
+                populateConfigureViewModal();
+            }
+        });
+    }
 }
 
 function getAvailableColumns() {
@@ -149,12 +435,14 @@ function getAvailableColumns() {
         return [];
     }
 
-    // 1. Define a fixed set of identifier columns to always include.
-    const identifierFields = ['Fase', 'ID', 'Responsable', 'Milestone'].map(header => ({
-        id: header.toLowerCase().replace(/\s+/g, '-'),
-        name: header,
-        type: 'standard'
-    }));
+    // 1. Define identifier columns from the main template headers
+    const identifierFields = mainTemplateData.headers
+        .filter(header => ['Plaza', 'Localidad', 'Responsable', 'Fase', 'ID', 'Milestone'].includes(header))
+        .map(header => ({
+            id: header.toLowerCase().replace(/\s+/g, '-'),
+            name: header,
+            type: 'standard'
+        }));
 
     // 2. Get unique "Actividad" values from all projects to use as columns.
     const activitySet = new Set();
@@ -235,11 +523,48 @@ function createProjectMatrix() {
     const container = document.createElement('div');
     container.className = 'project-matrix-container';
 
+    // Get unique owners from project data
+    const owners = getUniqueOwners();
+
     container.innerHTML = `
         <div class="matrix-header">
-            <h2>Project Matrix</h2>
+            <h2>Deep Dive - Customizable Project Matrix</h2>
             <div class="matrix-controls">
+                <div class="display-mode-toggle">
+                    <label for="display-mode-toggle">
+                        <input type="checkbox" id="display-mode-toggle" ${state.summaryViewConfig.displayMode === 'data' ? 'checked' : ''}>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Data View</span>
+                    </label>
+                </div>
                 <button id="configure-view-btn" class="btn">✏️ Configure View</button>
+            </div>
+        </div>
+        <div class="matrix-filters">
+            <div class="filter-group">
+                <label for="status-filter">Status:</label>
+                <select id="status-filter">
+                    <option value="all">All Projects</option>
+                    <option value="behind">Behind 🔴</option>
+                    <option value="at-risk">At Risk 🟡</option>
+                    <option value="on-track">On Track 🟢</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="owner-filter">Owner:</label>
+                <select id="owner-filter">
+                    <option value="all">All</option>
+                    ${owners.map(owner => `<option value="${owner.toLowerCase()}">${owner}</option>`).join('')}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="due-date-filter">Due Date:</label>
+                <select id="due-date-filter">
+                    <option value="all">All</option>
+                    <option value="this-week">This Week</option>
+                    <option value="next-week">Next Week</option>
+                    <option value="overdue">Overdue</option>
+                </select>
             </div>
         </div>
         <div class="matrix-table-wrapper">
@@ -258,49 +583,133 @@ function createProjectMatrix() {
     return container;
 }
 
+function getUniqueOwners() {
+    const owners = new Set();
+    const projects = Object.entries(state.projectsData).filter(([id, proj]) => id !== 'main-template');
+    
+    projects.forEach(([projectId, project]) => {
+        const responsableIndex = project.headers.findIndex(h => h.toLowerCase() === 'responsable');
+        if (responsableIndex !== -1) {
+            project.content.forEach(row => {
+                const owner = row[responsableIndex];
+                if (owner && owner.trim() !== '') {
+                    owners.add(owner.trim());
+                }
+            });
+        }
+    });
+    
+    return Array.from(owners).sort();
+}
+
 function createExecutiveOverview() {
     const container = document.createElement('div');
     container.className = 'executive-overview';
 
-    // Placeholder data - we will make this dynamic later
-    const totalProjects = Object.keys(state.projectsData).length - 1; // Exclude main template
-    const onTrack = 3;
-    const atRisk = 8;
-    const behind = 1;
-    const blocked = 5;
-    const dueThisWeek = 7;
+    // Calculate real statistics from project data
+    const projects = Object.entries(state.projectsData).filter(([id, proj]) => id !== 'main-template');
+    const stats = calculateProjectStatistics(projects);
 
     container.innerHTML = `
         <div class="overview-header">
-            <h2>Command Center</h2>
+            <h2>Command Center - Executive Overview</h2>
         </div>
         <div class="overview-grid">
             <div class="overview-card">
-                <div class="card-value">${totalProjects}</div>
+                <div class="card-value">${stats.totalProjects}</div>
                 <div class="card-label">Active Projects</div>
             </div>
             <div class="overview-card">
-                <div class="card-value status-on-track">${onTrack}</div>
+                <div class="card-value status-on-track">${stats.onTrack}</div>
                 <div class="card-label">On Track 🟢</div>
             </div>
             <div class="overview-card">
-                <div class="card-value status-at-risk">${atRisk}</div>
+                <div class="card-value status-at-risk">${stats.atRisk}</div>
                 <div class="card-label">At Risk 🟡</div>
             </div>
             <div class="overview-card">
-                <div class="card-value status-behind">${behind}</div>
+                <div class="card-value status-behind">${stats.behind}</div>
                 <div class="card-label">Behind 🔴</div>
             </div>
             <div class="overview-card critical">
-                <div class="card-value">${blocked}</div>
+                <div class="card-value">${stats.blocked}</div>
                 <div class="card-label">Blocked / Overdue</div>
             </div>
             <div class="overview-card">
-                <div class="card-value">${dueThisWeek}</div>
+                <div class="card-value">${stats.dueThisWeek}</div>
                 <div class="card-label">Due This Week</div>
             </div>
         </div>
     `;
 
     return container;
+}
+
+function calculateProjectStatistics(projects) {
+    let onTrack = 0;
+    let atRisk = 0;
+    let behind = 0;
+    let blocked = 0;
+    let dueThisWeek = 0;
+    
+    const today = new Date();
+    const thisWeekEnd = new Date(today);
+    thisWeekEnd.setDate(today.getDate() + 7);
+    
+    projects.forEach(([projectId, project]) => {
+        const statusIndex = project.headers.findIndex(h => h.toLowerCase() === 'status');
+        const fechaIndex = project.headers.findIndex(h => h.toLowerCase().includes('fecha esperada'));
+        
+        let projectStatus = 'unknown';
+        let hasOverdue = false;
+        let hasDueThisWeek = false;
+        
+        if (statusIndex !== -1) {
+            const statuses = project.content.map(row => row[statusIndex]).filter(s => s);
+            if (statuses.length > 0) {
+                const hasPendiente = statuses.some(s => s.toLowerCase() === 'pendiente');
+                const hasEnProceso = statuses.some(s => s.toLowerCase().includes('proceso'));
+                const allCompleto = statuses.every(s => s.toLowerCase() === 'completo');
+                
+                if (hasPendiente) {
+                    projectStatus = 'behind';
+                    behind++;
+                } else if (hasEnProceso) {
+                    projectStatus = 'at-risk';
+                    atRisk++;
+                } else if (allCompleto) {
+                    projectStatus = 'on-track';
+                    onTrack++;
+                }
+            }
+        }
+        
+        if (fechaIndex !== -1) {
+            project.content.forEach(row => {
+                const dateStr = row[fechaIndex];
+                if (dateStr) {
+                    const date = parseCustomDate(dateStr);
+                    if (date) {
+                        if (date < today) {
+                            hasOverdue = true;
+                        } else if (date >= today && date <= thisWeekEnd) {
+                            hasDueThisWeek = true;
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (hasOverdue) blocked++;
+        if (hasDueThisWeek) dueThisWeek++;
+    });
+    
+    return {
+        totalProjects: projects.length,
+        onTrack,
+        atRisk,
+        behind,
+        blocked,
+        dueThisWeek
+    };
 } 
