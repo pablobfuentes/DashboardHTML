@@ -563,6 +563,9 @@ export function createEvidenciaCell(isMain = false, rowData = null, colIndex = -
             // Show/hide delete button based on text content
             deleteButton.style.display = hasText ? '' : 'none';
             deleteButton.classList.toggle('visible', hasText);
+            
+            // Save the text content to project data
+            saveEvidenceTextContent(cell, this.value);
         });
         
         // Event listener for attach button
@@ -742,6 +745,10 @@ export function updateAllProjectTables() {
         // Create a map of old header index to new header index
         const headerMap = templateHeaders.map(h => oldHeaders.indexOf(h));
 
+        // Find evidence column indices
+        const oldEvidenciaIndex = oldHeaders.findIndex(h => h.toLowerCase() === 'evidencia');
+        const newEvidenciaIndex = templateHeaders.findIndex(h => h.toLowerCase() === 'evidencia');
+
         project.content.forEach(oldRow => {
             const newRow = new Array(templateHeaders.length).fill('');
             headerMap.forEach((oldIndex, newIndex) => {
@@ -749,6 +756,27 @@ export function updateAllProjectTables() {
                     newRow[newIndex] = oldRow[oldIndex];
                 }
             });
+            
+            // Preserve evidence text content if it exists
+            if (oldEvidenciaIndex !== -1 && newEvidenciaIndex !== -1 && oldRow[oldEvidenciaIndex]) {
+                try {
+                    const oldEvidenceState = JSON.parse(oldRow[oldEvidenciaIndex]);
+                    if (oldEvidenceState.textContent && typeof oldEvidenceState.textContent === 'string') {
+                        // Preserve the text content in the new evidence state
+                        const newEvidenceState = {
+                            required: oldEvidenceState.required || false,
+                            isText: oldEvidenceState.isText || false,
+                            textContent: oldEvidenceState.textContent
+                        };
+                        newRow[newEvidenciaIndex] = JSON.stringify(newEvidenceState);
+                        console.log(`Preserved evidence text content for project ${projectId}:`, oldEvidenceState.textContent);
+                    }
+                } catch (e) {
+                    // If it's not JSON, preserve as-is
+                    newRow[newEvidenciaIndex] = oldRow[oldEvidenciaIndex];
+                }
+            }
+            
             newContent.push(newRow);
         });
 
@@ -974,9 +1002,40 @@ export function updateProjectCellsVisibility() {
             // Update each row in the project to match the main template evidence settings
             state.currentTemplateRows.forEach((mainRow, rowIndex) => {
                 if (project.content[rowIndex] && mainRow[evidenciaIndex]) {
-                    // Only update the evidence column, preserve all other project data
-                    project.content[rowIndex][evidenciaIndex] = mainRow[evidenciaIndex];
-                    console.log(`Updated project ${projectId}, row ${rowIndex}, evidence:`, mainRow[evidenciaIndex]);
+                    // Get the project's evidence column index
+                    const projectEvidenciaIndex = project.headers.findIndex(h => h.toLowerCase() === 'evidencia');
+                    if (projectEvidenciaIndex === -1) return;
+                    
+                    // Get existing project evidence state to preserve text content
+                    let existingEvidenceState = { required: false, isText: false };
+                    if (project.content[rowIndex][projectEvidenciaIndex]) {
+                        try {
+                            existingEvidenceState = JSON.parse(project.content[rowIndex][projectEvidenciaIndex]);
+                        } catch (e) {
+                            // Handle legacy format
+                            existingEvidenceState = { required: false, isText: false };
+                        }
+                    }
+                    
+                    // Get main template evidence state
+                    let mainEvidenceState = { required: false, isText: false };
+                    try {
+                        mainEvidenceState = JSON.parse(mainRow[evidenciaIndex]);
+                    } catch (e) {
+                        // Handle legacy format
+                        mainEvidenceState = { required: false, isText: false };
+                    }
+                    
+                    // Merge main template settings with existing project text content
+                    const mergedEvidenceState = {
+                        required: mainEvidenceState.required,
+                        isText: mainEvidenceState.isText,
+                        textContent: existingEvidenceState.textContent || '' // Preserve existing text content
+                    };
+                    
+                    // Update the project evidence column with merged state
+                    project.content[rowIndex][projectEvidenciaIndex] = JSON.stringify(mergedEvidenceState);
+                    console.log(`Updated project ${projectId}, row ${rowIndex}, evidence:`, mergedEvidenceState);
                 }
             });
         }
@@ -1007,6 +1066,14 @@ function initializeProjectEvidenceCell(cell, rowData, colIndex) {
         return;
     }
     
+    // Find the project this cell belongs to
+    const projectPane = cell.closest('.project-pane');
+    if (!projectPane) return;
+    
+    const projectId = projectPane.id;
+    const project = state.projectsData[projectId];
+    if (!project || !project.content) return;
+    
     // Get the evidence state from the main template
     const mainRow = state.currentTemplateRows[rowIndex];
     if (!mainRow || !mainRow[evidenciaIndex]) {
@@ -1015,19 +1082,160 @@ function initializeProjectEvidenceCell(cell, rowData, colIndex) {
     }
     
     try {
-        const evidenceState = JSON.parse(mainRow[evidenciaIndex]);
+        const mainEvidenceState = JSON.parse(mainRow[evidenciaIndex]);
         
-        // Apply the evidence settings to the project cell
-        cell.classList.toggle('evidencia-required', evidenceState.required);
-        cell.classList.toggle('text-mode', evidenceState.isText);
+        // Get existing project evidence state to preserve text content
+        let projectEvidenceState = { required: false, isText: false };
+        const projectEvidenciaIndex = project.headers.findIndex(h => h.toLowerCase() === 'evidencia');
+        
+        console.log(`Looking for evidence data in project ${projectId}, row ${rowIndex}, col ${projectEvidenciaIndex}`);
+        console.log(`Project content at this position:`, project.content[rowIndex] ? project.content[rowIndex][projectEvidenciaIndex] : 'no row');
+        
+        if (projectEvidenciaIndex !== -1 && project.content[rowIndex] && project.content[rowIndex][projectEvidenciaIndex]) {
+            try {
+                projectEvidenceState = JSON.parse(project.content[rowIndex][projectEvidenciaIndex]);
+                console.log(`Found existing project evidence state:`, projectEvidenceState);
+            } catch (e) {
+                // Handle legacy format
+                projectEvidenceState = { required: false, isText: false };
+                console.log(`Error parsing existing project evidence state:`, e);
+            }
+        } else {
+            console.log(`No existing project evidence state found for project ${projectId}, row ${rowIndex}`);
+        }
+        
+        // Merge main template settings with existing project text content
+        const mergedEvidenceState = {
+            required: mainEvidenceState.required,
+            isText: mainEvidenceState.isText,
+            textContent: projectEvidenceState.textContent || '' // Preserve existing text content
+        };
+        
+        console.log(`Created merged evidence state:`, mergedEvidenceState);
+        
+        // Apply the merged evidence settings to the project cell
+        cell.classList.toggle('evidencia-required', mergedEvidenceState.required);
+        cell.classList.toggle('text-mode', mergedEvidenceState.isText);
         
         // Update content visibility based on the mode
-        updateEvidenciaContent(cell, evidenceState.isText);
+        updateEvidenciaContent(cell, mergedEvidenceState.isText);
         
-        console.log(`Initialized project evidence cell - required: ${evidenceState.required}, text: ${evidenceState.isText}`);
+        // Load existing text content if available
+        if (mergedEvidenceState.textContent && typeof mergedEvidenceState.textContent === 'string') {
+            const textInput = cell.querySelector('.evidence-text');
+            if (textInput) {
+                textInput.value = mergedEvidenceState.textContent;
+                // Trigger the input event to update UI state
+                textInput.dispatchEvent(new Event('input'));
+            }
+        }
+        
+                    // Only save the merged state if the project doesn't already have valid evidence data
+        if (projectEvidenciaIndex !== -1) {
+            if (!project.content[rowIndex]) {
+                project.content[rowIndex] = new Array(project.headers.length).fill('');
+            }
+            
+            // Check if the project already has evidence data with text content
+            const existingEvidenceData = project.content[rowIndex][projectEvidenciaIndex];
+            let shouldSave = true;
+            
+            console.log(`Checking existing evidence data for project ${projectId}, row ${rowIndex}:`, existingEvidenceData);
+            
+            if (existingEvidenceData) {
+                try {
+                    const existingState = JSON.parse(existingEvidenceData);
+                    console.log(`Parsed existing state:`, existingState);
+                    if (existingState.textContent && existingState.textContent.trim() !== '') {
+                        // Project already has text content, don't overwrite it
+                        shouldSave = false;
+                        console.log(`Project ${projectId} already has evidence text content, not overwriting`);
+                    } else {
+                        console.log(`Project ${projectId} has evidence state but no text content, will overwrite`);
+                    }
+                } catch (e) {
+                    // Existing data is not JSON, might be legacy format
+                    console.log(`Existing evidence data is not JSON format:`, existingEvidenceData);
+                }
+            } else {
+                console.log(`No existing evidence data found for project ${projectId}, row ${rowIndex}`);
+            }
+            
+            if (shouldSave) {
+                project.content[rowIndex][projectEvidenciaIndex] = JSON.stringify(mergedEvidenceState);
+                saveState();
+                console.log(`Saved merged evidence state to project ${projectId}, row ${rowIndex}:`, mergedEvidenceState);
+            }
+        }
+    
+    console.log(`Initialized project evidence cell - required: ${mergedEvidenceState.required}, text: ${mergedEvidenceState.isText}, content: ${mergedEvidenceState.textContent || 'none'}`);
     } catch (e) {
         console.error('Error parsing evidence state for project cell:', e);
     }
+}
+
+function saveEvidenceTextContent(cell, textContent) {
+    // Find the project this cell belongs to
+    const projectPane = cell.closest('.project-pane');
+    if (!projectPane) return;
+    
+    const projectId = projectPane.id;
+    const project = state.projectsData[projectId];
+    if (!project || !project.content) return;
+    
+    console.log(`=== SAVING EVIDENCE TEXT ===`);
+    console.log(`Project ID: ${projectId}`);
+    console.log(`Text content: ${textContent}`);
+    console.log(`Current project data before save:`, JSON.stringify(project.content).substring(0, 200) + '...');
+    
+    // Find the row and column indices
+    const row = cell.closest('tr');
+    const tbody = row.closest('tbody');
+    if (!tbody) return;
+    
+    const rowIndex = Array.from(tbody.children).indexOf(row);
+    const evidenciaIndex = project.headers.findIndex(h => h.toLowerCase() === 'evidencia');
+    
+    if (rowIndex === -1 || evidenciaIndex === -1) return;
+    
+    // Get current evidence state
+    let evidenceState = { required: false, isText: false };
+    try {
+        if (project.content[rowIndex] && project.content[rowIndex][evidenciaIndex]) {
+            evidenceState = JSON.parse(project.content[rowIndex][evidenciaIndex]);
+        }
+    } catch (e) {
+        // Handle legacy format
+        evidenceState = { required: false, isText: false };
+    }
+    
+    // Add the text content to the evidence state
+    evidenceState.textContent = textContent;
+    
+    // Save back to project data
+    if (!project.content[rowIndex]) {
+        project.content[rowIndex] = new Array(project.headers.length).fill('');
+    }
+    project.content[rowIndex][evidenciaIndex] = JSON.stringify(evidenceState);
+    
+    // Save state
+    saveState();
+    
+    console.log(`Saved evidence text for project ${projectId}, row ${rowIndex}:`, textContent);
+    console.log(`Full evidence state saved:`, evidenceState);
+    console.log(`Project data after save:`, JSON.stringify(project.content).substring(0, 200) + '...');
+    
+    // Verify the save worked by reading it back
+    setTimeout(() => {
+        const savedData = project.content[rowIndex][evidenciaIndex];
+        console.log(`Verification - reading back saved data:`, savedData);
+        try {
+            const savedState = JSON.parse(savedData);
+            console.log(`Verification - parsed saved state:`, savedState);
+        } catch (e) {
+            console.log(`Verification - error parsing saved data:`, e);
+        }
+    }, 100);
 }
 
 function updateProjectEvidenceCellsOnly() {

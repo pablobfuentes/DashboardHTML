@@ -326,10 +326,14 @@ function getEvidenceTextForActivity(project, activityName) {
     
     if (actividadIndex === -1 || evidenciaIndex === -1) return '';
     
+    console.log(`Looking for evidence text for activity: ${activityName} in project: ${project.name || 'unknown'}`);
+    
     // Find the row that matches this activity
     for (const row of project.content) {
         if (row[actividadIndex] && row[actividadIndex].trim() === activityName) {
             const evidenceData = row[evidenciaIndex];
+            
+            console.log(`Found matching row, evidence data:`, evidenceData);
             
             // Handle different evidence data formats
             if (!evidenceData) return '';
@@ -338,21 +342,31 @@ function getEvidenceTextForActivity(project, activityName) {
                 // Try to parse as JSON (for evidence state)
                 const parsed = JSON.parse(evidenceData);
                 if (parsed && typeof parsed === 'object') {
-                    // This is evidence state, not actual text content
+                    console.log(`Parsed evidence state:`, parsed);
+                    // Check if this evidence state has text content
+                    if (parsed.textContent && typeof parsed.textContent === 'string') {
+                        console.log(`Found text content: ${parsed.textContent}`);
+                        return parsed.textContent;
+                    }
+                    // This is evidence state without text content
+                    console.log(`No text content found in evidence state`);
                     return '';
                 }
             } catch (e) {
                 // Not JSON, treat as text content
+                console.log(`Not JSON, treating as text: ${evidenceData}`);
                 return evidenceData;
             }
             
             // If it's a string but not JSON, return it as text
             if (typeof evidenceData === 'string') {
+                console.log(`String evidence data: ${evidenceData}`);
                 return evidenceData;
             }
         }
     }
     
+    console.log(`No matching activity found for: ${activityName}`);
     return '';
 }
 
