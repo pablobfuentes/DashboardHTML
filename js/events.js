@@ -6,12 +6,14 @@ import * as utils from './utils.js';
 import { createMilestonesTimeline, createGanttChart } from './milestones.js';
 import { updateTime } from './timezone.js';
 import { updateDatesBasedOnDependencies, formatCustomDate } from './dependencies.js';
+import { renderSummaryView } from './summary.js';
 
 // --- Main Initializer ---
 
 export function initializeEventListeners() {
     initDelegatedEventListeners();
     initGlobalListeners();
+    initializeTabDragAndDrop(); // Initialize drag and drop for project tabs
 }
 
 // --- Event Listener Initializers ---
@@ -47,6 +49,7 @@ function initDelegatedEventListeners() {
         if (closest('#refresh-projects-button')) updateAllProjectTables();
         if (closest('.pull-contacts-btn')) syncContactsWithProjects();
         if (closest('.seguimiento-tab')) handleSeguimientoViewSwitch(closest('.seguimiento-tab'));
+        if (closest('.consulta-tab')) handleConsultaViewSwitch(closest('.consulta-tab'));
 
         // --- Quick Info Panel Tabs ---
         const infoTab = closest('.info-tab-vertical');
@@ -1013,6 +1016,21 @@ function handleSeguimientoViewSwitch(tab) {
     }
 }
 
+function handleConsultaViewSwitch(tab) {
+    document.querySelectorAll('.consulta-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    const targetViewId = tab.dataset.view;
+    document.querySelectorAll('.consulta-view').forEach(view => view.classList.remove('active'));
+
+    const targetView = document.getElementById(`${targetViewId}-view`);
+    if (targetView) targetView.classList.add('active');
+
+    if (targetViewId === 'summary') {
+        renderSummaryView();
+    }
+}
+
 function handleAddProject() {
     state.projectCount++;
     const projectId = `project-${state.projectCount}`;
@@ -1348,4 +1366,210 @@ function updateLastContactRow(tbody) {
     if (rows.length > 0) {
         rows[rows.length - 1].classList.add('last-contact-row');
     }
+}
+
+// --- Drag and Drop for Project Tabs ---
+
+function initializeTabDragAndDrop() {
+    const tabsContainer = document.getElementById('tabs');
+    if (!tabsContainer) return;
+
+    let draggedTab = null;
+    let draggedTabIndex = -1;
+
+    // Drag start
+    tabsContainer.addEventListener('dragstart', (e) => {
+        const tab = e.target.closest('.project-tab');
+        if (!tab) return;
+        
+        draggedTab = tab;
+        draggedTabIndex = Array.from(tabsContainer.querySelectorAll('.project-tab')).indexOf(tab);
+        tab.classList.add('dragging');
+        
+        // Set drag data
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', tab.outerHTML);
+    });
+
+    // Drag over
+    tabsContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        const tab = e.target.closest('.project-tab');
+        if (!tab || tab === draggedTab) return;
+        
+        const rect = tab.getBoundingClientRect();
+        const midPoint = rect.left + rect.width / 2;
+        
+        // Remove existing drop indicators
+        tabsContainer.querySelectorAll('.project-tab').forEach(t => {
+            t.classList.remove('drop-before', 'drop-after');
+        });
+        
+        // Add drop indicator
+        if (e.clientX < midPoint) {
+            tab.classList.add('drop-before');
+        } else {
+            tab.classList.add('drop-after');
+        }
+    });
+
+    // Drag leave
+    tabsContainer.addEventListener('dragleave', (e) => {
+        if (!tabsContainer.contains(e.relatedTarget)) {
+            tabsContainer.querySelectorAll('.project-tab').forEach(t => {
+                t.classList.remove('drop-before', 'drop-after');
+            });
+        }
+    });
+
+    // Drop
+    tabsContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        
+        const targetTab = e.target.closest('.project-tab');
+        if (!targetTab || !draggedTab) return;
+        
+        // Remove drop indicators
+        tabsContainer.querySelectorAll('.project-tab').forEach(t => {
+            t.classList.remove('drop-before', 'drop-after');
+        });
+        
+        // Remove dragging class
+        draggedTab.classList.remove('dragging');
+        
+        // Get target index
+        const targetIndex = Array.from(tabsContainer.querySelectorAll('.project-tab')).indexOf(targetTab);
+        const rect = targetTab.getBoundingClientRect();
+        const midPoint = rect.left + rect.width / 2;
+        const insertAfter = e.clientX > midPoint;
+        
+        // Calculate new index
+        let newIndex = targetIndex;
+        if (insertAfter) newIndex++;
+        // Remove this line as it's causing the issue
+        // if (draggedTabIndex < targetIndex) newIndex--;
+        
+        console.log('Drag Debug:', {
+            draggedTabIndex,
+            targetIndex,
+            insertAfter,
+            newIndex,
+            draggedTabName: draggedTab.querySelector('.project-name-editable').textContent,
+            targetTabName: targetTab.querySelector('.project-name-editable').textContent
+        });
+        
+        // Don't do anything if the position hasn't changed
+        if (newIndex === draggedTabIndex) {
+            draggedTab = null;
+            return;
+        }
+        
+        // Reorder the tab
+        reorderProjectTab(draggedTabIndex, newIndex);
+        
+        draggedTab = null;
+    });
+
+    // Drag end
+    tabsContainer.addEventListener('dragend', (e) => {
+        const tab = e.target.closest('.project-tab');
+        if (tab) {
+            tab.classList.remove('dragging');
+        }
+        
+        // Remove all drop indicators
+        tabsContainer.querySelectorAll('.project-tab').forEach(t => {
+            t.classList.remove('drop-before', 'drop-after');
+        });
+        
+        draggedTab = null;
+    });
+}
+
+function reorderProjectTab(fromIndex, toIndex) {
+    const tabsContainer = document.getElementById('tabs');
+    const tabContentContainer = document.getElementById('tab-content');
+    const addProjectButton = document.getElementById('add-project-button');
+    
+    if (!tabsContainer || !tabContentContainer) return;
+    
+    const projectTabs = Array.from(tabsContainer.querySelectorAll('.project-tab'));
+    const projectPanes = Array.from(tabContentContainer.querySelectorAll('.project-pane'));
+    
+    // Allow toIndex to be equal to the length (for inserting at the end)
+    if (fromIndex >= projectTabs.length || toIndex > projectTabs.length) return;
+    
+    const movedTab = projectTabs[fromIndex];
+    const movedPane = projectPanes[fromIndex];
+    
+    console.log('Reorder Debug:', {
+        fromIndex,
+        toIndex,
+        originalTabNames: projectTabs.map(t => t.querySelector('.project-name-editable').textContent),
+        movedTabName: movedTab.querySelector('.project-name-editable').textContent
+    });
+    
+    // Remove from current position
+    movedTab.remove();
+    movedPane.remove();
+    
+    // Get the updated arrays after removal
+    const updatedTabs = Array.from(tabsContainer.querySelectorAll('.project-tab'));
+    const updatedPanes = Array.from(tabContentContainer.querySelectorAll('.project-pane'));
+    
+    // Calculate the correct insertion position
+    // After removing an element, all indices shift left by 1
+    // So we need to adjust the target index accordingly
+    let insertIndex = toIndex;
+    if (fromIndex < toIndex) {
+        // When moving right, the target position shifts left by 1 after removal
+        insertIndex = toIndex - 1;
+    }
+    // When moving left, no adjustment needed since we're moving to a position that comes before the removed element
+    
+    // Handle inserting at the end of the list
+    if (toIndex === projectTabs.length) {
+        insertIndex = updatedTabs.length; // This will make referenceTab undefined, so it appends to the end
+    }
+    
+    console.log('Reorder Debug - Insert:', {
+        insertIndex,
+        updatedTabNames: updatedTabs.map(t => t.querySelector('.project-name-editable').textContent),
+        referenceTabName: updatedTabs[insertIndex]?.querySelector('.project-name-editable').textContent || 'addProjectButton'
+    });
+    
+    // Insert at new position
+    const referenceTab = updatedTabs[insertIndex] || addProjectButton;
+    const referencePane = updatedPanes[insertIndex] || null;
+    
+    if (insertIndex >= updatedTabs.length) {
+        // Insert at the end
+        tabsContainer.insertBefore(movedTab, addProjectButton);
+        tabContentContainer.appendChild(movedPane);
+    } else {
+        // Insert at specific position
+        tabsContainer.insertBefore(movedTab, referenceTab);
+        if (referencePane) {
+            tabContentContainer.insertBefore(movedPane, referencePane);
+        } else {
+            tabContentContainer.appendChild(movedPane);
+        }
+    }
+    
+    // Update the order in state (optional - for persistence)
+    updateProjectTabOrder();
+}
+
+function updateProjectTabOrder() {
+    const tabsContainer = document.getElementById('tabs');
+    if (!tabsContainer) return;
+    
+    const projectTabs = Array.from(tabsContainer.querySelectorAll('.project-tab'));
+    const projectOrder = projectTabs.map(tab => tab.getAttribute('data-project-id'));
+    
+    // Store the order in state for future reference
+    state.projectTabOrder = projectOrder;
+    saveState();
 }

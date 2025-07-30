@@ -75,6 +75,7 @@
                         <button class="tab-button" data-tab="email-templates">
                             <span class="tab-name">Email Templates</span>
                         </button>
+                        <button class="tab-button" data-tab="summary">Resumen</button>
                     </div>
                     <div class="tab-content" id="template-content">
                         <div class="tab-pane active main-template-container" id="main-template">
@@ -188,6 +189,10 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tab-pane" id="summary">
+                            <h2>Resumen</h2>
+                            <p>Contenido del resumen en desarrollo...</p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -195,10 +200,14 @@
             <!-- Section: Consulta -->
             <section class="content-section" id="consulta">
                 <div class="consulta-tabs">
-                    <button class="consulta-tab active" data-view="contactos">Contactos</button>
+                    <button class="consulta-tab active" data-view="summary">Resumen</button>
+                    <button class="consulta-tab" data-view="contactos">Contactos</button>
                 </div>
                 <div class="consulta-content">
-                    <div id="contactos-view" class="consulta-view active">
+                    <div id="summary-view" class="consulta-view active">
+                        <!-- Summary content will be loaded here -->
+                    </div>
+                    <div id="contactos-view" class="consulta-view">
                         <div class="contacts-header">
                             <h2>Directorio de Contactos</h2>
                         </div>

@@ -4,6 +4,7 @@
 export const state = {
     projectCount: 0,
     projectsData: {},
+    projectTabOrder: [], // Store the order of project tabs
     activeDatepicker: null,
     currentDateCell: null,
     isResizing: false,
@@ -38,11 +39,22 @@ export const state = {
     ],
     emailTemplates: [],
     mainTemplateActions: {}, // Store main template action configurations per row
+    summaryViewConfig: {
+        columns: [],
+        displayMode: 'icon'
+    }
 };
 
 // Initialize headers and rows from csvData
 state.currentTemplateHeaders = Object.keys(state.csvData[0]);
 state.currentTemplateRows = state.csvData.map(row => Object.values(row));
+
+// Ensure the main-template exists in projectsData from the start
+state.projectsData['main-template'] = {
+    name: 'Main Template',
+    headers: [...state.currentTemplateHeaders],
+    content: JSON.parse(JSON.stringify(state.currentTemplateRows))
+};
 
 export function syncContactsFromDOM() {
     Object.keys(state.projectsData).forEach(projectId => {
@@ -80,6 +92,7 @@ export function saveState() {
         statusTags: state.statusTags,
         emailTemplates: state.emailTemplates,
         mainTemplateActions: state.mainTemplateActions,
+        projectTabOrder: state.projectTabOrder,
     };
     localStorage.setItem('dashboardState', JSON.stringify(dataToSave));
     console.log("Dashboard state saved.");
@@ -109,6 +122,18 @@ export function loadState() {
     ];
     state.emailTemplates = loadedData.emailTemplates || [];
     state.mainTemplateActions = loadedData.mainTemplateActions || {};
+    state.projectTabOrder = loadedData.projectTabOrder || [];
+
+    // **Verification Step**: Ensure main-template exists in projectsData after loading.
+    // This handles cases where the saved state is from an older version.
+    if (!state.projectsData['main-template']) {
+        console.warn("Loaded state is missing main-template project data. Re-creating it now.");
+        state.projectsData['main-template'] = {
+            name: 'Main Template',
+            headers: state.currentTemplateHeaders,
+            content: JSON.parse(JSON.stringify(state.currentTemplateRows))
+        };
+    }
 }
 
 export function loadAndRenderState(projectsData, currentTemplateHeaders, currentTemplateRows, projectCount, columnWidths, csvData) {

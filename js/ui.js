@@ -13,7 +13,20 @@ export function initializeUI() {
     const tabsContainer = document.getElementById('tabs');
     const tabContentContainer = document.getElementById('tab-content');
 
-    Object.keys(state.projectsData).forEach(projectId => {
+    // Get the order of projects to render
+    let projectIds = Object.keys(state.projectsData);
+    
+    // If we have a saved order, use it (but filter out any projects that no longer exist)
+    if (state.projectTabOrder && state.projectTabOrder.length > 0) {
+        const savedOrder = state.projectTabOrder.filter(id => state.projectsData[id]);
+        const remainingProjects = projectIds.filter(id => !savedOrder.includes(id) && id !== 'main-template');
+        projectIds = [...savedOrder, ...remainingProjects];
+    } else {
+        // Filter out main-template from the default order
+        projectIds = projectIds.filter(id => id !== 'main-template');
+    }
+
+    projectIds.forEach(projectId => {
         const project = state.projectsData[projectId];
         if (!project) return;
         
@@ -229,6 +242,8 @@ export function createProjectTab(projectData, projectId) {
     const tabButton = document.createElement('button');
     tabButton.className = 'project-tab';
     tabButton.setAttribute('data-tab', projectId);
+    tabButton.setAttribute('draggable', 'true');
+    tabButton.setAttribute('data-project-id', projectId);
     tabButton.innerHTML = `
         <span class="project-name-editable" contenteditable="true">${projectData.name}</span>
         <span class="delete-tab-icon">&times;</span>

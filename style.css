@@ -220,6 +220,8 @@ body {
     transition: all 0.2s ease;
     font-size: 14px;
     color: #333;
+    cursor: grab;
+    user-select: none;
 }
 
 .project-tab:hover {
@@ -230,6 +232,36 @@ body {
     background-color: #007bff;
     color: #fff;
     border-color: #0056b3;
+}
+
+.project-tab:active {
+    cursor: grabbing;
+}
+
+.project-tab.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    z-index: 1000;
+    position: relative;
+}
+
+.project-tab.drop-before {
+    border-left: 3px solid #007bff;
+    margin-left: -3px;
+}
+
+.project-tab.drop-after {
+    border-right: 3px solid #007bff;
+    margin-right: -3px;
+}
+
+.project-tab:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Prevent text selection during drag */
+.project-tab.dragging .project-name-editable {
+    pointer-events: none;
 }
 
 .tab-pane {
@@ -4175,3 +4207,139 @@ td.status-cell {
 .btn-secondary:hover {
     background-color: #5a6268;
 }
+
+/* --- Summary View --- */
+.executive-overview {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.overview-header h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.4rem;
+    color: #333;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+}
+
+.overview-card {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    border: 1px solid #e9ecef;
+}
+
+.overview-card .card-value {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: #007bff;
+    margin-bottom: 5px;
+}
+
+.overview-card .card-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.overview-card .status-on-track { color: #28a745; }
+.overview-card .status-at-risk { color: #ffc107; }
+.overview-card .status-behind { color: #dc3545; }
+
+.overview-card.critical .card-value {
+    color: #dc3545;
+}
+
+/* Project Matrix */
+.project-matrix-container {
+    margin-top: 30px;
+}
+
+.matrix-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.matrix-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.matrix-controls .btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.matrix-controls .btn:hover {
+    background-color: #5a6268;
+}
+
+.matrix-table-wrapper {
+    overflow-x: auto;
+}
+
+#summary-matrix-table .placeholder-cell {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Configure View Modal */
+#configure-view-modal {
+    display: none; /* Hidden by default */
+}
+
+#configure-view-modal .modal-content {
+    max-width: 600px;
+}
+
+.column-selection-container {
+    margin-top: 15px;
+}
+
+.column-selection-container h4 {
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.column-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.column-item {
+    display: flex;
+    align-items: center;
+}
+
+.column-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.column-item label {
+    font-size: 0.9rem;
+}
+
+/* End of File */
